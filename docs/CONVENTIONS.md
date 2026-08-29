@@ -33,8 +33,8 @@ ADR-030 propisuje:
 DECISIONS.md  >  PROTOCOL.md  >  PROJECT.md  >  ROADMAP.md
 ```
 
-Dva dokumenta nisu bila u toj listi jer u trenutku ADR-030 nisu postojala u
-konačnom obliku. Njihovo mesto:
+**ADR-032** proširuje tu listu, jer `CONVENTIONS.md` i `POJMOVNIK.md` u trenutku
+ADR-030 nisu postojali. Puna hijerarhija:
 
 ```
 DECISIONS.md > PROTOCOL.md > CONVENTIONS.md > PROJECT.md > ROADMAP.md > POJMOVNIK.md
@@ -58,7 +58,7 @@ DECISIONS.md > PROTOCOL.md > CONVENTIONS.md > PROJECT.md > ROADMAP.md > POJMOVNI
 `POJMOVNIK.md` i `WORKFLOW.md`. ADR-030 ih nije naveo samo zato što tada nisu
 postojali.
 
-**Unutar `DECISIONS.md`.** Isto važi i kad novi ADR obori stariji. Stari ADR se
+**Unutar `DECISIONS.md`** (ADR-032). Isto važi i kad novi ADR obori stariji. Stari ADR se
 **ne briše** — dobija ⚠️ oznaku na vrhu koja pokazuje na novi. Fajl je
 append-only i istorija odluka se čuva cela.
 
@@ -118,7 +118,7 @@ Tri posledice koje se lako previde:
 
 ### Provera
 
-Pravilo se proverava automatski, alatom u gitu — ne skillom (ADR-028):
+Pravilo se proverava automatski, alatom u gitu — ne skillom (ADR-033):
 
 ```
 tools/layer_check.py
@@ -154,7 +154,7 @@ Ovo je granica koju je najlakše pogrešno pročitati, pa stoji zapisana doslovn
 |---|---|
 | gde stoje figure | FEN iz `STATE`, klijent parsira |
 | kuda pešak sme | `legal_moves` iz `STATE` |
-| da li je ovo uzimanje | polje `capture` iz `STATE` |
+| da li je ovo uzimanje | polje `capture` iz `STATE` (ADR-034) |
 | da li treba dijalog za promociju | polje `promotion` iz `STATE` |
 | da li je potez legalan | server, uvek |
 | koliko je vremena ostalo | `clocks` iz `STATE` je izvor istine |
@@ -501,7 +501,7 @@ drugačije, ili odnesi kod na claude.ai.
 | `unittest` | testovi | stdlib |
 | `tools/perft.py` | perft i `perft_divide` | u gitu (ADR-028) |
 | `tools/cli_client.py` | CLI klijent za testiranje servera | u gitu (ADR-017) |
-| `tools/layer_check.py` | provera uvoza iz §2 | u gitu |
+| `tools/layer_check.py` | provera uvoza iz §2 | u gitu (ADR-033) |
 
 Konfiguracija `ruff`-a stoji u `pyproject.toml`: `line-length = 100`,
 `target-version = "py311"`.

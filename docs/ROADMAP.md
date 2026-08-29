@@ -33,11 +33,14 @@ Korak sa pitanjima se ne preskače.
 ---
 
 ## FAZA 0 — Skelet
-**Checkpoint:** `python -m unittest discover -s tests` prolazi (uključujući
-`test_layers.py`), `ruff check .` čist
+**Checkpoint:** `pip install -e .` pa `python -m unittest discover -s tests` prolazi
+(uključujući `test_layers.py`), `ruff check .` čist
 
 - [ ] 0.1 Struktura foldera, `src/chess/` sa `__init__.py`, `tests/`, `docs/`, `assets/`, `tools/`
-- [ ] 0.2 `pyproject.toml`, `ruff` (`line-length = 100`), **`docs/CONVENTIONS.md`**, prvi test
+- [ ] 0.2 `pyproject.toml` sa **`pygame` kao zavisnošću**, `ruff` (`line-length = 100`),
+      **`pip install -e .`**, prvi test
+      > Bez editable instalacije `unittest discover` ne nalazi paket — `src/`
+      > raspored znači da `src/` nije na `sys.path` (ADR-029).
 - [ ] 0.2b `tools/layer_check.py` + `tests/test_layers.py` — provera uvoza kroz `ast` (ADR-033)
 - [ ] 0.3 `.gitignore` proveren, commit, push
 - [ ] 0.4 Cburnett figure **rasterizovane u PNG** (dve veličine), DejaVu font, `LICENSE.txt`

@@ -155,7 +155,7 @@ chess/
 ├── README.md                    (srpski)
 ├── src/chess/
 │   ├── core/
-│   │   ├── types.py             Color, PieceType, Square, Move, CastlingRights
+│   │   ├── types.py             Color, PieceType, Square, Move, MoveKind, CastlingRights
 │   │   ├── board.py             raspored, make/unmake
 │   │   ├── movegen.py           generisanje poteza
 │   │   ├── attacks.py           is_square_attacked, is_in_check
@@ -203,7 +203,7 @@ Ovo je ono što čini prelazak na veb jeftinim. Ne krše se ni pod kojim izgovor
 
 1. `core/` uvozi samo standardnu biblioteku
 2. Protokol je JSON, verzionisan, dokumentovan u `PROTOCOL.md` — nikad `pickle`
-3. Nula šahovske logike u klijentu
+3. Nula šahovske logike u klijentu — precizna granica je u `CONVENTIONS.md` §3
 4. pygame tipovi ne izlaze iz `render.py` i `scenes/`; koordinate su `Square`, ne pikseli
 5. Sat je na serveru
 6. Klijent podeljen na `net.py` / `state.py` / `render.py` / `scenes/` — samo poslednja dva vide pygame

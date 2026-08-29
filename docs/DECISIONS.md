@@ -134,7 +134,7 @@ dodaje treći profil. Cena: jedan sloj konfiguracije više.
 
 > ⚠️ **Komanda za pokretanje zamenjena ADR-om 029.** Umesto
 > `pip install pygame` ide `pip install -e .` — `src/` raspored traži
-> instalaciju paketa. Princip "radi posle klonirаnja" ostaje.
+> instalaciju paketa. Princip "radi posle kloniranja" ostaje.
 
 **Kontekst.** Prethodni projekat korisnika (FastAPI + SQL Server) nije radio kod
 druge osobe: baza nije bila instalirana, kredencijali nisu bili u repozitorijumu,
@@ -219,8 +219,8 @@ funkcije koje ga primaju moraju to jasno da imenuju u potpisu i docstringu.
 ## ADR-014: Undo zapis se definiše u tasku 1.2
 
 > ⚠️ **Dopunjeno ADR-om 022.** Nedostajalo je **polje pojedene figure** — kod
-> en passanta pojedeni pešak nije na odredišnom polju. Rešeno uvođenjem
-> `Move.kind`.
+> en passanta pojedeni pešak nije na odredišnom polju. Zapis nosi **i polje**
+> pojedene figure; `Move.kind` iz ADR-022 dodatno uklanja svako zaključivanje.
 
 **Kontekst.** `unmake` ne može da vrati stanje ako se ne zapamti šta je potez
 promenio. Prvobitni ROADMAP to nije naveo, pa bi se propust otkrio tek na

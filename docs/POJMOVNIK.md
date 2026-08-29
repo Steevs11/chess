@@ -155,7 +155,7 @@ Isti račun, ali **razbijen po prvom potezu.**
 a2a3: 8457
 a2a4: 9329
 b1a3: 8885     ← referenca kaže 8885, u redu
-b1c3: 9750     ← referenca kaže 9755, evo bага
+b1c3: 9750     ← referenca kaže 9755, evo baga
 ```
 
 Nađeš potez koji odstupa, uđeš u tu poziciju, ponoviš na dubini N-1. Za par

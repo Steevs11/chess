@@ -6,7 +6,7 @@ Ovaj dokument je ugovor između servera i bilo kog klijenta. Piše se kao da ga
 čita neko treći ko piše svog klijenta — jer će to za koju fazu biti veb klijent.
 
 > Verzija 2 dokumenta (protokol i dalje `v: 1`). Usklađeno sa ADR-016, 017, 018
-> i novim ADR-ovima 022–029.
+> i novim ADR-ovima 022–034.
 
 ---
 
