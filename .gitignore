@@ -1,0 +1,42 @@
+# --- Claude Code (mora postojati PRE prvog commita) ---
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Baza (isporučuje se šema, ne podaci) ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+
+# --- OS ---
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- Lokalna konfiguracija ---
+.env
+.env.local
+
+# --- Snimci ---
+*.mp4
+*.mkv

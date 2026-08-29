@@ -1,0 +1,53 @@
+[project]
+name = "chess"
+version = "0.1.0"
+description = "Sahovska aplikacija za dva igraca preko mreze"
+requires-python = ">=3.11"
+dependencies = [
+    "pygame>=2.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear: mutable defaults, itd.
+    "C4",   # comprehensions
+    "UP",   # pyupgrade
+    "SIM",  # simplify
+    "RET",  # return
+    "PTH",  # koristi pathlib umesto os.path
+    "TID",  # tidy imports
+]
+ignore = [
+    "E501",  # duzinu linija resava formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"pickle".msg = "Nikad pickle na mrezi. Protokol je JSON."
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
