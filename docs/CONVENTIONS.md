@@ -17,7 +17,7 @@ korisnički interfejs su na **srpskom**.
 
 | Dokument | Pitanje |
 |---|---|
-| `PROJECT.md` | šta pravimo i zašto |
+| `docs/PROJECT.md` | šta pravimo i zašto |
 | `docs/DECISIONS.md` | zašto je nešto odlučeno baš tako |
 | `docs/PROTOCOL.md` | kako server i klijent razgovaraju |
 | `docs/CONVENTIONS.md` | kako se piše kod |
