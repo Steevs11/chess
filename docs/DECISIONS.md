@@ -39,6 +39,10 @@ prepisivanja. Procena preživljavanja koda pri prelasku na veb: `core` 100%,
 
 ## ADR-003: Sirovi `socket` umesto framework-a
 
+> ⚠️ **Delimično zamenjeno ADR-om 016.** Izbor `socket`-a važi. Model
+> konkurentnosti ne — umesto `threading` koristi se jednonitni `selectors`
+> event loop.
+
 **Kontekst.** Mentor je tražio socket-e. Kandidati: `socket` + `threading`,
 FastAPI, Flask, `websockets`.
 
@@ -87,14 +91,18 @@ kralja u šahu. Najjednostavnije je kopirati tablu, odigrati, proveriti.
 
 **Odluka.** Potez se odigra na istoj tabli i vrati (`make` / `unmake`).
 
-**Posledice.** Perft na dubini 5 traje sekunde umesto minuta. Bot u fazi 6 poziva
-generator miliona puta u sekundi — sa kopiranjem bi bio neupotrebljiv.
+**Posledice.** Perft na dubini 5 traje minut-dva umesto desetak minuta. Bot u
+fazi 6 poziva generator miliona puta u sekundi — sa kopiranjem bi bio neupotrebljiv.
 Cena: `unmake` mora tačno da vrati prava na rokadu, en passant polje i brojač
 polupoteza, što je izvor bagova ako se ne testira. Perft to pokriva.
 
 ---
 
 ## ADR-007: Perft kao dokaz ispravnosti
+
+> ⚠️ **Delimično zamenjeno ADR-om 019.** Princip važi. Ali perft postoji kao
+> alat od taska 1.3, ne tek na 1.8; podrazumevani checkpoint je dubina 4, a
+> dubina 5 ide iza `CHESS_SLOW_TESTS=1`.
 
 **Kontekst.** Kako dokazati da generator poteza radi ispravno u svim slučajevima,
 uključujući rokadu, en passant, vezane figure i otkrivene šahove.
@@ -168,6 +176,10 @@ Cena sada: oko 20 linija koda.
 
 ## ADR-012: Claude Code fajlovi izvan repozitorijuma
 
+> ⚠️ **Precizirano ADR-om 020.** Pravila projekta se izdvajaju u
+> `docs/CONVENTIONS.md` koji **ide u git**. Van gita ostaje samo `CLAUDE.md`
+> i `.claude/`.
+
 **Kontekst.** Repozitorijum je javan. U gitu se ništa ne briše — što uđe u
 commit, ostaje u istoriji zauvek.
 
@@ -175,3 +187,182 @@ commit, ostaje u istoriji zauvek.
 
 **Posledice.** Istorija je čista od nultog commita, nema šta da se briše kasnije.
 Cena: ti fajlovi nisu verzionisani — treba im kopija van foldera projekta.
+
+---
+
+## ADR-013: `Square` je `int`, ne dataclass
+
+**Kontekst.** Prvobitni plan je stavljao `Square` u istu korpu sa `Move` kao
+`frozen=True` dataclass. Perft na dubini 5 obilazi 4.865.609 čvorova i alocirao
+bi desetine miliona `Square` objekata.
+
+**Odluka.** `Square` je običan `int` 0–63. Čitljivost se dobija imenovanim
+konstantama (`E4 = 28`) i funkcijama `file_of()`, `rank_of()`, `to_algebraic()`,
+`from_algebraic()`.
+
+`Move` ostaje `frozen=True` dataclass, ali sa `slots=True`. Pakovanje poteza u
+int (kako rade pravi engine-i) razmatramo **tek ako merenje pokaže da je
+potrebno** — ne optimizujemo unapred.
+
+**Posledice.** Perft je upotrebljivo brz. Cena: `Square` nije tip-siguran, pa
+funkcije koje ga primaju moraju to jasno da imenuju u potpisu i docstringu.
+
+---
+
+## ADR-014: Undo zapis se definiše u tasku 1.2
+
+**Kontekst.** `unmake` ne može da vrati stanje ako se ne zapamti šta je potez
+promenio. Prvobitni ROADMAP to nije naveo, pa bi se propust otkrio tek na
+perft checkpointu — kad je najskuplje.
+
+**Odluka.** `UndoRecord` se definiše zajedno sa `make/unmake` i sadrži:
+
+| Polje | Zašto |
+|---|---|
+| pojedena figura | vraćanje na tablu |
+| prethodna prava na rokadu | pomeranje topa ili kralja ih gasi nepovratno |
+| prethodno en passant polje | pravo traje tačno jedan potez |
+| prethodni brojač polupoteza | pravilo 50 poteza |
+| prethodni Zobrist ključ | jeftinije od ponovnog računanja |
+
+**Posledice.** `unmake` je tačan po konstrukciji. Cena: svaki novi tip poteza
+mora da dopuni undo zapis — što perft odmah uhvati ako se zaboravi.
+
+---
+
+## ADR-015: Zobrist heš u tasku 1.2, ne u 1.9
+
+**Kontekst.** Trostruko ponavljanje traži poređenje pozicija po četiri stvari:
+raspored, ko je na potezu, prava na rokadu, en passant polje. Plan je to stavljao
+u 1.9, što bi značilo povratak u `board.py` posle checkpointa.
+
+**Odluka.** Zobrist heš se uvodi u 1.2 i održava **inkrementalno** u
+`make/unmake` — XOR ulaz i izlaz umesto ponovnog računanja cele pozicije.
+
+**Posledice.** Ponavljanje u 1.9 je tada samo brojanje ključeva u istoriji.
+Isti heš služi transpozicionoj tabeli bota u fazi 6 — plaća se jednom,
+koristi dvaput. Cena: jedan koncept više u fazi 1.
+
+---
+
+## ADR-016: Server je jednonitni `selectors` event loop
+
+**Kontekst.** Prvobitni plan: nit po klijentu sa `Lock` oko stanja. Uz to je
+stajalo da server računa vreme "pri svakom događaju" — što znači da pad
+zastavice **nikad ne bi bio detektovan** ako igrač prestane da šalje poruke.
+Partija bi visila zauvek.
+
+**Odluka.** Jedna nit, `selectors`, sa `select(timeout=vreme_do_najbliže_zastavice)`.
+
+**Posledice.** Tri problema rešena jednom odlukom: pad zastavice okida sam,
+nema `Lock`-ova, nema race condition-a. Cena: kod je organizovan oko event
+loop-a, što je manje intuitivno od niti dok se ne navikneš.
+
+---
+
+## ADR-017: `tools/cli_client.py` umesto `nc`
+
+**Kontekst.** Checkpoint faze 2 je bio "dva `nc localhost 5000` terminala
+odigraju partiju". `nc` ne postoji na Windows-u, pa checkpoint nije bio
+sprovodiv u razvojnom okruženju.
+
+**Odluka.** Mali CLI klijent od tridesetak linija u standardnoj biblioteci,
+task 2.0. Prima poteze u UCI formatu (`e2e4`), prevodi ih u protokol poruke,
+ispisuje odgovore.
+
+**Posledice.** Checkpoint radi na Windows-u. Dobijamo trajan debug alat, i
+kasnije osnovu za pokretanje bota kao spoljnog klijenta. Cena: pola sata rada.
+
+---
+
+## ADR-018: Format poteza — strukturiran na žici, UCI u `core`
+
+**Kontekst.** Predlog je bio da se potezi na žici šalju kao UCI stringovi
+(`e2e4`, `e7e8q`) umesto strukturirano.
+
+**Odluka.** Na žici ostaje strukturirano: `{"from": "e2", "to": "e4",
+"promotion": "queen"}`. To je idiomatski JSON, čitljivije pri debug-u, i lakše
+za JavaScript klijent u fazi 4.
+
+Ali `core` dobija `Move.from_uci()` i `Move.to_uci()`, jer trebaju za CLI
+klijent, za testove i za UCI interfejs bota u 6.8.
+
+**Posledice.** Oba formata postoje, svaki tamo gde je bolji. Cena: dvadesetak
+linija konverzije.
+
+---
+
+## ADR-019: Perft je alat od 1.3, ne checkpoint na 1.8
+
+**Kontekst.** Perft je bio zakazan tek za 1.8. To znači da se generisanje poteza
+piše kroz tri taska bez ijedne provere ispravnosti.
+
+**Odluka.** Perft harness sa `perft_divide` postoji od 1.3 i koristi se pri
+svakoj izmeni generatora. `perft_divide` broji čvorove **po korenskom potezu**,
+pa se odstupanje lokalizuje binarnom pretragom umesto ručnim traženjem.
+
+Perft 4 ostaje u podrazumevanom test suite-u. Perft 5 ide iza promenljive
+`CHESS_SLOW_TESTS=1`, jer minut-dva po pokretanju znači da posle nedelju dana
+prestaneš da puštaš testove.
+
+**Posledice.** Greška se hvata u tasku u kom je napravljena. 1.8 ostaje kao
+formalni checkpoint, ali bez iznenađenja.
+
+---
+
+## ADR-020: Konvencije u git, Claude fajlovi van gita
+
+**Kontekst.** `CLAUDE.md` je bio u `.gitignore`, što je u prividnom sukobu sa
+principom iz ADR-009 — sve što je projektu potrebno mora biti u repozitorijumu.
+
+**Odluka.** Razdvajaju se dve stvari koje su bile spojene u jedan fajl:
+
+| Fajl | Sadržaj | Git |
+|---|---|---|
+| `docs/CONVENTIONS.md` | pravila projekta: slojevi, imenovanje, testovi, git tok | **da** |
+| `CLAUDE.md` | uputstvo asistentu; upućuje na `CONVENTIONS.md` | ne |
+
+Princip iz ADR-009 se odnosi na ono što je potrebno da se projekat **pokrene**.
+`CLAUDE.md` tome ne pripada. Konvencije pripadaju — i pripadale bi svakom
+projektu, sa asistentom ili bez njega.
+
+**Posledice.** Konvencije su normalna inženjerska dokumentacija i njihovo
+prisustvo poboljšava repozitorijum. Bilo koji chat ili alat sa pristupom
+GitHub-u može ih sam učitati, bez lepljenja. Cena: dva fajla umesto jednog,
+i `CLAUDE.md` i dalje nije verzionisan pa mu treba kopija van projekta.
+
+---
+
+## ADR-021: Razumevanje se proverava pitanjima, ne autorstvom
+
+**Kontekst.** Cilj projekta je da korisnik nauči i razume šta je napravljeno.
+U pregledu je predloženo da korisnik fazu 1 piše rukom, uz obrazloženje da
+"čitanje diffa daje osećaj razumevanja bez razumevanja".
+
+Prva rečenica je tačna. Zaključak nije bio.
+
+Odbrana traje 15 minuta i sastoji se od prezentacije i dokumentacije. Kod se ne
+pokazuje i o njemu se ne ispituje. Ručno kucanje engine-a bi produžilo fazu 1 za
+nedelju dana da bi rešilo problem koji ne postoji.
+
+Uz to, kucanje nije ono što stvara razumevanje — **odgovaranje na pitanja jeste.**
+Aktivno prisećanje je efikasnije od prepisivanja i traje minute umesto dana.
+
+**Odluka.** Claude Code piše sav kod. Razumevanje se obezbeđuje ritmom po tasku:
+
+1. Plan mod — korisnik čita plan pre nego što kod postoji
+2. Claude Code implementira
+3. Claude Code objašnjava u tri do pet rečenica: šta je urađeno, zašto tako,
+   koja alternativa je odbačena i zbog čega
+4. **Claude Code postavlja korisniku dva do tri pitanja o upravo napisanom kodu**
+5. Korisnik odgovara. Ako ne zna — Claude Code objašnjava drugačije, pa opet.
+6. Na kraju faze korisnik prepričava celu fazu svojim rečima; Claude Code od
+   toga piše `docs/faze/faza-N.md`
+
+Korak 4 je obavezan i ne preskače se. Pitanja moraju biti o **zašto**, ne o
+**šta**: "zašto filtriramo legalnost posle generisanja umesto tokom" je dobro
+pitanje, "šta radi ova funkcija" nije.
+
+**Posledice.** Faza 1 ne traje duže nego u prvobitnom planu. Razumevanje se meri
+odgovorom, ne osećajem. Dokumentacija po fazama nastaje kao nusprodukt umesto
+kao poseban posao na kraju. Cena: dva do tri minuta po tasku.
