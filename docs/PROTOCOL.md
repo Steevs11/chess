@@ -98,8 +98,8 @@ Parsiranje nije rasuđivanje. Legalni potezi uvek stižu od servera.
 Dozvoljeno: `"queen"`, `"rook"`, `"bishop"`, `"knight"`.
 
 **Najviše jedna `MOVE` poruka bez odgovora.** Klijent šalje sledeći potez tek
-kad primi `STATE` ili `ERROR`. Server ignoriše poruke koje stignu pre toga i
-odgovara `ERROR` sa kodom `MOVE_PENDING`.
+kad primi `STATE` ili `ERROR`. Poruku koja stigne pre toga server **odbija** —
+ne obrađuje je i odgovara `ERROR` sa kodom `MOVE_PENDING`.
 
 ### `RESIGN`
 ```json
@@ -197,8 +197,18 @@ Zato potez koji traži promociju nosi zastavicu:
 }
 ```
 
-Klijent tada zna dve stvari bez ijednog pravila: gde sme da spusti figuru,
-i kad da otvori dijalog iz taska 3.8.
+**`capture` je uvek serverski** (ADR-034). Stoji na **svakom** potezu koji uzima
+figuru, uključujući en passant. Klijent ga nikad ne izvodi sam — kod en passanta
+je odredišno polje **prazno**, pa bi klijent koji zaključuje „ima li figure na
+odredištu" nacrtao pogrešno. A klijent koji to izvede ispravno upravo je
+implementirao šahovsko pravilo, što krši ADR-001.
+
+**Promocija je uvek u jednu od četiri figure:** `queen`, `rook`, `bishop`,
+`knight`. Zapisano ovde da ne bi bila neizrečena pretpostavka u klijentu —
+dijalog iz taska 3.8 prikazuje tačno te četiri.
+
+Klijent tako zna tri stvari bez ijednog pravila: gde sme da spusti figuru,
+da li je potez uzimanje, i kad da otvori dijalog za promociju.
 
 `legal_moves` se šalje **samo igraču koji je na potezu.** Drugi dobija praznu mapu.
 
@@ -215,7 +225,10 @@ i kad da otvori dijalog iz taska 3.8.
 
 `termination`: `"checkmate"` · `"stalemate"` · `"resignation"` · `"timeout"` ·
 `"draw_agreement"` · `"insufficient_material"` · `"fifty_move"` ·
-`"threefold_repetition"` · `"abandoned"`
+`"threefold_repetition"`
+
+> `"abandoned"` je **rezervisan za fazu 5** i trenutno ga ništa ne proizvodi.
+> Diskonekcija se u fazi 2 završava padom zastavice, dakle `"timeout"` (ADR-025).
 
 ### `OPPONENT_DISCONNECTED`
 ```json
@@ -256,7 +269,7 @@ njega zna koju figuru da vrati na mesto posle neuspelog drag & drop-a.
 | `PROTOCOL_ERROR` | neispravan JSON ili polje | zatvara se | ne |
 | `UNKNOWN_TYPE` | nepoznat tip poruke | ostaje | ne |
 | `ILLEGAL_MOVE` | potez nije legalan | ostaje | **da** |
-| `NOT_YOUR_TURN` | nije tvoja runda | ostaje | **da** |
+| `NOT_YOUR_TURN` | nije tvoja runda | ostaje | **da**, ako je izazvan potezom |
 | `MOVE_PENDING` | prethodni potez još nije obrađen | ostaje | **da** |
 | `DRAW_ALREADY_OFFERED` | remi već ponuđen u ovom potezu | ostaje | ne |
 | `GAME_NOT_FOUND` | nema takve partije | ostaje | ne |

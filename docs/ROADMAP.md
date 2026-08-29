@@ -4,8 +4,8 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 
 **Kako se koristi:** pročitaj blok TRENUTNO, pa prvi neodštikliran red. To je sledeći task.
 
-> Verzija 2 — ažurirano posle tehničkog pregleda plana.
-> Izmene su obrazložene u `docs/DECISIONS.md`, ADR-013 do ADR-021.
+> Verzija 3 — ažurirano posle tri kruga tehničkog pregleda.
+> Izmene su obrazložene u `docs/DECISIONS.md`, ADR-013 do ADR-034.
 
 ---
 
@@ -33,10 +33,12 @@ Korak sa pitanjima se ne preskače.
 ---
 
 ## FAZA 0 — Skelet
-**Checkpoint:** `python -m unittest discover -s tests` prolazi, `ruff check .` čist
+**Checkpoint:** `python -m unittest discover -s tests` prolazi (uključujući
+`test_layers.py`), `ruff check .` čist
 
 - [ ] 0.1 Struktura foldera, `src/chess/` sa `__init__.py`, `tests/`, `docs/`, `assets/`, `tools/`
-- [ ] 0.2 `pyproject.toml`, konfiguracija `ruff`, **`docs/CONVENTIONS.md`**, prvi (prazan) test
+- [ ] 0.2 `pyproject.toml`, `ruff` (`line-length = 100`), **`docs/CONVENTIONS.md`**, prvi test
+- [ ] 0.2b `tools/layer_check.py` + `tests/test_layers.py` — provera uvoza kroz `ast` (ADR-033)
 - [ ] 0.3 `.gitignore` proveren, commit, push
 - [ ] 0.4 Cburnett figure **rasterizovane u PNG** (dve veličine), DejaVu font, `LICENSE.txt`
 - [ ] 0.5 `assets/i18n/sr.json` + `client/i18n.py` sa `t()`
@@ -45,17 +47,25 @@ Korak sa pitanjima se ne preskače.
 ---
 
 ## FAZA 1 — Engine
-**Checkpoint:** perft 4 se poklapa iz početne pozicije i iz Kiwipete;
-perft 5 prolazi sa `CHESS_SLOW_TESTS=1`
+**Checkpoint:** podrazumevani perft skup iz ADR-026 se poklapa;
+spori skup prolazi sa `CHESS_SLOW_TESTS=1`
 
 Najveći i najvažniji deo projekta. Ne žuriti.
 
-- [ ] 1.1 `core/types.py` — `Color`, `PieceType`, `Piece`, `Move`, `CastlingRights`
-      **`Square` je `int` 0–63** sa `file_of()`, `rank_of()`, `to_algebraic()`, `from_algebraic()`
-      `Move` je `frozen=True, slots=True`, plus `from_uci()` i `to_uci()`
+- [ ] 1.1 `core/types.py` — `Color`, `PieceType`, `Piece`, `Move`, `CastlingRights`, **`MoveKind`**
+      **`Square` je običan alias `Square = int`** (0–63, a1=0, h8=63), ne `NewType` (ADR-031)
+      sa `file_of()`, `rank_of()`, `to_algebraic()`, `from_algebraic()`
+      `Move` je `frozen=True, slots=True` i **nosi `kind`** (ADR-022):
+      `NORMAL` · `CAPTURE` · `DOUBLE_PAWN_PUSH` · `EN_PASSANT` · `CASTLE` · `PROMOTION`
+      plus `from_uci()` i `to_uci()` — `from_uci()` **ne može da odredi `kind` bez table**,
+      pa se potez iz spoljnog sveta uvek traži u listi legalnih poteza
+      `ChessError` hijerarhija: `IllegalMoveError`, `InvalidFenError`, `InvalidSanError`
 - [ ] 1.2 `core/board.py` — raspored, **make/unmake**, `UndoRecord`, **Zobrist heš**, `core/fen.py`
-      `UndoRecord` nosi: pojedenu figuru · prethodna prava na rokadu · prethodno en passant
-      polje · prethodni brojač polupoteza · prethodni Zobrist ključ
+      `Board` je **mutabilan** — na tome počiva make/unmake (ADR-006)
+      `UndoRecord` nosi: **pojedenu figuru i njeno polje** (kod en passanta pešak nije
+      na odredišnom polju) · prethodna prava na rokadu · prethodno en passant polje ·
+      prethodni brojač polupoteza · prethodni Zobrist ključ
+      Zobrist: **fiksan seed**, ep polje u ključ **samo kad je uzimanje moguće** (ADR-027)
 - [ ] 1.3 `core/movegen.py` — generisanje po figuri
       **+ `perft` i `perft_divide` harness — od ovog taska, ne od 1.8**
 - [ ] 1.4 Specijalni potezi — rokada (pet uslova), en passant, promocija sa podpromocijom
@@ -71,15 +81,19 @@ Najveći i najvažniji deo projekta. Ne žuriti.
 **Perft se pokreće posle svake izmene generatora, počev od 1.3.**
 Kad se broj ne poklopi — `perft_divide`, pa binarna pretraga do konkretnog poteza.
 
-| Dubina | Početna pozicija | Kiwipete |
-|---|---|---|
-| 1 | 20 | 48 |
-| 2 | 400 | 2.039 |
-| 3 | 8.902 | 97.862 |
-| 4 | 197.281 | 4.085.603 |
-| 5 | 4.865.609 | — |
+**Podrazumevani skup** (~300.000 čvorova, mora ostati brz da bi se stvarno pokretao):
 
-> Dubina 5 iza `CHESS_SLOW_TESTS=1`. Vrednosti proveriti na Chess Programming Wiki.
+| Pozicija | Dubina | Šta lovi |
+|---|---|---|
+| Početna | 4 | osnovno kretanje |
+| Kiwipete | 3 | rokadu i en passant istovremeno |
+| Position 3 | 4 | en passant u zamršenim slučajevima |
+| Position 4 | 3 | promociju i vezane figure |
+
+**Iza `CHESS_SLOW_TESTS=1`** (~9.000.000 čvorova): početna d5 · Kiwipete d4 · ostale dublje
+
+> **FEN-ove i referentne brojeve prepisati sa Chess Programming Wiki.**
+> Nikad iz sećanja — ni čovekovog ni modelovog. Svaka konstanta nosi komentar sa izvorom.
 
 ---
 

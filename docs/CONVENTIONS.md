@@ -1,0 +1,510 @@
+# KONVENCIJE
+
+Pravila po kojima se piše kod u ovom projektu. Važe za svakoga ko ga dodiruje —
+čoveka ili asistenta.
+
+Ovaj fajl **ide u git** (ADR-020). `CLAUDE.md` ne ide — on je uputstvo asistentu
+i upućuje ovamo. Sve što bi važilo i bez asistenta stoji ovde.
+
+Kod, komentari, imena i commit poruke su na **engleskom**. Dokumentacija i
+korisnički interfejs su na **srpskom**.
+
+---
+
+## 1. Namena i hijerarhija dokumenata
+
+### Ko odgovara na koje pitanje
+
+| Dokument | Pitanje |
+|---|---|
+| `PROJECT.md` | šta pravimo i zašto |
+| `docs/DECISIONS.md` | zašto je nešto odlučeno baš tako |
+| `docs/PROTOCOL.md` | kako server i klijent razgovaraju |
+| `docs/CONVENTIONS.md` | kako se piše kod |
+| `docs/ROADMAP.md` | šta je sledeće i gde smo stali |
+| `docs/WORKFLOW.md` | kako izgleda jedna radna sesija |
+| `docs/POJMOVNIK.md` | šta znače termini |
+
+### Hijerarhija kad se dokumenti ne slažu
+
+ADR-030 propisuje:
+
+```
+DECISIONS.md  >  PROTOCOL.md  >  PROJECT.md  >  ROADMAP.md
+```
+
+Dva dokumenta nisu bila u toj listi jer u trenutku ADR-030 nisu postojala u
+konačnom obliku. Njihovo mesto:
+
+```
+DECISIONS.md > PROTOCOL.md > CONVENTIONS.md > PROJECT.md > ROADMAP.md > POJMOVNIK.md
+```
+
+- **`CONVENTIONS.md`** obavezuje kod, ali ne sme da protivreči protokolu.
+  Protokol je ugovor sa spoljnim svetom; konvencije su unutrašnja stvar.
+- **`POJMOVNIK.md`** nema autoritet. On objašnjava, ne propisuje. Ako se ne
+  slaže sa bilo čim iznad sebe, POJMOVNIK je taj koji se ispravlja.
+
+### Pravilo propagacije (ADR-030)
+
+> Kad ADR obori nešto napisano u `PROJECT.md`, `PROTOCOL.md`, `ROADMAP.md` ili
+> `CONVENTIONS.md`, ispravka tih dokumenata ide u **istom commitu** kao i ADR.
+> Bez izuzetka.
+>
+> Obrazloženje: dokument koji zaostaje za odlukama je gori od dokumenta koji ne
+> postoji, jer mu se veruje.
+
+**Proširenje.** Pravilo važi za **svaki** fajl u `docs/`, uključujući
+`POJMOVNIK.md` i `WORKFLOW.md`. ADR-030 ih nije naveo samo zato što tada nisu
+postojali.
+
+**Unutar `DECISIONS.md`.** Isto važi i kad novi ADR obori stariji. Stari ADR se
+**ne briše** — dobija ⚠️ oznaku na vrhu koja pokazuje na novi. Fajl je
+append-only i istorija odluka se čuva cela.
+
+### Kad se piše ADR
+
+Piše se kad odluka:
+
+- menja strukturu ili smer zavisnosti
+- menja protokol
+- uvodi ili odbija zavisnost
+- bira između dva pristupa gde je izbor mogao ići drugačije
+
+Ne piše se za imena promenljivih, redosled funkcija ni sitne refaktore.
+
+Format je uvek isti: **Kontekst** → **Odluka** → **Posledice**, gde posledice
+navode i **šta smo izgubili**, ne samo šta smo dobili.
+
+---
+
+## 2. Slojevi i smer uvoza
+
+Smer zavisnosti (ADR-002):
+
+```
+client  ─┐
+server  ─┼─▶  protocol  ─▶  core  ─▶  stdlib
+tools   ─┘
+```
+
+Strelica se **nikad ne obrće.** `core` ne zna da protokol postoji.
+
+### Tabela dozvoljenih uvoza
+
+| Modul | Sme da uvozi | Ne sme |
+|---|---|---|
+| `core/*` | **samo stdlib** | bilo šta iz projekta van `core` |
+| `protocol/*` | stdlib, `core` | `server`, `client` |
+| `server/*` | stdlib, `core`, `protocol` | `client`, `pygame` |
+| `client/net.py` | stdlib, `protocol` | `pygame`, `core.movegen` i sl. |
+| `client/state.py` | stdlib, `protocol`, `core.types`, `core.fen` | `pygame` |
+| `client/i18n.py` | stdlib | `pygame` |
+| `client/render.py` | sve gore + `pygame` | `core.movegen`, `attacks`, `rules`, `game` |
+| `client/scenes/*` | sve gore + `pygame` | isto |
+| `tools/*` | sve | — |
+| `tests/*` | sve | — |
+
+Tri posledice koje se lako previde:
+
+1. **`core` uvozi samo standardnu biblioteku.** Ni `pygame`, ni bilo šta sa
+   PyPI-ja. Ovo je uslov da `core` preživi prelazak na veb bez izmene.
+2. **pygame tipovi ne izlaze iz `render.py` i `scenes/`.** `Surface`, `Rect`,
+   `event` ne smeju da se pojave u potpisu funkcije koju zove `state.py`.
+   Koordinate koje prelaze tu granicu su `Square`, nikad pikseli.
+3. **`net.py` i `state.py` se pišu bez pygame-a namerno** (ADR-004) — u fazi 4
+   se prevode 1:1 u JavaScript. Sve što u njima nije prevodivo je greška u
+   dizajnu, ne u prevodu.
+
+### Provera
+
+Pravilo se proverava automatski, alatom u gitu — ne skillom (ADR-028):
+
+```
+tools/layer_check.py
+```
+
+Alat parsira `import` naredbe kroz `ast` i prijavljuje svaki uvoz koji tabela
+ne dozvoljava. Pokreće se i kao test, pa checkpoint faze 0 pada ako se pravilo
+prekrši.
+
+---
+
+## 3. Šta klijent sme, a šta ne
+
+Ovo je granica koju je najlakše pogrešno pročitati, pa stoji zapisana doslovno
+(ADR-024):
+
+> Granica je između **čitanja pozicije** i **odlučivanja o legalnosti**.
+
+| | Klijent |
+|---|---|
+| parsiranje FEN-a, crtanje table | ✅ dozvoljeno |
+| računanje kuda figura sme | ❌ zabranjeno |
+
+> Konkretno: pygame klijent sme da uvozi **samo** `core/types.py` i
+> `core/fen.py`. Nikad `movegen`, `attacks`, `rules` ni `game`.
+>
+> Veb klijent u fazi 4 reimplementira parsiranje FEN-a u JavaScriptu — takođe
+> dozvoljeno po istoj logici. **Parsiranje nije rasuđivanje.**
+
+### Šta ovo znači u praksi
+
+| Situacija | Ko odlučuje |
+|---|---|
+| gde stoje figure | FEN iz `STATE`, klijent parsira |
+| kuda pešak sme | `legal_moves` iz `STATE` |
+| da li je ovo uzimanje | polje `capture` iz `STATE` |
+| da li treba dijalog za promociju | polje `promotion` iz `STATE` |
+| da li je potez legalan | server, uvek |
+| koliko je vremena ostalo | `clocks` iz `STATE` je izvor istine |
+| da li je pala zastavica | server |
+
+Klijent sme da odbrojava sat lokalno radi glatkoće prikaza, ali se **uvek
+sinhronizuje** na vrednost iz `STATE` i nikad sam ne proglašava pad zastavice.
+
+Klijent sme da odbije drag & drop na polje koje nije u `legal_moves` — to nije
+odlučivanje, to je korišćenje serverovog odgovora.
+
+---
+
+## 4. Imenovanje, tipovi i komentari
+
+### Imena
+
+| Šta | Kako | Primer |
+|---|---|---|
+| fajl, folder | `snake_case` | `movegen.py` |
+| klasa, enum | `PascalCase` | `CastlingRights` |
+| funkcija, metoda, promenljiva | `snake_case` | `is_square_attacked` |
+| konstanta | `UPPER_SNAKE_CASE` | `STARTING_FEN` |
+| interno (nije javni API modula) | vodeća donja crta | `_rook_path_clear` |
+| član enuma | `UPPER_SNAKE_CASE` | `Color.WHITE`, `MoveKind.EN_PASSANT` |
+
+Boolean funkcija počinje sa `is_`, `has_` ili `can_`. Funkcija koja menja stanje
+je glagol (`make_move`), funkcija koja vraća vrednost je imenica ili `get_`.
+
+### Tipovi
+
+Type hints se pišu **svuda** — u potpisima funkcija, na poljima dataclass-a, na
+modulskim konstantama gde tip nije očigledan.
+
+**Ali tipovi se ne proveravaju alatom** (ADR-031). `ruff` ih ne gleda, mypy ne
+koristimo. Znači:
+
+- hint je dokumentacija za čitaoca i IDE, ne garancija
+- `Square` je **običan alias** `Square = int`, ne `NewType`. Bez type checkera
+  `NewType` ne daje ništa osim lepšeg imena.
+- svaka funkcija koja prima `Square` mora to reći **u potpisu i u docstringu**,
+  uz opseg: `0–63, a1 = 0, h8 = 63`
+
+Revidira se u fazi 4, kad `core` bude stabilan.
+
+### Dataclass-ovi
+
+- vrednosni objekti (`Move`, `Piece`, `CastlingRights`, `TimeControl`) su
+  `frozen=True, slots=True`
+- poruke protokola su `frozen=True`
+- `Board` je **mutabilan** — na tome počiva `make`/`unmake` (ADR-006)
+
+Nikad mutabilan podrazumevani argument. Ako treba prazna lista, `field(default_factory=list)`.
+
+### Komentari i docstringovi
+
+Docstring dobija svaka javna funkcija u `core/` i `protocol/`. Format:
+
+```python
+def is_square_attacked(board: Board, square: Square, by: Color) -> bool:
+    """Return True if `square` (0-63) is attacked by any `by` piece.
+
+    Does not care whether the attacking move would be legal - a pinned
+    piece still attacks. Used by check detection and castling rules.
+    """
+```
+
+Komentar objašnjava **zašto**, nikad **šta**. Ako je potrebno objasniti šta kod
+radi, kod treba prepraviti, ne komentarisati.
+
+Izuzetak gde je komentar obavezan: svako mesto gde je izabrana neočigledna
+varijanta. Tada komentar nosi broj ADR-a.
+
+```python
+# EP square enters the key only when a capture is actually available (ADR-027).
+```
+
+### Dužina i oblik
+
+- linija do 100 znakova (`ruff` to sprovodi)
+- funkcija koja ne staje na ekran je kandidat za razdvajanje
+- rani `return` umesto ugnježdenih `if`-ova
+
+---
+
+## 5. Testovi
+
+### Raspored
+
+`tests/` preslikava `src/chess/`. Svaki podfolder ima `__init__.py` da bi ga
+`unittest discover` našao.
+
+```
+tests/
+├── __init__.py
+├── core/
+│   ├── __init__.py
+│   ├── test_board.py
+│   ├── test_movegen.py
+│   ├── test_perft.py
+│   └── test_fen.py
+├── protocol/
+├── server/
+└── test_layers.py        poziva tools/layer_check.py
+```
+
+### Pokretanje
+
+```bash
+python -m unittest discover -s tests          # podrazumevano
+CHESS_SLOW_TESTS=1 python -m unittest discover -s tests
+```
+
+Prva komanda radi tek posle `pip install -e .` — `src/` raspored znači da paket
+nije na `sys.path` bez instalacije (ADR-029).
+
+### Imenovanje
+
+`test_<šta>_<uslov>_<očekivano>`:
+
+```python
+def test_castling_rejected_when_king_passes_attacked_square(self): ...
+def test_en_passant_capture_removes_pawn_behind_target(self): ...
+```
+
+Ime testa treba da bude čitljivo kao rečenica u izveštaju o padu.
+
+### Tabelarni testovi
+
+Kroz `subTest()`, da jedan pad ne sakrije ostale:
+
+```python
+for fen, depth, expected in PERFT_CASES:
+    with self.subTest(fen=fen, depth=depth):
+        self.assertEqual(perft(Board.from_fen(fen), depth), expected)
+```
+
+### Perft
+
+Skup pozicija i podela dubina su u ADR-026. Podrazumevani suite ostaje ispod
+~300.000 čvorova da bi se stvarno pokretao; dublje ide iza `CHESS_SLOW_TESTS=1`.
+
+```python
+@unittest.skipUnless(os.environ.get("CHESS_SLOW_TESTS"), "slow")
+```
+
+> **FEN-ovi i referentni brojevi se prepisuju sa Chess Programming Wiki.**
+> Nikad iz sećanja — ni čovekovog ni modelovog. Svaka konstanta nosi komentar sa
+> izvorom. Ako referenca nije potvrđena, to se kaže umesto da se pretpostavi.
+
+### Determinizam
+
+Test koji ne daje isti rezultat pri svakom pokretanju je pokvaren test.
+
+- Zobrist tabela se generiše sa **fiksnim seed-om** (ADR-027)
+- nema `random` bez seed-a, nema oslanjanja na `time.time()`
+- nema oslanjanja na redosled `set`-a ili `dict`-a gde redosled nije garantovan
+
+### Izolacija
+
+- test **ne dira disk** izvan `tempfile`
+- test **ne otvara socket** — server se testira kroz `Player` interfejs sa
+  lažnom implementacijom, ne kroz mrežu
+- test ne zavisi od drugog testa ni od redosleda izvršavanja
+
+### Pravilo koje se ne krši
+
+> **Test se nikad ne menja da bi prošao.**
+
+Ako test pada, greška je u kodu dok se ne dokaže suprotno. Ako je test zaista
+pogrešan, to je **zaseban commit** sa obrazloženjem zašto je očekivanje bilo
+pogrešno — nikad tiha izmena u istom commitu sa implementacijom.
+
+---
+
+## 6. Greške i izuzeci
+
+### Hijerarhija
+
+```python
+class ChessError(Exception):          # core/types.py
+class IllegalMoveError(ChessError):
+class InvalidFenError(ChessError):
+class InvalidSanError(ChessError):
+
+class ProtocolError(Exception):       # protocol/codec.py
+```
+
+`core` baca samo `ChessError` potomke. `protocol` baca `ProtocolError` na
+neispravan ulaz. Server hvata i pretvara u `ERROR` poruku sa kodom iz
+`PROTOCOL.md`.
+
+### Pravila
+
+- **nikad goli `except:`** — uvek konkretan tip
+- `except Exception` je dozvoljen samo na **granici procesa** (glavna petlja
+  servera), i mora da loguje i nastavi ili da ponovo baci
+- izuzetak nosi poruku na **engleskom**, dovoljno konkretnu za debug:
+  `f"no piece on {to_algebraic(sq)}"`, ne `"invalid"`
+- izuzetak **nikad ne nosi tekst za korisnika** — korisnički tekst ide kroz
+  `message_key` i `sr.json` (ADR-010)
+- `core` ne štampa ništa i ne loguje — vraća vrednost ili baca
+
+### Validacija na granici
+
+Sve što dolazi spolja proverava se u `protocol/codec.py`, jednom, na ulazu.
+Posle te tačke kod radi sa proverenim `dataclass`-om i ne proverava ponovo.
+
+Potez iz spoljnog sveta se **traži u listi generisanih legalnih poteza**, nikad
+ne izvršava direktno (ADR-022). `Move.from_uci()` ne može da odredi `kind` bez
+table — to nije nedostatak nego zaštita.
+
+---
+
+## 7. Ulaz/izlaz i enkodiranje
+
+Razvija se na Windows-u, gde je podrazumevano enkodiranje `open()`-a lokalno, a
+ne UTF-8. To je izvor grešaka koje se ne vide kod tebe dok ne pukne kod drugoga.
+
+### Pravila
+
+```python
+# uvek, bez izuzetka
+with path.open(encoding="utf-8") as f: ...
+
+# JSON sa dijakritikom
+json.dump(data, f, ensure_ascii=False, indent=2)
+```
+
+- **svaki `open()` ide sa `encoding="utf-8"` eksplicitno**
+- putanje su `pathlib.Path`, nikad spojeni stringovi
+- putanja do resursa se računa od modula, nikad od radnog direktorijuma:
+
+```python
+ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
+```
+
+- konfiguracija ide kroz promenljivu okruženja sa razumnim podrazumevanim:
+  `os.environ.get("CHESS_DB_PATH", "chess.db")`
+
+### Logovanje
+
+- kroz `logging`, nikad `print()` u kodu biblioteke
+- log poruke na **engleskom i bez dijakritika** — Windows konzola ume da pukne
+  na č ć š ž đ (ADR-010)
+- `DEBUG` za tok poruka, `INFO` za životni ciklus partije, `WARNING` za
+  odbijene poteze i neispravne poruke, `ERROR` za neočekivano
+- `print()` je dozvoljen samo u `tools/` i u ulaznim tačkama (`__main__.py`)
+
+### Font i tekst
+
+Nijedan tekst vidljiv korisniku ne stoji u kodu. Sve ide kroz ključ u
+`assets/i18n/sr.json`. Font koji se pakuje mora da podržava č ć š ž đ —
+DejaVu Sans, ne podrazumevani pygame font.
+
+---
+
+## 8. Git
+
+### Grane
+
+- `main` je uvek u stanju koje prolazi checkpoint
+- rad ide na grani po fazi: `faza-1`, `faza-2`, …
+- merge nazad u `main` sa `--no-ff`, da faza ostane vidljiva u istoriji
+
+### Commit
+
+Jedan task = jedan commit. Poruka na engleskom, u imperativu:
+
+```
+<tip>: <šta, malim slovom, bez tačke>
+
+<opciono telo: zašto, ne šta>
+```
+
+Tipovi: `feat` · `fix` · `docs` · `test` · `refactor` · `chore`
+
+```
+feat: add castling generation with five-condition check
+fix: restore en passant square in unmake
+docs: protocol v2, glossary, ADR-022 to ADR-031
+test: add Position 3 and Position 4 perft cases
+```
+
+Telo se piše kad odluka nije očigledna iz diffa. Ako commit prati ADR, broj ADR-a
+ide u telo.
+
+### Šta nikad ne ulazi u commit
+
+```
+.claude/          CLAUDE.md         __pycache__/      *.pyc
+.venv/            .idea/            chess.db          *.log
+```
+
+Repozitorijum je javan i u gitu se **ništa ne briše** — što uđe u commit, ostaje
+u istoriji zauvek. Zato `.gitignore` postoji pre prvog commita (ADR-012).
+
+### Zabranjeno
+
+- `push --force` na `main`
+- `reset --hard`, `rebase`, `clean -fd` bez izričitog odobrenja
+- commit koji meša implementaciju i ispravku testa
+- commit koji nosi ADR bez propagacije iz §1
+
+### Referenciranje za pregled
+
+Kad se dokument šalje na pregled van projekta, link se zakucava na **commit SHA**,
+nikad na `main` — `main` može biti keširan i ne kaže koju verziju je čitalac video.
+
+```
+https://raw.githubusercontent.com/<user>/<repo>/<SHA>/docs/PROTOCOL.md
+```
+
+---
+
+## 9. Definicija gotovog taska
+
+Task nije gotov dok svih sedam ne prođe:
+
+- [ ] `python -m unittest discover -s tests` prolazi
+- [ ] `ruff check .` i `ruff format --check .` čisti
+- [ ] perft pokrenut ako je diran generator poteza (obavezno od 1.3)
+- [ ] pročitan `git diff` — ceo, ne preleteo
+- [ ] odgovoreno na pitanja iz koraka 4 ritma po tasku; pitanje i odgovor
+      zapisani u `docs/faze/faza-N.md` (ADR-021)
+- [ ] `ROADMAP.md` ažuriran; `DECISIONS.md` dopunjen ako je doneta odluka, uz
+      propagaciju iz §1 u **istom commitu**
+- [ ] commitovano
+
+Poslednja stvarna provera nije na listi jer se ne može odštiklirati:
+
+> **Mogu naglas da objasnim šta je urađeno i zašto baš tako.**
+
+Ako to ne prolazi, ne prelazi se na sledeći task — pitaj da ti se objasni
+drugačije, ili odnesi kod na claude.ai.
+
+---
+
+## 10. Alati
+
+| Alat | Uloga | Zavisnost |
+|---|---|---|
+| `ruff` | linter i formatter | dev-only |
+| `unittest` | testovi | stdlib |
+| `tools/perft.py` | perft i `perft_divide` | u gitu (ADR-028) |
+| `tools/cli_client.py` | CLI klijent za testiranje servera | u gitu (ADR-017) |
+| `tools/layer_check.py` | provera uvoza iz §2 | u gitu |
+
+Konfiguracija `ruff`-a stoji u `pyproject.toml`: `line-length = 100`,
+`target-version = "py311"`.
+
+Nova zavisnost se **ne dodaje bez odobrenja i bez ADR-a.** Trenutna lista je
+`pygame` za klijenta i `ruff` za razvoj. To je sve.

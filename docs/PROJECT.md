@@ -346,8 +346,8 @@ Checkpoint je **objektivan uslov**, ne osećaj. Ne prelazi se dalje dok ne prođ
 | Faza | Sadržaj | Checkpoint |
 |---|---|---|
 | 0 | Skelet, git, ruff | `unittest` prolazi, `ruff` čist |
-| 1 | **Engine** — cela šahovska logika | **perft do dubine 5 se poklapa** |
-| 2 | Protokol + server (TCP) | dva `nc` terminala odigraju partiju kucanjem |
+| 1 | **Engine** — cela šahovska logika | **perft se poklapa na skupu iz ADR-026** |
+| 2 | Protokol + server (TCP) | dva `tools/cli_client.py` terminala odigraju partiju |
 | 3 | **Pygame klijent** | **dva prozora igraju → video za mentora** |
 | 4 | Veb klijent (WebSocket + vanilla JS) | dva browser taba igraju |
 | 5 | SQLite, nalozi, lobby, istorija | partija preživi restart servera |

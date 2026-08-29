@@ -132,6 +132,10 @@ dodaje treći profil. Cena: jedan sloj konfiguracije više.
 
 ## ADR-009: SQLite, sa repository pattern-om od početka
 
+> ⚠️ **Komanda za pokretanje zamenjena ADR-om 029.** Umesto
+> `pip install pygame` ide `pip install -e .` — `src/` raspored traži
+> instalaciju paketa. Princip "radi posle klonirаnja" ostaje.
+
 **Kontekst.** Prethodni projekat korisnika (FastAPI + SQL Server) nije radio kod
 druge osobe: baza nije bila instalirana, kredencijali nisu bili u repozitorijumu,
 šema nije postojala, ODBC drajver je nedostajao.
@@ -226,7 +230,7 @@ perft checkpointu — kad je najskuplje.
 
 | Polje | Zašto |
 |---|---|
-| pojedena figura | vraćanje na tablu |
+| pojedena figura **i njeno polje** | kod en passanta pojedeni pešak nije na odredišnom polju |
 | prethodna prava na rokadu | pomeranje topa ili kralja ih gasi nepovratno |
 | prethodno en passant polje | pravo traje tačno jedan potez |
 | prethodni brojač polupoteza | pravilo 50 poteza |
@@ -433,6 +437,10 @@ Cena: partija od 80 poteza nosi par stotina bajtova više po poruci, što je na
 
 ## ADR-024: Granica između čitanja pozicije i odlučivanja
 
+> ⚠️ **Način provere zamenjen ADR-om 033.** Granica se proverava
+> `tools/layer_check.py` alatom u gitu, pokrenutim kao test — ne skillom.
+> Sama granica ostaje neizmenjena.
+
 **Kontekst.** Pravilo "nula šahovske logike u klijentu" je nejasno u jednom
 slučaju: klijent mora da parsira FEN da bi nacrtao tablu. Da li je to kršenje?
 
@@ -448,7 +456,7 @@ Bez zapisane granice, o ovome bi se raspravljalo za mesec dana.
 Konkretno: pygame klijent sme da uvozi **samo** `core/types.py` i `core/fen.py`.
 Nikad `movegen`, `attacks`, `rules` ni `game`.
 
-**Posledice.** Pravilo je proverivo automatski — `layer-check` skill traži uvoze.
+**Posledice.** Pravilo je proverivo automatski (vidi ADR-033).
 Veb klijent u fazi 4 reimplementira parsiranje FEN-a u JavaScriptu, što je
 takođe dozvoljeno po istoj logici. Cena: nikakva.
 
@@ -514,7 +522,7 @@ nego dve na velikoj. Podrazumevani suite ostaje brz, pa se stvarno pokreće.
 
 **Fiksan seed.** Tabela nasumičnih brojeva generiše se sa zadatim seed-om.
 Bez toga su ključevi različiti pri svakom pokretanju i testovi nisu
-deterministički — što krši pravilo 13 iz `CLAUDE.md`.
+deterministički — što krši pravilo determinizma iz `docs/CONVENTIONS.md` §5.
 
 **En passant uslovno.** Ep polje ulazi u ključ **samo kad je en passant
 uzimanje stvarno moguće** (postoji protivnički pešak koji sme da uzme).
@@ -606,3 +614,79 @@ Revidira se u fazi 4, kad `core` bude stabilan i kad dodavanje alata ne usporava
 **Posledice.** Manje alata za konfigurisanje i manje trenja u fazi u kojoj se
 najviše menja. Cena: greške u tipovima se hvataju testovima, ne alatom.
 Perft to uglavnom pokriva za `core`.
+
+---
+
+## ADR-032: Hijerarhija dokumenata i obavezna oznaka na oborenom ADR-u
+
+**Kontekst.** ADR-030 je nabrojao četiri dokumenta u pravilu propagacije, jer
+`POJMOVNIK.md` i `WORKFLOW.md` tada nisu postojali. Uz to, ADR-030 nije rekao
+šta se dešava kad **novi ADR obori stariji ADR** — pa je ADR-029 oborio ADR-009
+bez ijedne oznake, i propust je primećen tek u trećem krugu pregleda.
+
+Drugim rečima: pravilo propagacije je prekršeno u istom dokumentu koji ga uvodi.
+
+**Odluka.**
+
+**Puna hijerarhija:**
+
+```
+DECISIONS.md > PROTOCOL.md > CONVENTIONS.md > PROJECT.md > ROADMAP.md > POJMOVNIK.md
+```
+
+`CONVENTIONS.md` obavezuje kod, ali ne sme da protivreči protokolu — protokol je
+ugovor sa spoljnim svetom, konvencije su unutrašnja stvar. `POJMOVNIK.md` nema
+autoritet: objašnjava, ne propisuje, i uvek je on taj koji se ispravlja.
+
+**Propagacija važi za svaki fajl u `docs/`**, ne samo za četiri iz ADR-030.
+
+**Novi ADR koji obara stariji obavezno stavlja ⚠️ oznaku na vrh starijeg**, sa
+pokazivačem na novi. Stari ADR se ne briše — fajl je append-only i istorija
+odluka se čuva cela.
+
+**Posledice.** Čitalac koji naiđe na stari ADR odmah zna da nastavi dalje.
+Bez toga bi neko implementirao `threading` po ADR-003 ili `pip install pygame`
+po ADR-009. Cena: jedan blok teksta po oborenom ADR-u.
+
+---
+
+## ADR-033: `tools/layer_check.py` kao alat i test, ne skill
+
+**Kontekst.** ADR-024 je rekao da se granica slojeva proverava `layer-check`
+skillom. To protivreči ADR-028: *ako nešto radi i bez asistenta, ide u git.*
+
+Provera uvoza radi bez asistenta — to je lint pravilo, ne uputstvo. Uz to,
+skill se okida kad ga model prepozna kao relevantan, a to nije garancija.
+
+**Odluka.** `tools/layer_check.py` ide u git. Parsira `import` naredbe kroz
+`ast` i prijavljuje svaki uvoz koji tabela iz `CONVENTIONS.md` §2 ne dozvoljava.
+
+Pokreće se **i kao test** (`tests/test_layers.py`), pa checkpoint faze 0 pada
+ako se pravilo prekrši. `.claude/skills/layer-check/` se svodi na nekoliko redova
+koji pozivaju alat.
+
+**Posledice.** Kršenje granice hvata test suite, ne asistent koji se seti da
+pozove skill. Pravilo postaje izvršivo za bilo koga ko klonira repozitorijum.
+Cena: pedesetak linija koda u fazi 0.
+
+---
+
+## ADR-034: `capture` je uvek serverski podatak
+
+**Kontekst.** Polje `capture` u `legal_moves` pojavljivalo se samo u primeru za
+promociju, bez ijedne rečenice da li stoji na svakom potezu koji uzima.
+
+Klijent bi mogao da ga izvede sam — „ima li figure na odredišnom polju".
+Ali **kod en passanta odredišno polje je prazno**, pa bi takav klijent nacrtao
+pogrešno. A klijent koji to ispravno izvede upravo je implementirao šahovsko
+pravilo, što krši ADR-001.
+
+**Odluka.** `capture: true` server šalje na **svakom** potezu koji uzima figuru,
+uključujući en passant. Klijent ga nikad ne izvodi.
+
+Isto važi za `promotion`. Promocija je uvek u jednu od četiri figure —
+`queen`, `rook`, `bishop`, `knight` — i to je zapisano u `PROTOCOL.md` da ne bi
+bilo neizrečena pretpostavka u klijentu.
+
+**Posledice.** Klijent crta prsten uzimanja i otvara dijalog za promociju bez
+ijednog šahovskog pravila. Cena: jedan bool po potezu u `STATE` poruci.
