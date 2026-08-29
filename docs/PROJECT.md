@@ -1,8 +1,24 @@
 # PROJEKAT — šahovska aplikacija
 
 Ovaj dokument je kompletan opis projekta. Čita se jednom, na početku.
-Svakodnevna pravila su u `CLAUDE.md`, tok rada u `docs/WORKFLOW.md`,
-lista taskova u `docs/ROADMAP.md`.
+
+| Dokument | Sadržaj |
+|---|---|
+| `CLAUDE.md` | svakodnevna pravila, učitava se u svaku sesiju |
+| `docs/CONVENTIONS.md` | konvencije projekta (nastaje u 0.2) |
+| `docs/WORKFLOW.md` | tok rada, kada nova sesija |
+| `docs/ROADMAP.md` | lista taskova i trenutno stanje |
+| `docs/PROTOCOL.md` | ugovor između servera i klijenta |
+| `docs/DECISIONS.md` | sve odluke sa obrazloženjem (ADR) |
+| `docs/POJMOVNIK.md` | objašnjenja termina — FEN, Zobrist, perft |
+
+**Hijerarhija kad se dokumenti ne slažu** (ADR-030):
+
+```
+DECISIONS.md  >  PROTOCOL.md  >  PROJECT.md  >  ROADMAP.md
+```
+
+ADR koji obori nešto napisano u ovom dokumentu ispravlja ga u **istom commitu**.
 
 ---
 
@@ -81,12 +97,16 @@ Veb klijent → baza i nalozi → bot → deploy.
 | Engine (`core/`) | čist Python, stdlib | — |
 | Testovi | `unittest` | — |
 | Protokol | `dataclasses` + `json` | — |
-| Server | `socket` + `threading` | — |
+| Server | `socket` + `selectors` (jedna nit) | — |
 | Klijent | **pygame** | pygame |
 | Baza (faza 5) | `sqlite3` kroz repository pattern | — |
 | Dev | `ruff` | dev-only |
 
-**Pokretanje: `pip install pygame`.** To je sve.
+**Pokretanje: `pip install -e .`** — jedna komanda, instalira paket u editable
+režimu i povlači `pygame` iz `pyproject.toml`. To je sve.
+
+> `src/` raspored znači da Python ne vidi paket bez instalacije. Zato `-e .`,
+> a ne samo `pip install pygame` (ADR-029).
 
 ### Svesno odbijeno
 
@@ -165,9 +185,12 @@ chess/
 │           ├── menu.py
 │           └── game.py
 ├── assets/
-│   ├── pieces/                  Cburnett SVG, BSD-3
+│   ├── pieces/                  Cburnett PNG (rasterizovan), BSD-3
 │   ├── fonts/                   DejaVu Sans
 │   └── i18n/sr.json
+├── tools/
+│   ├── perft.py                 perft + perft_divide (u gitu, ADR-028)
+│   └── cli_client.py            CLI klijent za testiranje servera (ADR-017)
 ├── docs/
 └── tests/
 ```
@@ -257,8 +280,10 @@ Pravila su podatak, ne `if` zakucan u kodu.
 - **Izuzetak:** ako protivnik nema dovoljno materijala da matira nijednim nizom
   legalnih poteza → remi, ne poraz
 - Sat na `time.monotonic()`, **nikad** `time.time()` (NTP može da skoči)
-- Server ne drži nit koja otkucava: čuva `remaining_ms` i `turn_started_at`,
-  računa razliku pri svakom događaju
+- Server čuva `remaining_ms` po igraču i `turn_started_at`, pa računa razliku
+- **Pad zastavice okida sam**, kroz `select(timeout=vreme_do_najbliže_zastavice)`
+  u `selectors` event loop-u. Ne čeka se poruka od igrača — inače bi partija u
+  kojoj niko ništa ne šalje visila zauvek (ADR-016).
 
 ### Kontrole vremena
 
@@ -419,7 +444,9 @@ Avatar bota se crta u klijentu koji je aktivan. SVG/PNG materijal se koristi u o
 
 ## 12. Licence
 
-- **Figure:** Cburnett SVG set sa Wikimedia Commons. Višestruko licenciran
+- **Figure:** Cburnett set sa Wikimedia Commons, **rasterizovan u PNG** u dve
+  veličine još u fazi 0.4 (pygame učitava SVG u nominalnoj veličini, pa
+  skaliranje izgleda loše). Višestruko licenciran
   (BSD-3, CC-BY-SA-3.0, GFDL, GPL) — biramo **BSD-3**, obična atribucija bez
   copyleft obaveze. Atribucija u `assets/pieces/LICENSE.txt`.
 - **Font:** DejaVu Sans (slobodna licenca) — mora da podržava č ć š ž đ.

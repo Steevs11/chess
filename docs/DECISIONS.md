@@ -192,6 +192,9 @@ Cena: ti fajlovi nisu verzionisani — treba im kopija van foldera projekta.
 
 ## ADR-013: `Square` je `int`, ne dataclass
 
+> ⚠️ **Precizirano ADR-om 031.** `Square` je običan alias `Square = int`, ne
+> `NewType` — bez type checkera `NewType` ne daje nikakvu garanciju.
+
 **Kontekst.** Prvobitni plan je stavljao `Square` u istu korpu sa `Move` kao
 `frozen=True` dataclass. Perft na dubini 5 obilazi 4.865.609 čvorova i alocirao
 bi desetine miliona `Square` objekata.
@@ -210,6 +213,10 @@ funkcije koje ga primaju moraju to jasno da imenuju u potpisu i docstringu.
 ---
 
 ## ADR-014: Undo zapis se definiše u tasku 1.2
+
+> ⚠️ **Dopunjeno ADR-om 022.** Nedostajalo je **polje pojedene figure** — kod
+> en passanta pojedeni pešak nije na odredišnom polju. Rešeno uvođenjem
+> `Move.kind`.
 
 **Kontekst.** `unmake` ne može da vrati stanje ako se ne zapamti šta je potez
 promenio. Prvobitni ROADMAP to nije naveo, pa bi se propust otkrio tek na
@@ -294,6 +301,10 @@ linija konverzije.
 
 ## ADR-019: Perft je alat od 1.3, ne checkpoint na 1.8
 
+> ⚠️ **Podela dubina zamenjena ADR-om 026.** Kiwipete d4 (4.085.603) i početna
+> d5 (4.865.609) su isti red veličine, pa podela nije postigla cilj. Princip
+> "perft je alat od 1.3" ostaje.
+
 **Kontekst.** Perft je bio zakazan tek za 1.8. To znači da se generisanje poteza
 piše kroz tri taska bez ijedne provere ispravnosti.
 
@@ -363,6 +374,235 @@ Korak 4 je obavezan i ne preskače se. Pitanja moraju biti o **zašto**, ne o
 **šta**: "zašto filtriramo legalnost posle generisanja umesto tokom" je dobro
 pitanje, "šta radi ova funkcija" nije.
 
+**Pitanja i odgovori se zapisuju.** Posle svakog taska Claude Code dodaje dva
+reda u `docs/faze/faza-N.md`: postavljeno pitanje i da li je korisnik znao
+odgovor. Bez toga "gde zapneš, tu se vraćaš" nema gde da zapamti gde si zapeo —
+sve nestaje sa `/clear`.
+
 **Posledice.** Faza 1 ne traje duže nego u prvobitnom planu. Razumevanje se meri
 odgovorom, ne osećajem. Dokumentacija po fazama nastaje kao nusprodukt umesto
 kao poseban posao na kraju. Cena: dva do tri minuta po tasku.
+
+---
+
+## ADR-022: `Move` nosi `kind`
+
+**Kontekst.** Tri odvojena problema pokazala su se kao isti problem:
+
+1. `UndoRecord` ne može ispravno da vrati en passant — pojedeni pešak nije na
+   odredišnom polju nego iza njega, pa bi `unmake` morao to da **zaključuje**
+2. `legal_moves` u protokolu ne može da izrazi promociju — pešak na `e7` ima
+   četiri legalna poteza na `e8`, a mapa `from → [to]` ih spaja u jedan
+3. `make` i `unmake` bi bili gomila `if`-ova koji rekonstruišu šta je potez bio
+
+**Odluka.** `Move` dobija polje `kind`: `NORMAL`, `CAPTURE`, `DOUBLE_PAWN_PUSH`,
+`EN_PASSANT`, `CASTLE`, `PROMOTION`. Uvodi se u tasku 1.1.
+
+Generator poteza zna koju vrstu pravi, pa je popunjavanje besplatno.
+
+**Posledice.**
+
+- `make`/`unmake` postaju grananje po vrsti umesto zaključivanja
+- `UndoRecord` ne izvodi ništa — vrsta mu je data
+- Protokol može da nosi `{"to": "e8", "promotion": true}`, pa klijent zna kad da
+  otvori dijalog **bez ijednog šahovskog pravila**
+- `Move.from_uci()` **ne može da odredi `kind` bez table** — i to je dobro.
+  Tera na ispravan obrazac: potez iz spoljnog sveta se **traži u listi
+  generisanih legalnih poteza**, nikad se ne izvršava direktno. Isto je i
+  bezbednosno ispravno.
+
+Cena: jedan enum više u fazi 1.
+
+---
+
+## ADR-023: `STATE` je pun snapshot, ne delta
+
+**Kontekst.** `STATE` je nosio samo `last_move`, pa je klijent akumulirao
+istoriju poteza za prikaz iz taska 3.7. To radi dok klijent ne propusti nijednu
+poruku — a onda dolazi rekonekcija iz 5.7 i klijent koji se vratio nema ništa.
+
+**Odluka.** Svaka `STATE` poruka sadrži sve što treba da se nacrta ceo ekran od
+nule, uključujući `history` kao listu SAN poteza. Klijent ne akumulira ništa.
+
+**Posledice.** Rekonekcija postaje besplatna — dobiješ poslednji `STATE` i
+nastaviš. Klijent nema akumulirano stanje koje bi moglo da se raziđe sa serverom.
+Cena: partija od 80 poteza nosi par stotina bajtova više po poruci, što je na
+`localhost` i na vebu nemerljivo.
+
+---
+
+## ADR-024: Granica između čitanja pozicije i odlučivanja
+
+**Kontekst.** Pravilo "nula šahovske logike u klijentu" je nejasno u jednom
+slučaju: klijent mora da parsira FEN da bi nacrtao tablu. Da li je to kršenje?
+
+Bez zapisane granice, o ovome bi se raspravljalo za mesec dana.
+
+**Odluka.** Granica je između **čitanja pozicije** i **odlučivanja o legalnosti**.
+
+| | Klijent |
+|---|---|
+| parsiranje FEN-a, crtanje table | ✅ |
+| računanje kuda figura sme | ❌ |
+
+Konkretno: pygame klijent sme da uvozi **samo** `core/types.py` i `core/fen.py`.
+Nikad `movegen`, `attacks`, `rules` ni `game`.
+
+**Posledice.** Pravilo je proverivo automatski — `layer-check` skill traži uvoze.
+Veb klijent u fazi 4 reimplementira parsiranje FEN-a u JavaScriptu, što je
+takođe dozvoljeno po istoj logici. Cena: nikakva.
+
+---
+
+## ADR-025: Nedefinisano ponašanje — diskonekcija, remi, potez u letu
+
+**Kontekst.** Tri situacije koje task 2.7 traži, a nigde nisu bile zapisane.
+
+**Odluka.**
+
+**Diskonekcija.** Server šalje `OPPONENT_DISCONNECTED`. **Sat protivnika
+nastavlja da ide**, partija se završava padom zastavice sa `termination:
+"timeout"`. Ne uvodi se nijedan nov mehanizam, poklapa se sa ponašanjem online
+platformi, i ostavlja mesto za rekonekciju u fazi 5 bez izmene protokola.
+
+**Ponuda remija.** Nudi se samo kad si na potezu. Pada čim protivnik odigra
+potez (FIDE). Jedna ponuda po potezu — druga vraća `DRAW_ALREADY_OFFERED`.
+
+**Potez u letu.** Najviše jedna `MOVE` poruka bez odgovora. Uz to `ERROR`
+vezan za potez **nosi polje `move`**, pa klijent zna koju figuru da vrati posle
+neuspelog drag & drop-a. Pojas i tregeri — pravilo je zapisano, ali klijent ne
+zavisi od toga da ga server poštuje.
+
+**Posledice.** Task 2.7 ima šta da implementira. Cena: tri nova koda greške.
+
+---
+
+## ADR-026: Perft — skup pozicija i podela dubina
+
+**Kontekst.** ADR-019 je delio perft na "brz default" i "spor iza
+`CHESS_SLOW_TESTS`", ali aritmetika ne podržava tu podelu: Kiwipete dubina 4 je
+4.085.603 čvora, a početna pozicija dubina 5 je 4.865.609. Isti red veličine —
+podrazumevani suite je već bio spor.
+
+Uz to, dve pozicije ne pokrivaju dovoljno. Standardni skup sa Chess Programming
+Wiki ima šest, i svaka gađa drugu klasu bagova.
+
+**Odluka.**
+
+| | Pozicije | Približno čvorova |
+|---|---|---|
+| Podrazumevano | početna d4 · Kiwipete d3 · Position 3 d4 · Position 4 d3 | ~300.000 |
+| `CHESS_SLOW_TESTS=1` | početna d5 · Kiwipete d4 · ostale dublje | ~9.000.000 |
+
+Position 3 lovi en passant, Position 4 promociju i vezane figure, Position 5
+rokadu u neobičnim pozicijama.
+
+> **FEN-ove i referentne brojeve prepisati sa Chess Programming Wiki.**
+> Nikad iz sećanja — ni čovekovog ni modelovog. Ako referenca nije potvrđena,
+> reci to umesto da pretpostaviš.
+
+**Posledice.** Četiri pozicije na maloj dubini nalaze više bagova po sekundi
+nego dve na velikoj. Podrazumevani suite ostaje brz, pa se stvarno pokreće.
+
+---
+
+## ADR-027: Zobrist — fiksan seed, en passant uslovno
+
+**Kontekst.** Dve zamke koje prave suptilne bagove.
+
+**Odluka.**
+
+**Fiksan seed.** Tabela nasumičnih brojeva generiše se sa zadatim seed-om.
+Bez toga su ključevi različiti pri svakom pokretanju i testovi nisu
+deterministički — što krši pravilo 13 iz `CLAUDE.md`.
+
+**En passant uslovno.** Ep polje ulazi u ključ **samo kad je en passant
+uzimanje stvarno moguće** (postoji protivnički pešak koji sme da uzme).
+Ako se XOR-uje uvek, pozicija posle `e2-e4` nikad neće biti jednaka istoj
+poziciji dobijenoj drugim redosledom poteza, i trostruko ponavljanje neće
+okinuti kad treba.
+
+**Posledice.** Ponavljanje radi tačno. Testovi su ponovljivi. Cena: jedna
+provera više pri ažuriranju ključa.
+
+---
+
+## ADR-028: `tools/perft.py` u git, skill samo poziva
+
+**Kontekst.** Logika iz ADR-020 nije bila primenjena dosledno. Perft runner je
+živeo u `.claude/skills/perft/`, što je van gita — a perft runner je **alat
+projekta**, ne uputstvo asistentu.
+
+**Odluka.** Perft harness ide u `tools/perft.py`, u git. `.claude/skills/perft/SKILL.md`
+se svodi na nekoliko redova koji taj alat pozivaju i objašnjavaju kad.
+
+Isto pravilo važi unapred: **ako nešto radi i bez asistenta, ide u git.**
+
+**Posledice.** Perft se može pokrenuti ručno, iz CI-ja, ili od strane bilo koga
+ko klonira repozitorijum. Skill ostaje tanak. Cena: nikakva.
+
+---
+
+## ADR-029: `pip install -e .` kao jedina komanda za pokretanje
+
+**Kontekst.** Sa `src/chess/` rasporedom, `python -m unittest discover -s tests`
+**ne nalazi paket**, jer `src/` nije na `sys.path`. Checkpoint faze 0 ne bi
+prošao prvog dana.
+
+Uz to, rečenica iz `PROJECT.md` — *"Pokretanje: `pip install pygame`. To je sve."* —
+postaje netačna.
+
+**Odluka.** `pygame` je deklarisan kao zavisnost u `pyproject.toml`, a uputstvo
+za pokretanje postaje:
+
+```bash
+pip install -e .
+```
+
+Jedna komanda, koja instalira i paket u editable režimu i sve zavisnosti.
+
+**Posledice.** `src/` raspored ostaje (sprečava da testovi slučajno uvezu fajlove
+iz radnog direktorijuma umesto instalirani paket). Obećanje "jedna komanda" i
+dalje stoji. `PROJECT.md` §4 mora biti ispravljen.
+
+---
+
+## ADR-030: ADR koji obara tekst ispravlja ga u istom commitu
+
+**Kontekst.** Posle prvog kruga pregleda, `PROTOCOL.md` §7 je i dalje opisivao
+model sata koji je ADR-016 proglasio neispravnim, a §8 je i dalje pominjao `nc`
+koji je ADR-017 zamenio. `PROJECT.md` je zaostajao za tri odluke.
+
+`DECISIONS.md` je append-only i to je ispravno. Ali nigde nije pisalo da odluka
+mora biti **propagirana** u dokumente koje obara.
+
+**Odluka.** Kad ADR obori nešto napisano u `PROJECT.md`, `PROTOCOL.md`,
+`ROADMAP.md` ili `CONVENTIONS.md`, ispravka tih dokumenata ide u **istom commitu**
+kao i ADR. Bez izuzetka.
+
+Hijerarhija kad se dokumenti ne slažu:
+
+```
+DECISIONS.md  >  PROTOCOL.md  >  PROJECT.md  >  ROADMAP.md
+```
+
+**Posledice.** Dokument koji zaostaje za odlukama je gori od dokumenta koji ne
+postoji, jer mu se veruje. Ovo pravilo ide i u `docs/CONVENTIONS.md` §1.
+Cena: nekoliko minuta po ADR-u.
+
+---
+
+## ADR-031: Bez type checkera za sada
+
+**Kontekst.** `ruff` ne proverava tipove. Bez mypy-ja, `Square = NewType("Square", int)`
+iz ADR-013 ne daje nikakvu garanciju — ostaje `int` sa lepim imenom.
+
+**Odluka.** Ne uvodimo mypy. `Square` je običan alias `Square = int`, bez
+pretvaranja da je proveren. Type hints se i dalje pišu svuda — služe čitljivosti
+i IDE-u.
+
+Revidira se u fazi 4, kad `core` bude stabilan i kad dodavanje alata ne usporava.
+
+**Posledice.** Manje alata za konfigurisanje i manje trenja u fazi u kojoj se
+najviše menja. Cena: greške u tipovima se hvataju testovima, ne alatom.
+Perft to uglavnom pokriva za `core`.
