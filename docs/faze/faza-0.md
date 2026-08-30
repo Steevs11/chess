@@ -57,6 +57,41 @@ suzi dok ne prođe više ništa ne dokazuje.
 
 ### Pitanja
 
-_(popunjava se posle koraka 4)_
+Pitanja su rekonstruisana naknadno, u sesiji posle commita `ec3e754`, jer u trenutku
+commita nisu bila zapisana. Na 2 i 3 sam prvo odgovorio pogrešno; tačan odgovor je
+došao tek posle objašnjenja na claude.ai.
+
+**1. Zašto `src/chess/`, a ne `chess/` u korenu, kad to traži `pip install -e .`?**
+Znao — delimično. Pogodio sam organizaciju koda, promašio mehanizam.
+Python stavlja trenutni folder na početak `sys.path`, pa kod flat layouta `import
+chess` nađe `./chess/` prosto zato što stojim u njemu — instalacija se nikad ne
+proveri. Greška u `pyproject.toml` se tako ne vidi: testovi prolaze uvozeći mimo
+instalacije, a puca kod druge osobe posle `git clone`. Sa `src/` u korenu nema
+foldera `chess`, pa uvoz mora kroz ono što je `pip` upisao — testira se ono što se
+stvarno instalira. Kod `-e` su fajlovi isti, ali put do njih ide kroz zapis koji je
+`pip` napravio čitajući `pyproject.toml`, pa greška u tom fajlu pada odmah (ADR-029).
+
+**2. Zašto `tests/` dobija `__init__.py`, a `tools/` i `assets/` samo `.gitkeep`,
+kad su sva tri fajla prazna?**
+Nisam znao. Prvi odgovor je bio da `__init__.py` omogućava uvoz standardnih
+biblioteka — netačno; `import json` radi bez ijednog `__init__.py`.
+Oba fajla drže folder u gitu, jer git prati fajlove a ne foldere, ali govore
+različitim alatima. `.gitkeep` govori samo gitu. `__init__.py` govori i Pythonu:
+„ovo je paket, sme se uvesti kao `tests.core`". Ako obrišem `tests/core/__init__.py`,
+`unittest discover` u Pythonu 3.11 taj folder **tiho preskoči** — bez greške, bez
+poruke. Vidim `OK` i mislim da je prošlo, a pola testova se nije ni pokrenulo.
+Tišina je opasnija od greške. `tools/` ga nema jer se `layer_check.py` pokreće kao
+skripta i nikad se ne uvozi; `assets/` uopšte nema Python fajlova.
+
+**3. Zašto granica stoji i u docstringu `__init__.py`, kad već stoji u
+`CONVENTIONS §2` i kad će je `layer_check.py` mašinski proveravati?**
+Nisam znao. Prvi odgovor je opisao hijerarhiju dokumenata (ADR-030/ADR-032) — tačno,
+ali odgovor na drugo pitanje.
+Tri mesta hvataju istu grešku u tri različita trenutka. `CONVENTIONS.md` pre pisanja,
+ali samo ako ga otvorim. `layer_check.py` posle pisanja, kad pokrenem testove.
+Docstring **dok** pišem, jer stoji u fajlu pored onog koji uređujem. Alat kaže
+„zabranjeno" i ništa više; docstring kaže **zašto** — `core` ostaje čist da bi
+preživeo prelazak na veb bez izmene. Sa razlogom znam i kad pravilo ne važi; bez
+razloga ga samo zaobilazim.
 
 ---
