@@ -12,9 +12,10 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    planiranje (pre 0.1)
-Sledeće:   0.1 — struktura projekta
-Otvoreno:  —
+Radimo:    0.2 — pyproject i prvi test
+Sledeće:   0.2b — layer_check.py
+Otvoreno:  ruff formatira Python blokove u docs/*.md — treba exclude u
+           pyproject.toml (detalji u docs/faze/faza-0.md)
 Grana:     main
 ```
 
@@ -36,7 +37,7 @@ Korak sa pitanjima se ne preskače.
 **Checkpoint:** `pip install -e .` pa `python -m unittest discover -s tests` prolazi
 (uključujući `test_layers.py`), `ruff check .` čist
 
-- [ ] 0.1 Struktura foldera, `src/chess/` sa `__init__.py`, `tests/`, `docs/`, `assets/`, `tools/`
+- [x] 0.1 Struktura foldera, `src/chess/` sa `__init__.py`, `tests/`, `docs/`, `assets/`, `tools/`
 - [ ] 0.2 `pyproject.toml` sa **`pygame` kao zavisnošću**, `ruff` (`line-length = 100`),
       **`pip install -e .`**, prvi test
       > Bez editable instalacije `unittest discover` ne nalazi paket — `src/`
