@@ -12,10 +12,9 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    0.2 — pyproject i prvi test
-Sledeće:   0.2b — layer_check.py
-Otvoreno:  ruff formatira Python blokove u docs/*.md — treba exclude u
-           pyproject.toml (detalji u docs/faze/faza-0.md)
+Radimo:    0.2b — layer_check.py
+Sledeće:   0.3 — .gitignore proveren, commit, push
+Otvoreno:  ništa
 Grana:     main
 ```
 
@@ -34,12 +33,12 @@ Korak sa pitanjima se ne preskače.
 ---
 
 ## FAZA 0 — Skelet
-**Checkpoint:** `pip install -e .` pa `python -m unittest discover -s tests` prolazi
-(uključujući `test_layers.py`), `ruff check .` čist
+**Checkpoint:** `pip install -e ".[dev]"` pa `python -m unittest discover -s tests`
+prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check .` čisti
 
 - [x] 0.1 Struktura foldera, `src/chess/` sa `__init__.py`, `tests/`, `docs/`, `assets/`, `tools/`
-- [ ] 0.2 `pyproject.toml` sa **`pygame` kao zavisnošću**, `ruff` (`line-length = 100`),
-      **`pip install -e .`**, prvi test
+- [x] 0.2 `pyproject.toml` sa **`pygame` kao zavisnošću**, `ruff` (`line-length = 100`),
+      **`pip install -e ".[dev]"`**, prvi test
       > Bez editable instalacije `unittest discover` ne nalazi paket — `src/`
       > raspored znači da `src/` nije na `sys.path` (ADR-029).
 - [ ] 0.2b `tools/layer_check.py` + `tests/test_layers.py` — provera uvoza kroz `ast` (ADR-033)

@@ -553,6 +553,11 @@ ko klonira repozitorijum. Skill ostaje tanak. Cena: nikakva.
 
 ## ADR-029: `pip install -e .` kao jedina komanda za pokretanje
 
+> ⚠️ **Komanda precizirana ADR-om 036.** Glasi `pip install -e ".[dev]"` —
+> bez `[dev]` se `ruff` ne instalira, pa checkpoint faze 0 ne može da prođe.
+> Suština ovog ADR-a (editable install zbog `src/` rasporeda, jedna komanda)
+> ostaje na snazi.
+
 **Kontekst.** Sa `src/chess/` rasporedom, `python -m unittest discover -s tests`
 **ne nalazi paket**, jer `src/` nije na `sys.path`. Checkpoint faze 0 ne bi
 prošao prvog dana.
@@ -690,3 +695,78 @@ bilo neizrečena pretpostavka u klijentu.
 
 **Posledice.** Klijent crta prsten uzimanja i otvara dijalog za promociju bez
 ijednog šahovskog pravila. Cena: jedan bool po potezu u `STATE` poruci.
+
+---
+
+## ADR-035: `ruff` ne dira `docs/`
+
+**Kontekst.** `ruff format --check .` je od prvog dana padao — ne na kodu, nego
+na dokumentaciji. Od `ruff` 0.16 formatter ulazi i u Python blokove unutar
+Markdown fajlova. U `CONVENTIONS.md` §7 stoji namerno zbijen primer:
+
+```
+with path.open(encoding="utf-8") as f: ...
+```
+
+`ruff` ga hoće razlomljenog na dva reda. Primer koji pokazuje *šta ruff radi*
+bio je i sam prepravljen, pa je izjednačio „napisano" i „ruff hoće" — sam sebe
+je pojeo.
+
+Time je stavka iz CONVENTIONS §9 (`ruff format --check .` čist) bila nedostižna,
+a jedina alternativa bila je prepravljanje dokumentacije da bi alat ćutao.
+
+**Odluka.** `pyproject.toml` dobija `extend-exclude = ["docs"]` u `[tool.ruff]`.
+Dokumentacija nije kod; formatter je nikad ne dodiruje.
+
+Odbačena su tri druga puta:
+
+- **prepraviti primer** — dokumentacija se ne krivi zbog alata
+- **suziti komandu** na `ruff format --check src/ tests/` — gate glasi sa tačkom;
+  komanda koja se sužava dok ne prođe više ništa ne dokazuje
+- **`extend-exclude = ["*.md"]`** — izmereno: ne radi. Obrazac bez kose crte
+  `ruff` 0.16.5 ne primeni; `"**/*.md"` je čak uvukao fajlove koje `.gitignore`
+  isključuje. Prošli su `"docs"`, `"docs/*.md"` i `"docs/**/*.md"`; izabran je
+  `"docs"` jer posle njega `ruff` vidi tačno `.py` fajlove projekta i ništa više.
+
+**Posledice.** `ruff format --check .` je od sada upotrebljiv kao gate — prolazi
+ili pada na kodu, i ni na čemu drugom. Isto važi za `ruff check .`, mada on
+Markdown ionako nikad nije ni čitao.
+
+**Šta smo izgubili:** Python blokovi u `docs/` više nemaju nikakvu mašinsku
+proveru. Primer sa sintaksnom greškom u dokumentaciji proći će nezapaženo dok ga
+neko ne prekopira i ne pokrene. Ako to jednom zaboli, rešenje nije vraćanje
+formattera nego zaseban test koji blokove samo parsira, bez prepravljanja.
+
+---
+
+## ADR-036: `pip install -e ".[dev]"` — `[dev]` nije opcion
+
+**Kontekst.** ADR-029 je uveo `pip install -e .` kao jedinu komandu za
+pokretanje, a `PROJECT.md` §4 je tvrdio „To je sve." Ali `ruff` stoji u
+`[project.optional-dependencies] dev`, pa ga ta komanda **ne instalira**.
+
+Posledica je da onaj ko odradi tačno ono što dokumentacija kaže nema `ruff`, a
+checkpoint faze 0 i CONVENTIONS §9 od njega traže `ruff check .` i
+`ruff format --check .`. Obećanje „jedna komanda i sve radi" bilo je netačno od
+prvog dana; primetilo se tek kad je gate stvarno pokrenut.
+
+**Odluka.** Uputstvo za pokretanje glasi:
+
+```bash
+pip install -e ".[dev]"
+```
+
+Navodnici su deo komande: i `bash` i PowerShell drugačije čitaju gole uglaste
+zagrade.
+
+`ruff` **ostaje** u `dev` extra, ne seli se u `dependencies`. Igraču šaha linter
+ne treba, a `PROJECT.md` §4 i CONVENTIONS §10 ga izričito vode kao `dev-only`.
+
+**Posledice.** Obećanje „jedna komanda" i dalje stoji — komanda je i dalje jedna,
+samo je tačna. ADR-029 nije oboren, nego preciziran, i nosi ⚠️ oznaku koja
+pokazuje ovamo (CONVENTIONS §1, ADR-032).
+
+**Šta smo izgubili:** komanda više nije ona koju čovek napiše iz navike, pa je
+lakše zaboraviti `[dev]`. Ništa to ne hvata automatski — `tests/test_package.py`
+proverava da je paket instaliran, ne da je instaliran **sa** `dev` skupom.
+Izostavljen `[dev]` i dalje se otkriva tek kad `ruff` ne postoji.

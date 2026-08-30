@@ -102,11 +102,16 @@ Veb klijent → baza i nalozi → bot → deploy.
 | Baza (faza 5) | `sqlite3` kroz repository pattern | — |
 | Dev | `ruff` | dev-only |
 
-**Pokretanje: `pip install -e .`** — jedna komanda, instalira paket u editable
-režimu i povlači `pygame` iz `pyproject.toml`. To je sve.
+**Pokretanje: `pip install -e ".[dev]"`** — jedna komanda, instalira paket u
+editable režimu i povlači `pygame` i `ruff` iz `pyproject.toml`. To je sve.
 
 > `src/` raspored znači da Python ne vidi paket bez instalacije. Zato `-e .`,
 > a ne samo `pip install pygame` (ADR-029).
+>
+> `[dev]` nije opcion iako se zove `optional-dependencies`: bez njega nema
+> `ruff`-a, a checkpoint svake faze traži `ruff check .` i
+> `ruff format --check .` (ADR-036). Navodnici su deo komande — i `bash` i
+> PowerShell drugačije čitaju gole uglaste zagrade.
 
 ### Svesno odbijeno
 

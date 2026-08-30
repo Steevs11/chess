@@ -23,6 +23,9 @@ where = ["src"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+# Documentation is not code. ruff format also reformats Python blocks inside
+# .md files, and the examples in docs/ are deliberately compressed (ADR-035).
+extend-exclude = ["docs"]
 
 [tool.ruff.lint]
 select = [

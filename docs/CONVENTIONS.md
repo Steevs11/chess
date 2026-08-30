@@ -268,8 +268,9 @@ python -m unittest discover -s tests          # podrazumevano
 CHESS_SLOW_TESTS=1 python -m unittest discover -s tests
 ```
 
-Prva komanda radi tek posle `pip install -e .` — `src/` raspored znači da paket
-nije na `sys.path` bez instalacije (ADR-029).
+Prva komanda radi tek posle `pip install -e ".[dev]"` — `src/` raspored znači da
+paket nije na `sys.path` bez instalacije (ADR-029), a bez `[dev]` nema `ruff`-a
+(ADR-036).
 
 ### Imenovanje
 
@@ -504,7 +505,10 @@ drugačije, ili odnesi kod na claude.ai.
 | `tools/layer_check.py` | provera uvoza iz §2 | u gitu (ADR-033) |
 
 Konfiguracija `ruff`-a stoji u `pyproject.toml`: `line-length = 100`,
-`target-version = "py311"`.
+`target-version = "py311"`, `extend-exclude = ["docs"]`.
+
+`docs/` je isključen jer `ruff format` ulazi i u Python blokove unutar Markdown
+fajlova i prepravlja namerno zbijene primere (ADR-035). Dokumentacija nije kod.
 
 Nova zavisnost se **ne dodaje bez odobrenja i bez ADR-a.** Trenutna lista je
 `pygame` za klijenta i `ruff` za razvoj. To je sve.
