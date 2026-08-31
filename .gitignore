@@ -40,3 +40,6 @@ desktop.ini
 # --- Snimci ---
 *.mp4
 *.mkv
+
+# --- Logovi ---
+*.log

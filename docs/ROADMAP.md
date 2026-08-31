@@ -12,8 +12,8 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    0.3 — .gitignore proveren, commit, push
-Sledeće:   0.4 — Cburnett figure u PNG, DejaVu font, LICENSE.txt
+Radimo:    0.4 — Cburnett figure u PNG, DejaVu font, LICENSE.txt
+Sledeće:   0.5 — assets/i18n/sr.json + client/i18n.py sa t()
 Otvoreno:  ništa
 Grana:     main
 ```
@@ -43,7 +43,9 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > raspored znači da `src/` nije na `sys.path` (ADR-029).
 - [x] 0.2b `tools/layer_check.py` + `tests/test_layers.py` — provera uvoza kroz `ast` (ADR-033)
       > Nepokriven fajl je nalaz, ne tišina; `*/__init__.py` ne uvozi iz projekta (ADR-037).
-- [ ] 0.3 `.gitignore` proveren, commit, push
+- [x] 0.3 `.gitignore` proveren, commit, push
+      > Provera ide kroz celu istoriju, ne kroz `git status` — komanda je u
+      > CONVENTIONS §8. Dodat `*.log`, koji je §8 tražio a `.gitignore` nije imao.
 - [ ] 0.4 Cburnett figure **rasterizovane u PNG** (dve veličine), DejaVu font, `LICENSE.txt`
 - [ ] 0.5 `assets/i18n/sr.json` + `client/i18n.py` sa `t()`
       **svaki `open()` ide sa `encoding="utf-8"` eksplicitno**

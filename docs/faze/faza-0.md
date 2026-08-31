@@ -347,3 +347,111 @@ pa red više nije neproveren. Opšta odbrana ostaje čitanje diffa; zato tabela 
 prepisana u docstringu tik iznad `RULES`, i zato je taj gubitak zapisan u ADR-037.1.
 
 ---
+
+## 0.3 — `.gitignore` proveren, commit, push
+
+Task koji izgleda kao štikliranje, a nije: pet commita je čekalo push na javni
+repozitorijum, a po ADR-012 u gitu se ništa ne briše. Push je jednosmerna vrata —
+dok commit stoji lokalno istorija se sme prepisati, posle push-a na `main` ispravka
+traži `push --force`, koji je zabranjen. Provera je zato morala da se obavi **pre**
+push-a, i morala je da ima moć da ga zaustavi.
+
+### Zašto `git status` nije provera
+
+`git status` gleda radno stablo. Pitanje nije „šta je sad tu", nego „šta je ušlo u
+commit pre tri dana i ostalo tamo zauvek". To su dva različita pitanja, a samo drugo
+je važno posle push-a.
+
+Provera ide kroz svaki objekat svakog commita:
+
+```bash
+git rev-list --objects --all \
+  | awk 'NF>1 { $1=""; sub(/^ /,""); print }' | sort -u \
+  | git check-ignore --no-index --verbose --stdin
+```
+
+Dve zamke, obe zapisane u CONVENTIONS §8 da se ne otkrivaju ponovo:
+
+1. **`--no-index` je obavezan.** Bez njega `git check-ignore` preskače praćene
+   fajlove — a praćen fajl koji `.gitignore` opisuje je tačno ono što se traži.
+   Podrazumevano ponašanje bi na jedini zanimljiv slučaj odgovorilo ćutanjem.
+2. **Izlazni kod je obrnut.** `1` = ništa nije pogođeno = čisto. `0` = uzbuna.
+   Ko ga pročita kao običan alat, dobiće tačno pogrešan zaključak.
+
+Uzet je `rev-list --objects`, a ne `log --diff-filter=A`, jer `A` ne vidi
+preimenovanja (`R`), pa bi fajl dodat pa preimenovan mogao da promakne. Obe metode
+su pokrenute; obe su dale isto.
+
+### Rezultat
+
+| Šta | Vrednost |
+|---|---|
+| commita u istoriji | 10 (5 pushovano, 5 čekalo) |
+| jedinstvenih putanja ikad u stablu | 36 |
+| pogođeno obrascima iz `.gitignore` | **0** (`exit 1`) |
+| `git status --porcelain` | prazno |
+
+Sve što je nastalo u 0.1–0.2b i ne sme u git — `.venv/`, `.ruff_cache/`, `.idea/`,
+`.claude/`, `CLAUDE.md`, `src/chess.egg-info/` i 12 `__pycache__/` foldera — stoji
+pod `!!` u `git status --ignored`: ignorisano i nikad praćeno. `src/chess.egg-info/`
+hvata `*.egg-info/`, jer obrazac bez kose crte važi na svakoj dubini, ne samo u korenu.
+
+### Nalaz: `*.log`
+
+CONVENTIONS §8 nabraja osam stavki koje „nikad ne ulaze u commit". `.gitignore` je
+pokrivao sedam. `*.log` je nedostajao.
+
+Dodat je u `.gitignore`, nije izbačen iz CONVENTIONS: §8 je propis, `.gitignore` je
+njegova implementacija, pa se dopunjuje implementacija. Ništa u projektu još ne piše
+`.log`, ali server iz faze 2 loguje (§7) — pitanje je bilo kad, ne da li. A obrazac
+koji nedostaje otkriva se tek kad je fajl već u commitu, dakle prekasno.
+
+### Odgovor unapred — šta da je provera nešto našla
+
+Zapisano pre pokretanja, jer posle push-a odgovor više nije isti:
+
+- **nalaz samo u nepushovanim commitima** → prepis istorije (`git filter-repo`) je
+  besplatan, jer `push --force` nije potreban za commite koje udaljeni repo nema;
+- **nalaz u već pushovanim commitima** → prepis traži `push --force` na `main`,
+  koji je zabranjen. Ako je tajna — opoziv i rotacija, ne brisanje, jer udaljeni
+  server drži objekat dohvatljivim po SHA i posle prepisa. Ako je smeće —
+  `git rm -r --cached` od tog commita nadalje, istorija ostaje kakva jeste, i to
+  ide u ADR jer je odluka mogla ići drugačije;
+- **nalaz samo u radnom stablu** → nije problem istorije, dopuni se `.gitignore`.
+
+U sva tri slučaja push staje dok korisnik ne odluči.
+
+### Pitanja
+
+**1. Zašto je podrazumevano ponašanje `git check-ignore` — preskakanje praćenih fajlova
+— pogrešno baš za ovu proveru?**
+Znao. Alat je napravljen za suprotno pitanje: „zašto mi ovaj **nepraćeni** fajl ne ulazi
+u commit". Za tu upotrebu preskakanje praćenih fajlova ima smisla, jer praćen fajl ulazi
+bez obzira na `.gitignore`. Mi pitamo obrnuto — da li je nešto ušlo u istoriju iako ga
+`.gitignore` opisuje — pa je praćen fajl koji obrazac pogađa **jedini nalaz koji nas
+zanima**, i baš o njemu podrazumevano ponašanje ćuti. Bez `--no-index` provera bi uvek
+vraćala „čisto", i to najglasnije kad bi trebalo da vrišti.
+
+**2. Zašto `*.egg-info/` hvata `src/chess.egg-info/`, a `.venv/` ne bi uhvatio
+`src/.venv/`?**
+Znao, i oborio pitanje. Druga polovina pitanja je netačna: `.venv/` bi ga uhvatio.
+Pravilo iz `gitignore(5)` gleda da li kosa crta stoji **na početku ili u sredini**
+obrasca; crta na kraju znači samo „ovo je folder, ne fajl" i ne veže obrazac za koren.
+Oba reda imaju crtu isključivo na kraju, pa oba važe na svakoj dubini stabla. Razlika
+koju je pitanje tražilo postojala bi tek kod `/.venv/` — vodeća crta vezuje obrazac za
+folder u kom `.gitignore` stoji. Takvog reda u našem `.gitignore` nema nijednog.
+
+> Pitanje je postavljeno sa netačnom pretpostavkom, uz napomenu „nije očigledno" koja je
+> gurala ka pogrešnom odgovoru. Zapisano je jer je oboreno pitanje jači dokaz razumevanja
+> od tačnog odgovora — a i podsetnik da se `gitignore(5)` proverava, ne pamti.
+
+**3. Zašto je `*.log` moralo odmah, kad nijedna linija koda još ne otvara `.log`, a
+`tools/history_check.py` nije morao, iako bi proveru učinio mašinskom?**
+Znao. Odlučuje cena kašnjenja, ne cena rada. Ako `*.log` fali u trenutku kad server prvi
+put zaloguje, fajl uđe u commit i po ADR-012 ostaje tamo zauvek — kašnjenje je nepovratno,
+a rad sada je jedan red. Ako alata nema, provera se otkuca ručno komandom iz §8; ništa se
+ne gubi, kašnjenje košta nula. Uz to se dve provere razlikuju po ritmu: `layer_check`
+gleda nešto što se menja svakim novim fajlom, a istorija se proverava pred `push` — desetak
+puta u životu projekta.
+
+---

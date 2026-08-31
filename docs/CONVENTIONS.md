@@ -477,6 +477,30 @@ ide u telo.
 Repozitorijum je javan i u gitu se **ništa ne briše** — što uđe u commit, ostaje
 u istoriji zauvek. Zato `.gitignore` postoji pre prvog commita (ADR-012).
 
+### Provera da ništa ignorisano nije već ušlo u istoriju
+
+Pokreće se **pre `push`-a**, i posle svake izmene `.gitignore`. `git status` za ovo
+ne vredi — on gleda radno stablo i ne kaže šta je ušlo u commit prošle nedelje.
+
+```bash
+git rev-list --objects --all \
+  | awk 'NF>1 { $1=""; sub(/^ /,""); print }' | sort -u \
+  | git check-ignore --no-index --verbose --stdin
+```
+
+`git rev-list --objects --all` daje svaku putanju iz svakog stabla svakog commita,
+dakle i preimenovane i kasnije obrisane fajlove. `--no-index` je obavezan: bez njega
+`git check-ignore` **preskače praćene fajlove**, a praćen fajl koji `.gitignore`
+opisuje je tačno ono što se traži.
+
+Izlazni kod je obrnut od očekivanog: **`1` = nijedna putanja nije pogođena = čisto**,
+`0` = nešto je pogođeno = stati i ne pushovati.
+
+Dok commit stoji samo lokalno, istorija se sme prepisati. Posle `push`-a na `main`
+ispravka traži `push --force`, koji je zabranjen — a kod tajne prepis ionako ne
+pomaže, jer udaljeni server drži objekat dohvatljivim po SHA. Tajna se opoziva i
+menja, ne briše.
+
 ### Zabranjeno
 
 - `push --force` na `main`
