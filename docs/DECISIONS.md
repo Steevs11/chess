@@ -770,3 +770,96 @@ pokazuje ovamo (CONVENTIONS §1, ADR-032).
 lakše zaboraviti `[dev]`. Ništa to ne hvata automatski — `tests/test_package.py`
 proverava da je paket instaliran, ne da je instaliran **sa** `dev` skupom.
 Izostavljen `[dev]` i dalje se otkriva tek kad `ruff` ne postoji.
+
+---
+
+## ADR-037: Tabela slojeva postaje izvršiva
+
+**Kontekst.** ADR-033 je tražio alat koji sprovodi tabelu iz `CONVENTIONS.md` §2.
+Pisanje tog alata otvorilo je tri pitanja na koja tabela — pisana za čoveka — nije
+imala odgovor: kako pravilo dolazi do koda a da ne nastane drugi izvor istine, šta
+alat radi sa fajlom koji nijedan red ne opisuje, i šta sme `__init__.py`, koji se
+u tabeli nije pominjao.
+
+Tri odluke izlaze iz istog konteksta, ali se traže odvojeno. Svaka nosi svoj
+podnaslov i citira se zasebno: **ADR-037.1**, **ADR-037.2**, **ADR-037.3**.
+
+### ADR-037.1 — Tabela se prepisuje u kod, test veže imena redova
+
+**Kontekst.** Pravila prepisana u Python su drugi izvor istine — tačno onaj problem
+koji je u tasku 0.2 nađen u `.claude/`, gde je 80% sadržaja bilo prepričavanje
+dokumenata koje nijedan ADR nije mogao da ispravi.
+
+Obrnuto rešenje — da alat parsira tabelu iz `CONVENTIONS.md` — daje jedan izvor
+istine doslovno, ali traži da ćelije budu gramatika. Nisu: „sve gore + `pygame`"
+zavisi od redosleda redova i ne kaže da li je „gore" ceo skup redova iznad ili samo
+`client` redovi, a „sve" i „—" su proza. Tabela bi morala da se prepiše u strogi
+oblik — dokument bi tada služio alatu, a čita ga čovek.
+
+**Odluka.** `RULES` u `tools/layer_check.py` je **prepis** tabele, ne njen izvor.
+`tests/test_layers.py` parsira pipe-tabelu iz §2 i tvrdi da je skup imena redova
+identičan skupu ključeva; uz to tvrdi da je parser našao više od nula redova, jer bi
+parser koji ćutke ne uhvati ništa napravio test koji uvek prolazi. Tabela stoji
+doslovno prepisana i u docstringu iznad `RULES`, da se u `git diff`-u vide jedno
+pored drugog.
+
+Prepisivanje je zahtevalo da se dvosmislena ćelija pročita do kraja. „Sve gore"
+sada u §2 znači: sve što smeju `client` redovi iznad, plus ti moduli sami, uz smer
+uvoza unutar `client/` koji ide samo naniže (`i18n` ← `state` ← `render` ←
+`scenes`). Ta rečenica je dopisana u §2 **istim commitom** — pravilo ne živi u kodu.
+
+**Posledice.** Razilaženje alata i tabele je glasno, a ne tiho: dodat red bez pravila
+(ili obrnuto) obara test suite. U sukobu je tabela u pravu, kako §1 već propisuje.
+
+**Šta smo izgubili:** vezana su **imena redova, ne semantika ćelije**. Ako §2 kaže da
+`client/state.py` sme `core.fen`, a alat to zaboravi, nijedan test ne puca. Ta greška
+se hvata samo čitanjem diffa — zato tabela i stoji u docstringu tik iznad pravila.
+
+### ADR-037.2 — Fajl koji tabela ne pokriva je nalaz
+
+**Kontekst.** Alat obilazi stablo i nailazi na `.py` fajlove koje nijedan red ne
+opisuje — danas ni jedan, sutra `client/__main__.py` ili `core/eval.py`. Tri
+mogućnosti: preskočiti ga, pasti sa `traceback`-om, ili ga prijaviti.
+
+**Odluka.** Prijavljuje se kao nalaz, sa izlaznim kodom 1, uz poruku koja traži nov
+red u tabeli.
+
+Preskakanje znači da nov paket dobija **nula** provere i da to niko ne vidi — isti
+oblik kvara kao obrisan `tests/core/__init__.py`, koji `unittest discover` ćutke
+preskoči (faza 0, pitanje 2). `traceback` bi izgledao kao pokvaren alat, a alat koji
+izgleda pokvareno prestaje da se pokreće.
+
+Uz to je u §2 zapisan redosled biranja reda: tačan red → `*/__init__.py` → najduži
+prefiks. Bez zapisanog redosleda `tests/core/__init__.py` potpada pod dva reda
+odjednom.
+
+**Posledice.** Pravilo propagacije iz §1 sada važi i za kod: nov modul ne može da
+uđe u projekat bez reda u tabeli, u istom commitu.
+
+**Šta smo izgubili:** trenje. Svaki nov modul traži i izmenu `CONVENTIONS.md` — što
+je namera, ali usporava. U fazi 3.1 `client/__main__.py` neće proći dok mu se ne
+doda red.
+
+### ADR-037.3 — `__init__.py` ne uvozi ništa iz projekta
+
+**Kontekst.** Sedam `__init__.py` fajlova u `src/chess/` tabela nije pominjala, pa bi
+po ADR-037.2 svi odmah bili nalaz. Dve mogućnosti: da svaki nasledi pravilo svog
+paketa — čime je dozvoljena fasada `from .types import Piece` — ili da ne uvozi
+ništa iz projekta.
+
+**Odluka.** Nov red `*/__init__.py`: **samo stdlib**. Važi svuda u repozitorijumu,
+uključujući `tests/`, i pobeđuje nad redom `tests/*` po redosledu iz ADR-037.2.
+
+U ovom projektu je `__init__.py` marker paketa i ništa više — tako je postavljeno u
+0.1 („samo `__init__.py` fajlovi, nijedan prazan modul"). Fasada bi napravila ivicu
+u grafu zavisnosti koju nijedan red tabele ne opisuje, i otvorila vrata cikličnim
+uvozima između paketa.
+
+**Posledice.** Graf zavisnosti je onakav kakav tabela kaže da jeste; uvoz uvek
+pokazuje na modul u kom stvar zaista stoji, pa se `grep` po imenu klase završava na
+jednom mestu.
+
+**Šta smo izgubili:** nema `from chess.core import Piece`. Uvoz je uvek pun put,
+`from chess.core.types import Piece` — duže i, za onoga ko dolazi iz paketa koji
+imaju bogat `__init__.py`, neobično. Ako se fasada ikad poželi, to je izmena tabele
+u §2, a ne izuzetak u alatu.

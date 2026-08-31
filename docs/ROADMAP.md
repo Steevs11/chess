@@ -12,8 +12,8 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    0.2b — layer_check.py
-Sledeće:   0.3 — .gitignore proveren, commit, push
+Radimo:    0.3 — .gitignore proveren, commit, push
+Sledeće:   0.4 — Cburnett figure u PNG, DejaVu font, LICENSE.txt
 Otvoreno:  ništa
 Grana:     main
 ```
@@ -41,7 +41,8 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       **`pip install -e ".[dev]"`**, prvi test
       > Bez editable instalacije `unittest discover` ne nalazi paket — `src/`
       > raspored znači da `src/` nije na `sys.path` (ADR-029).
-- [ ] 0.2b `tools/layer_check.py` + `tests/test_layers.py` — provera uvoza kroz `ast` (ADR-033)
+- [x] 0.2b `tools/layer_check.py` + `tests/test_layers.py` — provera uvoza kroz `ast` (ADR-033)
+      > Nepokriven fajl je nalaz, ne tišina; `*/__init__.py` ne uvozi iz projekta (ADR-037).
 - [ ] 0.3 `.gitignore` proveren, commit, push
 - [ ] 0.4 Cburnett figure **rasterizovane u PNG** (dve veličine), DejaVu font, `LICENSE.txt`
 - [ ] 0.5 `assets/i18n/sr.json` + `client/i18n.py` sa `t()`

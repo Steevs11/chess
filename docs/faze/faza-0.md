@@ -267,3 +267,83 @@ baš u tasku 1.1, gde se `Square` piše. Tiha greška u pravom trenutku je skupl
 glasne greške u pogrešnom.
 
 ---
+
+## 0.2b — `layer_check.py` i `test_layers.py`
+
+Tabela iz `CONVENTIONS.md` §2 je do sada bila pravilo koje niko ne sprovodi. Sada je
+sprovodi alat od 254 reda, koji parsira svaki `.py` fajl kroz `ast` i poredi svaki uvoz
+sa redom tabele, i 15 testova koji proveravaju **alat**, ne samo kod.
+
+| Šta | Gde |
+|---|---|
+| alat, `RULES` + prepis tabele u docstringu | `tools/layer_check.py` |
+| 15 testova, `ALLOWED` (21) i `FORBIDDEN` (21) | `tests/test_layers.py` |
+| red `*/__init__.py`, redosled biranja reda, značenje „sve gore" | `CONVENTIONS.md` §2 |
+| ADR-037 sa tri citljive tačke | `DECISIONS.md` |
+
+### Tri pitanja koja je otvorilo pisanje alata
+
+**1. Kako test uvozi alat kad `tools/` nije paket?** Kroz `importlib.util`, po putanji
+izračunatoj od `__file__` (§7). `tools/` ostaje folder sa skriptama, kako je i zapisano
+u 0.1. Odbačeni su `sys.path.insert` — menja globalno stanje procesa i uvodi zavisnost
+od redosleda testova — i `subprocess`, koji bi testirao CLI omotač umesto pravila i pri
+padu dao samo izlazni kod, bez fajla i linije.
+
+> Zamka koja se videla tek pri pokretanju: `@dataclass` razrešava anotacije modula sa
+> `from __future__ import annotations` kroz `sys.modules[cls.__module__]`. Za modul koji
+> nije registrovan to je `None`, pa alat pukne pri učitavanju. Red
+> `sys.modules[_spec.name] = layer_check` **pre** `exec_module` nije stilska sitnica nego
+> uslov da se modul uopšte učita.
+
+**2. Šta sa fajlom koji tabela ne opisuje?** Prijavljuje se kao nalaz (ADR-037.2).
+Preskakanje bi značilo da nov paket dobija nula provere a da to niko ne vidi — isti oblik
+kvara kao obrisan `tests/core/__init__.py` iz pitanja 2 u tasku 0.1. Posledica: u fazi
+3.1 `client/__main__.py` neće proći dok mu se ne doda red u §2.
+
+**3. Kako tabela dolazi do koda a da ne nastane drugi izvor istine?** Prepisom u `RULES`
+plus testom koji veže **imena redova** sa pipe-tabelom iz `CONVENTIONS.md`. Alat koji bi
+sam parsirao tabelu tražio bi da ćelije budu gramatika — „sve gore + `pygame`" i „sve"
+to nisu — pa bi se tabela prepisala u strogi oblik i dokument bi počeo da služi alatu.
+
+Prepisivanje je nateralo da se dvosmislena ćelija dovrši: „sve gore" sada u §2 znači i
+smer unutar `client/` (`i18n` ← `state` ← `render` ← `scenes`), jer bi `state.py` koji
+sme `render.py` posredno povukao pygame i prestao da bude prevodiv 1:1 (ADR-004).
+
+### Dokaz da test nije prazan
+
+Sa privremenim `import pygame` u `core/__init__.py` i praznim `src/chess/ai/engine.py`:
+
+```
+src/chess/ai/engine.py:0: not covered by the import table (CONVENTIONS 2) - add a row for it
+src/chess/core/__init__.py:3: may not import third-party pygame (CONVENTIONS 2)
+2 violation(s) of the import table in CONVENTIONS 2   exit=1
+```
+
+Testovi su pali na dva mesta, alat vratio 1. Posle vraćanja: `14 files`, `Ran 15 tests OK`.
+
+### Pitanja
+
+**1. Zašto `check_source()` prima tekst, a ne `Path`, kad alat u radu uvek čita fajlove
+sa diska?**
+Znao. Zbog testova: sa `Path`-om bi svaki od 42 slučaja iz `ALLOWED` i `FORBIDDEN` morao
+da napravi fajl, a test ne dira disk izvan `tempfile` (§5). Uz to razdvaja dve
+odgovornosti — `check_source` presuđuje, `check_tree` čita disk. Da su spojene,
+presuđivanje se ne bi moglo testirati bez čitanja.
+
+**2. Test „stablo je čisto" prošao bi i da alat ne vidi nijedan uvoz. Šta to sprečava, i
+zašto moraju oba testa?**
+Znao. `test_forbidden_imports_are_reported` sa 21 slučajem koji **mora** da da nalaz —
+alat koji oslepi pada odmah. Oba su potrebna jer tvrde suprotne stvari: prvi „nema lažnih
+uzbuna", drugi „nema propuštenih". Alat koji sve prijavljuje prolazi drugi a pada prvi;
+alat koji ćuti prolazi prvi a pada drugi. Tek zajedno znače da presuđuje.
+
+**3. Koja izmena u alatu ne bi oborila nijedan test?**
+Znao, uz samoispravku u toku odgovora. Prvi primer — dodati `"server"` u red `protocol/*`
+— zapravo pada, jer `FORBIDDEN` sadrži `protocol/codec.py` koji uvozi `chess.server`.
+Ali klasa problema je tačna: spona proverava imena redova, ne sadržaj ćelije, pa proširenje
+pravila prolazi svuda gde negativan slučaj ne postoji. Konkretno je to bio `client/i18n.py`,
+koji je imao samo `import pygame` kao zabranjen slučaj — dodat mu je i `chess.core.types`,
+pa red više nije neproveren. Opšta odbrana ostaje čitanje diffa; zato tabela stoji doslovno
+prepisana u docstringu tik iznad `RULES`, i zato je taj gubitak zapisan u ADR-037.1.
+
+---

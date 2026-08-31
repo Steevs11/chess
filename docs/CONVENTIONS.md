@@ -94,6 +94,7 @@ Strelica se **nikad ne obrće.** `core` ne zna da protokol postoji.
 
 | Modul | Sme da uvozi | Ne sme |
 |---|---|---|
+| `*/__init__.py` | **samo stdlib** | bilo šta iz projekta (ADR-037.3) |
 | `core/*` | **samo stdlib** | bilo šta iz projekta van `core` |
 | `protocol/*` | stdlib, `core` | `server`, `client` |
 | `server/*` | stdlib, `core`, `protocol` | `client`, `pygame` |
@@ -105,7 +106,17 @@ Strelica se **nikad ne obrće.** `core` ne zna da protokol postoji.
 | `tools/*` | sve | — |
 | `tests/*` | sve | — |
 
-Tri posledice koje se lako previde:
+Kako se bira red: **tačan red za fajl → red `*/__init__.py` → najduži prefiks.**
+Zato `server/transport/tcp.py` pada pod `server/*`, a `tests/core/__init__.py` pod
+`*/__init__.py`, ne pod `tests/*`.
+
+„Sve gore" znači: sve što smeju `client` redovi **iznad**, plus ti moduli sami. Uvoz
+unutar istog sloja je dozvoljen (`core` → `core`, `server` → `server`), ali unutar
+`client/` ide **samo naniže**: `i18n` ← `state` ← `render` ← `scenes`. Kad bi
+`state.py` smeo da uveze `render.py`, posredno bi povukao `pygame` i prestao da bude
+prevodiv 1:1 (ADR-004).
+
+Četiri posledice koje se lako previde:
 
 1. **`core` uvozi samo standardnu biblioteku.** Ni `pygame`, ni bilo šta sa
    PyPI-ja. Ovo je uslov da `core` preživi prelazak na veb bez izmene.
@@ -115,18 +126,31 @@ Tri posledice koje se lako previde:
 3. **`net.py` i `state.py` se pišu bez pygame-a namerno** (ADR-004) — u fazi 4
    se prevode 1:1 u JavaScript. Sve što u njima nije prevodivo je greška u
    dizajnu, ne u prevodu.
+4. **`__init__.py` ne uvozi ništa iz projekta** — ni relativno. Fasada
+   (`from chess.core import Piece` u `core/__init__.py`) pravi ivicu u grafu
+   zavisnosti koju nijedan red tabele ne opisuje. Uvoz je uvek pun:
+   `from chess.core.types import Piece` (ADR-037.3).
 
 ### Provera
 
 Pravilo se proverava automatski, alatom u gitu — ne skillom (ADR-033):
 
 ```
-tools/layer_check.py
+python tools/layer_check.py
 ```
 
-Alat parsira `import` naredbe kroz `ast` i prijavljuje svaki uvoz koji tabela
-ne dozvoljava. Pokreće se i kao test, pa checkpoint faze 0 pada ako se pravilo
-prekrši.
+Alat parsira `import` naredbe kroz `ast` i prijavljuje svaki uvoz koji tabela ne
+dozvoljava. Pokreće se i kao test (`tests/test_layers.py`), pa checkpoint faze 0
+pada ako se pravilo prekrši.
+
+- izlazni kod: `0` čisto, `1` ima nalaza; svaki nalaz nosi fajl, liniju i razlog
+- **fajl koji tabela ne pokriva je nalaz**, ne izuzetak i ne tišina — nov modul
+  traži nov red u tabeli, u istom commitu (ADR-037.2)
+- uvoz sakriven u telu funkcije i relativni uvoz hvataju se isto kao uvoz na vrhu
+- **dinamički uvoz se ne vidi** — `importlib.import_module("pygame")` ne može da
+  uhvati nijedan `ast` alat; to je granica alata, ne rupa u pravilu
+- pravila u alatu su prepis ove tabele; test veže imena redova, pa dodat red bez
+  pravila (i obrnuto) pada. U sukobu je **tabela** u pravu (ADR-037.1, §1)
 
 ---
 
