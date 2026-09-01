@@ -863,3 +863,172 @@ jednom mestu.
 `from chess.core.types import Piece` — duže i, za onoga ko dolazi iz paketa koji
 imaju bogat `__init__.py`, neobično. Ako se fasada ikad poželi, to je izmena tabele
 u §2, a ne izuzetak u alatu.
+
+---
+
+## ADR-038: `cairosvg` odbijen; rasterizacija kroz pygame, alat nije zavisnost
+
+**Kontekst.** Task 0.4 traži 12 SVG figura pretvorenih u PNG u dve veličine
+(80 px za tablu, 32 px za pojedene figure iz 3.7). Rasterizacija se izvršava
+**jednom**; rezultat ide u git i ništa u vreme izvršavanja ne dodiruje SVG.
+
+`cairosvg` je očigledan izbor i daje bolji izlaz od nanosvg-a u opštem slučaju.
+Druga mogućnost je pygame, koji je već deklarisan u `pyproject.toml` i kroz
+SDL_image nosi nanosvg. Treća je preuzimanje gotovih PNG thumbnailova sa
+Wikimedia servisa, koje rasterizuje librsvg.
+
+**Odluka.** `cairosvg` je **odbijen**. Rasterizuje se alatom
+`tools/rasterize_pieces.py`, kroz pygame — bez ijedne nove zavisnosti.
+
+Dva razloga, po težini:
+
+1. Na Windows-u `cairosvg` vuče native cairo DLL-ove izvan `pip`-a. To je tačno
+   onaj režim otkaza iz konteksta ADR-009 — prethodni projekat korisnika nije radio
+   kod druge osobe jer ODBC drajver nije bio instaliran. Princip „sve što je
+   projektu potrebno mora biti u repozitorijumu ili instalirano jednim `pip`"
+   važi i ovde.
+2. **Alat koji jednom generiše resurs nije zavisnost projekta.** Zavisnost je ono
+   bez čega program ne radi kod korisnika. Igraču šaha rasterizator SVG-a ne treba
+   — njemu trebaju PNG-ovi, a oni su u gitu.
+
+**Posledice.**
+
+`pyproject.toml` se ne menja. Lista zavisnosti ostaje `pygame` + `ruff`. Ko klonira
+repozitorijum dobija gotove PNG-ove; ko hoće da ih regeneriše, pokreće alat i za to
+mu ne treba ništa novo. Ista logika je zapisana u CONVENTIONS §10.
+
+**Šta smo izgubili — prvo, izmereno, ne pretpostavljeno.**
+
+Prva verzija ovog ADR-a tvrdila je „izgubili smo kvalitet u odnosu na librsvg".
+Provereno je poređenjem sa Wikimedia thumbnailom, koji rasterizuje librsvg, na
+120 px (jedina standardna veličina blizu naše — thumbnailer odbija 80 px):
+
+| | ukupno piksela | različitih | prosek \|Δ\| | max \|Δ\| |
+|---|---|---|---|---|
+| bela dama | 14 400 | 1 554 (10.8%) | 1.3 / 255 | 52 |
+| beli skakač | 14 400 | 803 (5.6%) | 0.6 / 255 | 121 |
+
+Oba broja stoje namerno. Procenat sam navodi na pogrešan zaključak — 10.8% izgleda
+mnogo — a prosek pokazuje da je razlika ispod praga vidljivosti i da se nalazi
+isključivo na ivičnim pikselima, dakle u antialiasingu. Na 1:1 i na 4× uvećanju
+razlika se ne vidi; jedina uočena razlika ide **u našu korist** (librsvg ostavlja
+sivkastu mrlju na spoju kuglice i kraka krune, nanosvg ne).
+
+**Šta smo stvarno izgubili.**
+
+1. **nanosvg ne skalira crtež na traženo platno.** Root `width`/`height` određuju
+   veličinu platna, ali crtež ostaje u razmeri koju fajl deklariše — i `viewBox` to
+   ne menja. Prva verzija alata je zato dala figure u razmeri 45 na platnu 80×80,
+   a na 32×32 odsečene. Alat mora sam da skalira geometriju kroz
+   `<g transform="scale(...)">`. Ta cena nije hipotetička — naplatila se u ovom
+   tasku, i to tiho: dve od tri provere su kvar propustile, jer je izlaz imao tačnu
+   dimenziju i neprazne piksele. Zbog toga alat sada poredi udeo neprovidnih piksela
+   **kroz veličine**: ono što crtež pokriva ne sme da zavisi od platna.
+2. **Merenje važi za ovaj materijal.** Cburnett set je čist crtež sa konturama, bez
+   gradijenata, filtera i teksta — a to je upravo ono što nanosvg podržava slabo ili
+   nikako. SVG koji bi ih koristio nije proveren i zaključak se na njega ne prenosi.
+
+Rezervni put, ako bi ikad zatrebao: PNG thumbnailovi sa Wikimedia servisa. Takođe
+nula zavisnosti, ali traži mrežu pri generisanju i nudi samo standardne veličine.
+
+---
+
+## ADR-039: Tuđi materijal se čuva bajt u bajt — `.gitattributes` i provera
+
+**Kontekst.** `assets/pieces/LICENSE.txt` navodi sha1 za svaki od 12 SVG originala,
+a `assets/fonts/LICENSE.txt` je kopija `LICENSE` fajla iz DejaVu arhive, bajt u
+bajt. Obe tvrdnje su **proverljive** — neko ih može izračunati i uporediti.
+
+`git add` je u 0.4 prijavio:
+
+```
+warning: in the working copy of 'assets/pieces/svg/wp.svg',
+         LF will be replaced by CRLF the next time Git touches it
+```
+
+`core.autocrlf=true` je uobičajena postavka na Windows-u. Blob u repozitorijumu
+ostaje LF i njegov sha1 se poklapa — ali fajl **na disku posle kloniranja** dobija
+CRLF, i tada se sha1 iz `LICENSE.txt` više ne poklapa ni sa čim što se vidi.
+
+Kvar se kod autora ne pojavljuje nikad. Nastaje kod druge osobe, posle `git clone`.
+
+**Odluka.** `.gitattributes` u korenu repozitorijuma:
+
+```
+assets/pieces/svg/*.svg    -text
+assets/fonts/LICENSE.txt   -text
+*.png   binary
+*.ttf   binary
+```
+
+`-text` znači da git **ne prepisuje prelaske reda**, ni pri commitu ni pri
+checkoutu. To je i sve što radi: ne isključuje filtere sadržaja (`ident`,
+`clean`/`smudge`), koji bi bajtove promenili jednako uspešno. Nijedan nije
+konfigurisan, i za ove putanje se ne sme konfigurisati.
+
+`-text` nije `binary` — SVG i tekstualna licenca ostaju čitljivi u diffu.
+
+PNG i TTF nemaju prelaske reda koje bi trebalo pretvarati i git to sam zaključuje,
+ali njuškanjem prvih bajtova fajla — heuristikom, ne garancijom. Zato izričito.
+
+Odbačena je druga mogućnost: **ostaviti konverziju i preformulisati `LICENSE.txt`**
+da kaže kako sha1 važi za preuzete bajtove i za blob, a ne za fajl na disku.
+Tvrdnja bi bila tačna, ali bi je proveravao samo onaj ko zna za `autocrlf` i ume
+da izvuče blob kroz `git cat-file`. Proverljiva tvrdnja koju niko ne može lako da
+proveri je za korak od tvrdnje kojoj se samo veruje.
+
+Pravilo se izriče šire nego što je slučaj tražio, jer će se ponoviti: **tuđi
+materijal u ovom repozitorijumu čuva se bajt u bajt.** 0.5 donosi `sr.json`, faza 4
+veb resurse.
+
+**Posledice.**
+
+sha1 iz `LICENSE.txt` važi na svakoj platformi, i proverava se običnim
+`sha1sum`-om nad fajlom koji je pred očima.
+
+**Lanac se proverava mašinski, u `tests/test_assets.py`.** ADR beleži odluku; on
+je ne sprovodi. Test tvrdi četiri stvari: da se svih 12 sha1 iz `LICENSE.txt`
+poklapa sa fajlovima na disku, da je svaki SVG sa diska naveden u `LICENSE.txt`,
+da ih je tačno 12, i da `.gitattributes` postoji sa redom za
+`assets/pieces/svg/*.svg`.
+
+Četvrta tvrdnja postoji zato što bez nje test hvata posledicu a ne uzrok. Poruka
+„sha1 se ne poklapa" nekoga ko je tek klonirao repozitorijum ne vodi nikuda; uz
+proveru `.gitattributes`-a poruka može da kaže šta se dogodilo i šta da uradi.
+
+Provera je **test, a ne alat u `tools/`** — suprotno od ADR-038, i iz istog
+razloga. Kvar iz ADR-038 nastaje dok alat generiše PNG, pa ga alat i hvata. Ovaj
+kvar nastaje pri `git clone` na drugoj mašini, gde se pokreće `pip install -e
+".[dev]"` pa testovi, a rasterizator se ne pokreće nikad. Provera mora da stoji
+tamo gde se izvršava u trenutku kad kvar nastaje.
+
+Test ne uvozi `pygame` — `hashlib`, `pathlib` i `re` su dovoljni.
+
+`CONVENTIONS.md` §5 je istim commitom precizirana: pravilo je glasilo „test ne dira
+disk izvan `tempfile`", a `tests/test_layers.py` od 0.2b obilazi celo stablo sa
+diska. Pravilo je htelo da zabrani **pisanje**, ne čitanje.
+
+Rečenicu o tome **od čega tvrdnja zavisi** dobijaju `assets/pieces/LICENSE.txt` i
+nov fajl `assets/fonts/PROVENANCE.txt` — **ne** `assets/fonts/LICENSE.txt`.
+
+Razlika je u tome čiji je dokument. `assets/pieces/LICENSE.txt` je **naš** tekst
+koji citira tuđu licencu, pa napomena o našem repozitorijumu tu pripada.
+`assets/fonts/LICENSE.txt` su napisali Bitstream i Tavmjong Bah i kopiran je bajt u
+bajt; umetnuta rečenica napravila bi dokument koji izgleda kao licenca a sadrži i
+nešto što nije, pa bi je onaj ko ga sutra prekopira u svoj projekat poneo kao deo
+uslova. Isto važi za sha256 vrednosti. Zato one, i napomena, idu u `PROVENANCE.txt`
+pored njega — koji na jednoj rečenici objašnjava i zašto su ta dva fajla različito
+tretirana, da se za mesec dana ne raspravlja ponovo.
+
+`PROVENANCE.txt` **nema** svoj red u `.gitattributes`, namerno. Red postoji tamo
+gde tačni bajtovi nose tvrdnju; `PROVENANCE.txt` je naš, niko mu ne računa heš i
+nije kopija ničega. Red koji ne štiti nijednu tvrdnju učinio bi komentar u
+`.gitattributes` netačnim za sebe, a spisak obaveza koji sadrži i ukrase prestaje
+da se čita kao spisak obaveza. Iz istog razloga reda nema ni
+`assets/pieces/LICENSE.txt`.
+
+**Šta smo izgubili:** `.gitattributes` je od sada fajl koji se ne sme brisati ni
+skraćivati bez čitanja dva `LICENSE.txt` fajla — a to niko ne pogađa iz njegovog
+imena. Veza je jednosmerna i nevidljiva: ništa u `.gitattributes` ne pokazuje ko
+na njega računa. Test tu vezu sada čuva, ali je i sam deo iste petlje — ko obriše
+i njega, obrisao je i jedino mesto koje bi prijavilo.

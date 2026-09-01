@@ -1,0 +1,70 @@
+================================================================================
+DEJAVU SANS - WHERE THESE FILES CAME FROM
+================================================================================
+
+This file is ours. LICENSE.txt next to it is not.
+
+WHY THEY ARE SEPARATE
+---------------------
+
+LICENSE.txt is a third-party document, written by Bitstream and Tavmjong Bah. It
+is copied here byte for byte, and nothing of ours is added to it. A sentence about
+this repository, inserted into someone else's license, would produce a document
+that reads as a license but is not only one - and whoever copies it into their own
+project next year would carry our sentence along as if it were part of the terms.
+The sha256 values below are in the same position: they are our claims, not theirs.
+
+assets/pieces/LICENSE.txt is the opposite case, which is why it is handled the
+opposite way. That file is our document that quotes a third-party license; the
+notice about .gitattributes belongs inside it, because the document is ours to
+write.
+
+
+VERSION AND SOURCE
+------------------
+
+DejaVu fonts 2.37, from the project's own GitHub releases page:
+
+    https://github.com/dejavu-fonts/dejavu-fonts/releases/tag/version_2_37
+
+Archive:  dejavu-fonts-ttf-2.37.zip
+    https://github.com/dejavu-fonts/dejavu-fonts/releases/download/version_2_37/dejavu-fonts-ttf-2.37.zip
+    5522795 bytes
+    sha256 7576310b219e04159d35ff61dd4a4ec4cdba4f35c00e002a136f00e96a908b0a
+
+Three files were taken out of it, unchanged:
+
+    ttf/DejaVuSans.ttf        ->  DejaVuSans.ttf
+        757076 bytes
+        sha256 7da195a74c55bef988d0d48f9508bd5d849425c1770dba5d7bfc6ce9ed848954
+
+    ttf/DejaVuSans-Bold.ttf   ->  DejaVuSans-Bold.ttf
+        705684 bytes
+        sha256 e6476c1b80502924294eed40894c5b18e06c181444ca953e5334262df9c27724
+
+    LICENSE                   ->  LICENSE.txt
+        8816 bytes
+        sha256 7a083b136e64d064794c3419751e5c7dd10d2f64c108fe5ba161eae5e5958a93
+
+DejaVu is not one license and is not BSD: the base fonts are (c) Bitstream, the
+DejaVu changes are in the public domain, and glyphs imported from the Arev fonts
+are (c) Tavmjong Bah. The license requires the copyright notice, the trademark
+notice and the permission notice to travel with every copy - which is why
+LICENSE.txt exists here at all, and why it is not summarised.
+
+The fonts are packaged because the interface is in Serbian and must render
+c c s z dj with their diacritics. The default pygame font is not relied on.
+
+
+WHAT THESE SHA256 VALUES DEPEND ON
+----------------------------------
+
+They hold as long as git does not rewrite the bytes between the commit and the
+working tree (ADR-039). .gitattributes in the repository root covers that:
+
+    assets/fonts/LICENSE.txt   -text      no end-of-line conversion
+    *.ttf                      binary     no conversion, not treated as text
+
+Deleting either line silently makes the values above wrong, and nothing in
+.gitattributes points back here to say so. tests/test_assets.py checks both the
+values and the lines they depend on.

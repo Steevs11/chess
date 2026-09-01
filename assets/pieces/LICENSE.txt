@@ -1,0 +1,192 @@
+================================================================================
+CHESS PIECES - ORIGIN, AUTHOR AND LICENSE
+================================================================================
+
+ORIGIN
+------
+
+These are the 12 standard chess pieces of the "Cburnett" set, downloaded from
+Wikimedia Commons, category "SVG chess pieces/Standard transparent".
+
+This is the set Wikipedia uses to illustrate chess articles, and the set the
+lichess.org source tree ships as its default piece set
+(https://github.com/lichess-org/lila/tree/master/public/piece/cburnett; checked
+2026-08-31, where an open proposal to change that default exists as lila#15365).
+
+Nothing here came from a commercial chess platform. Every file was fetched from
+Wikimedia Commons at the revision recorded below, and the sha1 of every download
+was computed locally and compared against the sha1 Commons reports for that file.
+
+
+AUTHOR AND COPYRIGHT HOLDER
+---------------------------
+
+Copyright (c) 2006 Cburnett
+https://commons.wikimedia.org/wiki/User:Cburnett
+
+All 12 files name the same author in their |author= field: Cburnett. The files
+were created 2006-12-27 with Inkscape and uploaded by their author as own work.
+
+A note on the license text below. On Commons the BSD template is invoked without
+an attribution parameter, so it renders the placeholder wording "Copyright (c)
+The author" and "provided by The author and contributors". That is template
+boilerplate, not the name of a rights holder. The holder is identified from the
+|author= field.
+
+Cburnett is therefore named in the two places where that name belongs to a
+party: the copyright line and the third condition. The warranty disclaimer is
+left in its canonical 3-clause BSD wording, "THE COPYRIGHT HOLDER AND
+CONTRIBUTORS" - it refers to the same holder, and the standard text of a license
+is not edited to make a document read more consistently.
+
+
+LICENSE
+-------
+
+Each of the 12 file description pages carries the same multi-license tag:
+
+    {{self|GFDL|migration=relicense|BSD|GPL}}
+
+which offers, and states "You may select the license of your choice":
+
+  - GNU Free Documentation License, version 1.2 or later
+  - Creative Commons Attribution-ShareAlike 3.0 Unported
+        (not offered by the author directly; added to the file by the 2009 GFDL
+        licensing update, hence the "CC-BY-SA-3.0-migrated" category)
+  - 3-clause BSD License
+  - GNU General Public License, version 2 or later
+
+WE SELECT THE 3-CLAUSE BSD LICENSE.
+
+It was chosen because it requires attribution only, with no copyleft obligation
+on the rest of this project. The BSD template on Commons defaults to version 3
+when invoked without a version parameter, as these files do; Commons accordingly
+files all 12 pages under Category:3-clause BSD License. This was verified for
+each of the 12 files individually, not inferred from one.
+
+
+3-CLAUSE BSD LICENSE
+--------------------
+
+Copyright (c) 2006 Cburnett
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+  * Neither the name of Cburnett nor the names of its contributors may be used
+    to endorse or promote products derived from this software without specific
+    prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER AND CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+WHAT THE THIRD CONDITION MEANS FOR THIS PROJECT
+-----------------------------------------------
+
+The third condition is not an attribution rule - it is the opposite of one. It
+forbids using the rights holder's name to endorse or promote anything derived
+from this material without written permission.
+
+Crediting Cburnett as the author of the pieces, here and in the application's
+about screen, is required. Suggesting that Cburnett endorses, sponsors or is
+associated with this project - in a README, a screenshot caption, a presentation
+or a store listing - is not permitted. Attribution yes, advertising no.
+
+
+THE 12 FILES
+------------
+
+Each permalink is pinned to the exact revision whose license block and author
+line were read. The sha1 is of the SVG file as committed here; it was computed
+from the downloaded bytes and matches the value Commons reports.
+
+Those values hold as long as git does not rewrite the bytes between the commit
+and the working tree (ADR-039). .gitattributes in the repository root keeps
+end-of-line conversion off for assets/pieces/svg/*.svg. With core.autocrlf=true -
+the usual setting on Windows - a checkout would turn LF into CRLF and every sha1
+below would differ. Deleting that line silently invalidates this whole section,
+and nothing in .gitattributes points back here to say so; tests/test_assets.py
+checks the values and the line they depend on.
+
+wp  white pawn      Chess_plt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_plt45.svg&oldid=1218934628
+    sha1 09d59e2770fcee23722ac53b26e875f76d2c1eb1
+
+wn  white knight    Chess_nlt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_nlt45.svg&oldid=1122094287
+    sha1 3a2253429c0e39863b3f5ecf447209dccecdc337
+
+wb  white bishop    Chess_blt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_blt45.svg&oldid=1122092843
+    sha1 35dd477dc22636bfcc559a01f75b00369205ffda
+
+wr  white rook      Chess_rlt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_rlt45.svg&oldid=1122094886
+    sha1 126b7779885b87e87acc713474587732711bc8d3
+
+wq  white queen     Chess_qlt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_qlt45.svg&oldid=1122094769
+    sha1 e638eb28ec25007b9f8fac8476bdf6ae1fc5a0ee
+
+wk  white king      Chess_klt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_klt45.svg&oldid=1122093902
+    sha1 2c7569b837971207e40f7148e2b2086aaf8e4bbd
+
+bp  black pawn      Chess_pdt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_pdt45.svg&oldid=1030603507
+    sha1 0a6d2f3dc6327a02ca591bc489d701fbff228138
+
+bn  black knight    Chess_ndt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_ndt45.svg&oldid=1122094232
+    sha1 3c79cbbda76bcf1d4e4062cef6dd3b58a250a562
+
+bb  black bishop    Chess_bdt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_bdt45.svg&oldid=1122092772
+    sha1 da6dd1b5ef629bacebbd2ce26c7d81ba8a205587
+
+br  black rook      Chess_rdt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_rdt45.svg&oldid=997857576
+    sha1 bd0e866f1e6da8e3d6f9c0b356b60fc58391aff6
+
+bq  black queen     Chess_qdt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_qdt45.svg&oldid=997858038
+    sha1 ed72e75b7bdbf880a3c9bee053c8786cfab8bdb9
+
+bk  black king      Chess_kdt45.svg
+    https://commons.wikimedia.org/w/index.php?title=File:Chess_kdt45.svg&oldid=1122093852
+    sha1 b1165ef85a3df6f1af2549ab0af78ab21b540e8a
+
+The file names follow FEN letters (w/b for colour, then p n b r q k), which is a
+renaming by this project; the Commons names are the ones above.
+
+
+THE PNG FILES ARE GENERATED, THE ARTWORK IS NOT OURS
+----------------------------------------------------
+
+    assets/pieces/svg/       the 12 originals, byte for byte as downloaded
+    assets/pieces/png/80/    rasterized at 80 x 80
+    assets/pieces/png/32/    rasterized at 32 x 32
+
+The PNG files are rasterizations of the SVG files sitting next to them, produced
+by tools/rasterize_pieces.py using pygame 2.6.1 (SDL_image 2.0.5, nanosvg). They
+are derivative works of the SVGs and carry the same license and the same
+attribution; the rasterization itself adds no artistic contribution.
+
+The SVG originals are kept because they are the source and the PNGs are the
+generated artefact. They are also what the web client uses in phase 4.

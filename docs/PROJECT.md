@@ -156,6 +156,7 @@ ništa o transportu. Zbog toga:
 chess/
 ├── CLAUDE.md                    (u .gitignore)
 ├── .gitignore
+├── .gitattributes               tuđi materijal bajt u bajt (ADR-039)
 ├── pyproject.toml
 ├── README.md                    (srpski)
 ├── src/chess/
@@ -190,13 +191,24 @@ chess/
 │           ├── menu.py
 │           └── game.py
 ├── assets/
-│   ├── pieces/                  Cburnett PNG (rasterizovan), BSD-3
-│   ├── fonts/                   DejaVu Sans
+│   ├── pieces/
+│   │   ├── svg/                 12 Cburnett originala — izvor, BSD-3
+│   │   ├── png/80/              rasterizovano za tablu
+│   │   ├── png/32/              rasterizovano za pojedene figure (3.7)
+│   │   └── LICENSE.txt
+│   ├── fonts/
+│   │   ├── DejaVuSans.ttf
+│   │   ├── DejaVuSans-Bold.ttf
+│   │   ├── LICENSE.txt          njihov — kopija iz arhive, ne dira se
+│   │   └── PROVENANCE.txt       naš — verzija, izvor, sha256 (ADR-039)
 │   └── i18n/sr.json
 ├── tools/
 │   ├── perft.py                 perft + perft_divide (u gitu, ADR-028)
-│   └── cli_client.py            CLI klijent za testiranje servera (ADR-017)
+│   ├── cli_client.py            CLI klijent za testiranje servera (ADR-017)
+│   ├── layer_check.py           provera uvoza iz CONVENTIONS §2 (ADR-033)
+│   └── rasterize_pieces.py      SVG → PNG, dve veličine (ADR-038)
 ├── docs/
+│   └── faze/                    faza-N.md, nastaje po ADR-021
 └── tests/
 ```
 
@@ -449,10 +461,41 @@ Avatar bota se crta u klijentu koji je aktivan. SVG/PNG materijal se koristi u o
 
 ## 12. Licence
 
-- **Figure:** Cburnett set sa Wikimedia Commons, **rasterizovan u PNG** u dve
-  veličine još u fazi 0.4 (pygame učitava SVG u nominalnoj veličini, pa
-  skaliranje izgleda loše). Višestruko licenciran
-  (BSD-3, CC-BY-SA-3.0, GFDL, GPL) — biramo **BSD-3**, obična atribucija bez
-  copyleft obaveze. Atribucija u `assets/pieces/LICENSE.txt`.
-- **Font:** DejaVu Sans (slobodna licenca) — mora da podržava č ć š ž đ.
-  Ne oslanjati se na podrazumevani pygame font bez provere.
+Dva `LICENSE.txt` fajla, ne jedan — figure i font nemaju istu licencu ni istog
+nosioca prava.
+
+### Figure — `assets/pieces/LICENSE.txt`
+
+Cburnett set sa Wikimedia Commons, kategorija „SVG chess pieces/Standard
+transparent". **SVG originali ostaju u repozitorijumu**, a PNG-ovi se iz njih
+generišu u dve veličine (80 px za tablu, 32 px za pojedene figure iz 3.7) alatom
+`tools/rasterize_pieces.py`. SVG je izvor, PNG je artefakt; PNG bez izvora je isto
+što i commitovan `.exe`, a fazi 4 trebaju isti SVG-ovi za veb klijenta (§11.4).
+
+Rasterizuje se unapred jer nanosvg iz SDL_image-a crta SVG u razmeri koju fajl
+deklariše i **ne skalira ga na traženo platno** — izmereno u 0.4, ne pretpostavljeno
+(ADR-038).
+
+Autor nudi **tri** licence — GFDL, 3-clause BSD i GPL, uz „You may select the
+license of your choice"; CC BY-SA 3.0 nije autorova, nego je dodata migracijom
+GFDL licenci iz 2009. **Biramo BSD-3**: obična atribucija, bez copyleft obaveze.
+Treći uslov BSD-3 zabranjuje korišćenje autorovog imena za promociju — atribucija
+da, reklamiranje ne.
+
+### Font — `assets/fonts/LICENSE.txt`
+
+DejaVu Sans 2.37 (`DejaVuSans.ttf` i `DejaVuSans-Bold.ttf`), sa zvanične GitHub
+releases stranice projekta. Mora da podržava č ć š ž đ; ne oslanjati se na
+podrazumevani pygame font bez provere.
+
+DejaVu **nije jedna licenca i nije BSD**: osnovni fontovi su © Bitstream, DejaVu
+izmene su u javnom domenu, glifovi iz Arev fontova su © Tavmjong Bah. Licenca traži
+da obaveštenje o autorskim pravima, žigu i sama dozvola idu uz **svaku** kopiju —
+zato drugi `LICENSE.txt` mora da postoji. Kopiran je iz arhive bajt u bajt i ne
+prepisuje se ručno.
+
+Zato verzija, izvorna arhiva i `sha256` vrednosti ne stoje u njemu nego u
+`assets/fonts/PROVENANCE.txt`, pored njega. `LICENSE.txt` je **tuđi** dokument;
+naša tvrdnja umetnuta u njega putovala bi dalje kao deo licence kod svakoga ko ga
+prekopira. `PROVENANCE.txt` je naš, i na jednoj rečenici objašnjava zašto se ta dva
+fajla različito tretiraju (ADR-039).

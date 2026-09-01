@@ -282,6 +282,7 @@ tests/
 │   └── test_fen.py
 ├── protocol/
 ├── server/
+├── test_assets.py        sha1 tuđeg materijala + .gitattributes (ADR-039)
 └── test_layers.py        poziva tools/layer_check.py
 ```
 
@@ -340,7 +341,12 @@ Test koji ne daje isti rezultat pri svakom pokretanju je pokvaren test.
 
 ### Izolacija
 
-- test **ne dira disk** izvan `tempfile`
+- test **ne piše na disk** izvan `tempfile`. **Čitanje** fajlova iz repozitorijuma
+  je dozvoljeno kad je predmet testa upravo sadržaj repozitorijuma:
+  `tests/test_layers.py` obilazi stablo od 0.2b, a `tests/test_assets.py` čita
+  `assets/` i `.gitattributes` od 0.4 (ADR-039). Pravilo je od početka ciljalo na
+  pisanje — formulacija „ne dira disk" bila je šira od namere i nije opisivala ono
+  što projekat već radi.
 - test **ne otvara socket** — server se testira kroz `Player` interfejs sa
   lažnom implementacijom, ne kroz mrežu
 - test ne zavisi od drugog testa ni od redosleda izvršavanja
@@ -551,6 +557,7 @@ drugačije, ili odnesi kod na claude.ai.
 | `tools/perft.py` | perft i `perft_divide` | u gitu (ADR-028) |
 | `tools/cli_client.py` | CLI klijent za testiranje servera | u gitu (ADR-017) |
 | `tools/layer_check.py` | provera uvoza iz §2 | u gitu (ADR-033) |
+| `tools/rasterize_pieces.py` | SVG figure → PNG, dve veličine | u gitu (ADR-038) |
 
 Konfiguracija `ruff`-a stoji u `pyproject.toml`: `line-length = 100`,
 `target-version = "py311"`, `extend-exclude = ["docs"]`.
@@ -560,3 +567,7 @@ fajlova i prepravlja namerno zbijene primere (ADR-035). Dokumentacija nije kod.
 
 Nova zavisnost se **ne dodaje bez odobrenja i bez ADR-a.** Trenutna lista je
 `pygame` za klijenta i `ruff` za razvoj. To je sve.
+
+Alat koji jednom generiše resurs čiji rezultat ide u git **nije zavisnost
+projekta** (ADR-038). Piše se onim što već postoji; ako to ne ide, bira se između
+nove zavisnosti i drugog puta — i taj izbor traži ADR, jer je mogao ići drugačije.

@@ -455,3 +455,195 @@ gleda nešto što se menja svakim novim fajlom, a istorija se proverava pred `pu
 puta u životu projekta.
 
 ---
+
+## 0.4 — Figure, font i dva `LICENSE.txt`
+
+Prvi task koji unosi **tuđi materijal** u javni repozitorijum. Težište nije bilo na
+kodu nego na licencama, iz jednog razloga: po ADR-012 se u gitu ništa ne briše, a
+netačna licenca — za razliku od tajne — nema opoziv. Ko uzme materijal oslanjajući
+se na naš `LICENSE.txt` nasledi našu grešku u svoj repozitorijum, i mi za to nikad
+ne saznamo.
+
+Nijedan gate to ne hvata. `ruff`, `unittest` i `layer_check` prolaze nad savršeno
+pogrešnom licencom. Zato je task imao **četiri tačke zaustavljanja** na kojima se
+ne nastavlja bez čovekove potvrde.
+
+| Šta | Gde |
+|---|---|
+| 12 SVG originala, `sha1` proveren nad preuzetim bajtovima | `assets/pieces/svg/` |
+| 24 PNG rasterizacije, 80 px i 32 px | `assets/pieces/png/80/`, `/32/` |
+| poreklo, autor, BSD-3, permalinkovi sa `oldid`, `sha1` | `assets/pieces/LICENSE.txt` |
+| DejaVu Sans 2.37, licenca kopirana bajt u bajt | `assets/fonts/` |
+| verzija, arhiva, `sha256` — naš dokument, ne njihov | `assets/fonts/PROVENANCE.txt` |
+| rasterizator bez nove zavisnosti, sa samoproverom | `tools/rasterize_pieces.py` |
+| provera `sha1` lanca | `tests/test_assets.py` |
+| tuđi materijal se čuva bajt u bajt | `.gitattributes` |
+| ADR-038 (odbijen `cairosvg`), ADR-039 (bajt u bajt) | `DECISIONS.md` |
+
+### Ono što stranica tvrdi nije ono što je u fajlu
+
+Opisi za `wk` i `bk` na Commons-u kažu „default size 64x64", dok ostalih deset kažu
+45x45 — a svih 12 fajlova na disku je `width="45" height="45"`, bez `viewBox`-a.
+Opis je tekst koji je čovek otkucao pre petnaest godina; SVG je ono što se stvarno
+rasterizuje.
+
+Plan je do tog trenutka imao zakucan `viewBox="0 0 45 45"` kao rezervu. Da je opis
+bio tačan, dobili bismo gornjih levih 45 od 64 jedinice — odsečenog kralja, tiho:
+dimenzija izlaza tačna, površina neprazna, obe samoprovere prolaze. `viewBox` se
+zato **izvodi** iz pročitanih `width`/`height`, a fajl bez ijednog od njih je nalaz
+koji zaustavlja alat.
+
+### nanosvg ne skalira crtež — izmereno, pa tek onda zapisano
+
+Prva verzija alata je prepisivala `width`/`height`, dodavala `viewBox` i verovala
+rasterizatoru. Rezultat je izgledao ispravno na kontaktnoj tabli i prošao je **obe**
+samoprovere. Uhvatio ga je tek 4× zum, slučajno.
+
+Merenje je pokazalo zašto: bela dama je zauzimala 39×35 piksela na poziciji (3,5) —
+**identično** na 80 px i na 32 px. Platno se menjalo, crtež nije. Na 32 px je bio
+odsečen.
+
+Poređenje veličina u bajtovima, koje je bilo u planu kao nezavisna provera, ovo
+**takođe nije uhvatilo**: fajlovi se razlikuju jer se platna razlikuju.
+
+Ispravka je da alat sam skalira geometriju kroz `<g transform="scale(...)">`, a
+treća tvrdnja u alatu je relativna umesto apsolutne: *udeo neprovidnih piksela ne
+sme da zavisi od veličine platna.* Sa namerno vraćenom starom rasterizacijom alat
+prijavljuje svih 12 i vraća 1.
+
+### „Izgubili smo kvalitet" je bila pretpostavka, pa je izmerena
+
+ADR-038 je u prvoj verziji tvrdio da nanosvg daje lošiji izlaz od librsvg-a.
+Provereno je poređenjem sa Wikimedia thumbnailom na 120 px — jedinoj standardnoj
+veličini blizu naše, jer thumbnailer odbija 80 px:
+
+| | piksela | različitih | prosek \|Δ\| |
+|---|---|---|---|
+| bela dama | 14 400 | 1 554 (10.8%) | 1.3 / 255 |
+| beli skakač | 14 400 | 803 (5.6%) | 0.6 / 255 |
+
+Oba broja stoje u ADR-u namerno: procenat izgleda veliko, a prosek pokazuje da je
+razlika ispod praga vidljivosti i da leži isključivo na ivičnim pikselima. Jedina
+uočena razlika ide **u našu korist** — librsvg ostavlja sivkastu mrlju na spoju
+kuglice i kraka krune.
+
+Ono što smo stvarno izgubili je drugo i zapisano je kao takvo: nanosvg ne poštuje
+`viewBox`, i merenje važi za crtež sa konturama, ne za SVG sa gradijentima,
+filterima i tekstom.
+
+### `git add` je prijavio kvar koji se kod nas nikad ne bi pojavio
+
+```
+warning: in the working copy of 'assets/pieces/svg/wp.svg',
+         LF will be replaced by CRLF the next time Git touches it
+```
+
+`core.autocrlf=true` znači da bi prvi `git clone` na Windows-u pretvorio SVG-ove u
+CRLF i oborio svih 12 `sha1` vrednosti u `LICENSE.txt`. Blob u repozitorijumu
+ostaje LF i kod nas se ništa ne vidi — kvar nastaje kod druge osobe.
+
+Odbačeno je preformulisanje `LICENSE.txt`-a („sha1 važi za blob, ne za fajl"):
+tvrdnja bi bila tačna, ali bi je proveravao samo onaj ko zna za `autocrlf` i ume da
+izvuče blob kroz `git cat-file`. Proverljiva tvrdnja koju niko ne može lako da
+proveri je za korak od tvrdnje kojoj se samo veruje.
+
+### Čiji je dokument odlučuje šta u njega sme
+
+`assets/pieces/LICENSE.txt` je **naš** tekst koji citira tuđu licencu, pa napomena o
+`.gitattributes`-u tu pripada. `assets/fonts/LICENSE.txt` su napisali Bitstream i
+Tavmjong Bah; naša rečenica umetnuta u njega putovala bi dalje kao deo uslova kod
+svakoga ko ga prekopira. Zato verzija, arhiva i `sha256` idu u zaseban
+`PROVENANCE.txt`, koji na jednoj rečenici objašnjava i zašto se ta dva fajla
+različito tretiraju.
+
+### Šta je `PROJECT.md` §12 tvrdio netačno
+
+Dve stvari. Font je bio opisan kao „DejaVu Sans (slobodna licenca)" — a DejaVu nije
+jedna licenca: osnovni fontovi su © Bitstream, izmene u javnom domenu, Arev glifovi
+© Tavmjong Bah. I: §12 je nabrajao četiri ravnopravno ponuđene licence, a autor je
+ponudio **tri** — CC BY-SA 3.0 je došla naknadno, migracijom GFDL licenci iz 2009.
+Oba ispravljena istim commitom (ADR-030/032).
+
+### Tri stvari koje su prošle a nisu trebale
+
+Zapisano jer se ponavljalo:
+
+1. **Rasterizacija** — dve samoprovere prošle nad odsečenim figurama.
+2. **Test** — `test_every_svg_matches_its_recorded_sha1` bi prošao sa praznom
+   petljom da regex prestane da hvata. Dodata tvrdnja da unosa ima 12 **pre**
+   petlje; treći slučaj u dokazu pokazuje da bez nje test ćuti.
+3. **Sam dokaz** — skripta koja kvari fajlove prikazala bi kao dokaz i izmenu koja
+   ništa ne menja, ako obrazac prestane da se poklapa. Dodata tvrdnja da izmena
+   stvarno menja bajtove, i da pada **imenovani** test, ne bilo koji.
+
+Isti oblik greške tri puta u jednom tasku: provera koja može da prođe praznog hoda.
+
+### Dokaz da `tests/test_assets.py` nije prazan
+
+Pet namernih kvarova, jedan po jedan, svaki vraćen i proveren `sha1`-om:
+
+| kvar | pao test |
+|---|---|
+| bajt u `svg/wq.svg` | `test_every_svg_matches_its_recorded_sha1` |
+| uklonjen red za `svg/*.svg` iz `.gitattributes` | `..._carries_every_line_a_claim_depends_on` |
+| `sha1` → `checksum` u `LICENSE.txt` | `test_license_documents_exactly_twelve_pieces` |
+| bajt u `DejaVuSans.ttf` | `test_every_font_file_matches_its_recorded_sha256` |
+| uklonjen red `*.ttf binary` | `..._carries_every_line_a_claim_depends_on` |
+
+Svih pet oborilo je **očekivani** test; radno stablo posle ostalo čisto.
+
+### Pitanja
+
+**1. Provera rasterizacije živi u alatu, a provera `sha1` u testu — iako obe čuvaju
+isti tuđi materijal. Šta odlučuje gde provera ide, i šta bi se izgubilo da su
+zamenjene?**
+Znao. Ne odlučuje kategorija „alat ili test", nego **trenutak u kom kvar nastaje i
+šta se tada izvršava**. Rasterizacija može da se pokvari samo dok alat piše PNG, a
+tada test suite ne radi. `autocrlf` udara pri `git clone` na drugoj mašini, gde alat
+ne radi nikad — PNG-ovi su commitovani i niko nema razloga da ih regeneriše — ali
+`pip install -e ".[dev]"` pa `unittest discover` je checkpoint faze 0, prva stvar
+koju nova osoba uradi.
+
+Zamenom bi `sha1` provera postala alat koji niko ne pokreće posle kloniranja: postoji
+i nikad ne opali, isto što i `perft/SKILL.md` iz 0.2. Obrnuta zamena je suptilnija —
+test bi gledao već commitovane, ispravne PNG-ove i prolazio zauvek, testirajući
+artefakt koji se ne menja; u trenutku kad neko izmeni alat i pokrene ga, test se ne
+izvršava.
+
+> Odgovor je otišao dalje od pitanja, na razliku u **ceni**: alat vrati 1 i ne
+> prikaže loš izlaz kao dobar, dok bi test to uhvatio tek posle — kad su loši fajlovi
+> već u indeksu.
+
+**2. Zašto rečenica o `.gitattributes`-u nije i u `assets/fonts/LICENSE.txt`, i zašto
+`PROVENANCE.txt` namerno nema svoj red u `.gitattributes`?**
+Znao, i preko onoga što je pitano. Odlučuje čiji je dokument: `pieces/LICENSE.txt` je
+naš tekst koji citira tuđu licencu, `fonts/LICENSE.txt` su napisali Bitstream i
+Tavmjong Bah, pa bi umetnuta rečenica putovala dalje kao deo uslova.
+
+Jači razlog nije bio u pitanju: rečenica bi glasila „ovo je kopija bajt u bajt", a
+upisati je u fajl znači učiniti je netačnom. **Tvrdnja bi sama sebe pojela** — isti
+oblik kao primer iz 0.1 koji je `ruff` prepravio pa je progutao sopstvenu poentu.
+
+`PROVENANCE.txt` nema red jer red postoji tamo gde **tačni bajtovi nose tvrdnju**; on
+je naš, niko mu ne računa heš, nije kopija ničega, a `sha256` vrednosti u njemu
+opisuju druge fajlove koji su već pokriveni. Uz to bi red koji ne štiti nijednu
+tvrdnju učinio komentar u `.gitattributes`-u netačnim za sebe, „pa se ceo fajl počne
+čitati kao spisak simpatija umesto kao spisak obaveza".
+
+**3. Šta tvrdnja o udelu neprovidnih piksela meri što dimenzija i nepraznost ne mere,
+i zašto su za nju bile potrebne dve veličine?**
+Znao, i uopštio preko pitanja. Prve dve su **apsolutne osobine jedne slike** i
+zadovoljava ih i pogrešna slika — odsečeni kralj je bio tačno 80×80 i nije bio
+prazan. Treća je **relativna**: ako je crtež stvarno skaliran, udeo platna koji
+zauzima je osobina crteža a ne platna, dakle isti u obe veličine. Kod dame je bio 49%
+na 80 px i 91% na 32 px.
+
+Dve veličine su potrebne jer sa jednom nema sa čim da se poredi: koliki udeo *treba*
+da zauzima dama — 85%, 78%? To je osobina tuđeg crteža, ne nešto što alat može da
+zna, a zakucan broj bi pucao čim se zameni set figura.
+
+> Uopštenje koje nije bilo u pitanju: **provera nad jednim izlazom hvata samo ono što
+> unapred umeš da iskažeš; provera koja poredi dva izlaza hvata nedoslednost, dakle i
+> bagove koje nisi predvideo.** Ovaj bag niko nije predvideo.
+
+---

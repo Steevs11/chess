@@ -1,0 +1,23 @@
+# Third-party material is stored byte for byte (ADR-039).
+#
+# assets/pieces/LICENSE.txt records a sha1 for each of the 12 SVG originals, and
+# assets/fonts/LICENSE.txt is a byte-for-byte copy of the LICENSE from the DejaVu
+# archive. With core.autocrlf=true - the usual setting on Windows - a checkout
+# rewrites line endings, and both of those claims stop being true of the file on
+# disk.
+#
+# -text stops git from rewriting line endings, on checkin and on checkout. That is
+# all it does: it does not disable content filters (ident, clean/smudge), which
+# would change the bytes just as effectively. None are configured here, and none
+# may be configured for these paths.
+#
+# -text is not "binary": these files stay readable in a diff.
+#
+# Removing a line from this file silently breaks a claim made in another file.
+assets/pieces/svg/*.svg    -text
+assets/fonts/LICENSE.txt   -text
+
+# PNG and TTF have no line endings to convert. Git works that out on its own, but
+# by sniffing the first bytes of the file - a heuristic, not a guarantee. Say it.
+*.png   binary
+*.ttf   binary

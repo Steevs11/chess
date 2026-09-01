@@ -12,8 +12,8 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    0.4 — Cburnett figure u PNG, DejaVu font, LICENSE.txt
-Sledeće:   0.5 — assets/i18n/sr.json + client/i18n.py sa t()
+Radimo:    0.5 — assets/i18n/sr.json + client/i18n.py sa t()
+Sledeće:   0.6 — LICENSE u korenu repozitorijuma
 Otvoreno:  ništa
 Grana:     main
 ```
@@ -46,9 +46,48 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
 - [x] 0.3 `.gitignore` proveren, commit, push
       > Provera ide kroz celu istoriju, ne kroz `git status` — komanda je u
       > CONVENTIONS §8. Dodat `*.log`, koji je §8 tražio a `.gitignore` nije imao.
-- [ ] 0.4 Cburnett figure **rasterizovane u PNG** (dve veličine), DejaVu font, `LICENSE.txt`
+- [x] 0.4 Cburnett figure **rasterizovane u PNG** (dve veličine), DejaVu font,
+      **dva** `LICENSE.txt` — figure i font nemaju istu licencu
+      > SVG originali ostaju u repou uz PNG: SVG je izvor, PNG je artefakt.
+      > nanosvg iz SDL_image-a **ne skalira crtež na traženo platno**, pa alat sam
+      > skalira geometriju i poredi udeo neprovidnih piksela kroz veličine —
+      > provera dimenzije i nepraznosti taj kvar propušta (ADR-038).
+      > Tuđi materijal se čuva bajt u bajt: `.gitattributes` isključuje pretvaranje
+      > prelazaka reda, jer bi `core.autocrlf` na Windows-u oborio svih 12 `sha1`
+      > vrednosti pri prvom kloniranju. `tests/test_assets.py` proverava i vrednosti
+      > i redove od kojih zavise (ADR-039).
 - [ ] 0.5 `assets/i18n/sr.json` + `client/i18n.py` sa `t()`
       **svaki `open()` ide sa `encoding="utf-8"` eksplicitno**
+- [ ] 0.6 `LICENSE` u korenu repozitorijuma
+      > Javan repo bez licence je podrazumevano „sva prava zadržana" —
+      > nejasan svakome ko na njega naiđe. Izbor licence je
+      > korisnikova odluka i traži ADR.
+- [ ] 0.7 `.claude/` se svodi na pokazivače; `CONVENTIONS.md` §1 dobija
+      red o autoritetu
+      > `.claude/` nije u hijerarhiji (§1) ni pod pravilom propagacije
+      > (ADR-030/032), a `rules/*.md` se učitavaju AUTOMATSKI PO
+      > PUTANJI — pravilo bez autoriteta stiže pred oči pre onog sa
+      > autoritetom, i to baš u tasku koji dira taj sloj. Tri fajla su
+      > tako protivrečila ADR-ovima (`faza-0.md`, 0.2). Sadržaj je
+      > ispravljen, struktura nije, pa se ponavlja sa svakim sledećim
+      > ADR-om. Kriterijum po ADR-020/028: `.claude/` sme operativno
+      > uputstvo („pročitaj §2 pre nego što dodirneš `core/`"), nikad
+      > tvrdnju o projektu. Traži ADR — druga opcija je da pravila
+      > ostanu, uz obaveznu ADR referencu uz svaku tvrdnju.
+      > Otvoreno za plan 0.7: tabela za preseljenje iz `faza-0.md` §0.2
+      > šalje Kiwipete brojeve u `tools/perft.py`, koji u 0.7 još ne
+      > postoji. Tri od šest stavki sele se tek u fazama 3 i 6.
+- [ ] 0.8 `WORKFLOW.md` usklađen sa odlukama
+      > Fajl je iz prvog commita i propušteno je pravilo propagacije.
+      > Četiri neslaganja: `/model opusplan` ne postoji (§2, §6);
+      > „sam pokreće perft skill" protiv ADR-028 (§2); kontrolna lista
+      > ima šest stavki, CONVENTIONS §9 ima sedam (§5); §8 kaže da
+      > `faza-N.md` nastaje na kraju faze iz prepričavanja, a ADR-021
+      > traži dva reda posle svakog taska i CONVENTIONS §9 to vodi kao
+      > stavku gotovog taska.
+      > Poslednje je najgore: ostala tri pucaju glasno, ovo ne puca
+      > uopšte — ko radi po dokumentu preskoči korak 4 i to se vidi
+      > tek na odbrani.
 
 ---
 
@@ -66,6 +105,9 @@ Najveći i najvažniji deo projekta. Ne žuriti.
       plus `from_uci()` i `to_uci()` — `from_uci()` **ne može da odredi `kind` bez table**,
       pa se potez iz spoljnog sveta uvek traži u listi legalnih poteza
       `ChessError` hijerarhija: `IllegalMoveError`, `InvalidFenError`, `InvalidSanError`
+      > `PROJECT.md` §5 ne navodi `Piece` u `core/types.py`, iako ga
+      > CONVENTIONS §4 vodi kao `frozen=True, slots=True`. Ispraviti u
+      > istom commitu kao 1.1.
 - [ ] 1.2 `core/board.py` — raspored, **make/unmake**, `UndoRecord`, **Zobrist heš**, `core/fen.py`
       `Board` je **mutabilan** — na tome počiva make/unmake (ADR-006)
       `UndoRecord` nosi: **pojedenu figuru i njeno polje** (kod en passanta pešak nije
@@ -109,6 +151,15 @@ uključujući rokadu i mat
 
 - [ ] 2.0 `tools/cli_client.py` — CLI klijent, stdlib, prima UCI unos *(zamena za `nc`)*
 - [ ] 2.1 `protocol/messages.py` — poruke kao `frozen` dataclass, polje `v`
+      > `STATE` nosi `material` kao dva zbira. Razlika se dobija
+      > oduzimanjem, što nije šahovsko pravilo — `material` nije
+      > pogrešan, nego nedovoljan. Prikaz POJEDENIH FIGURA iz 3.7
+      > klijent ne može da izvede: brojanjem iz FEN-a promocija daje
+      > „beli je izgubio pešaka". Isti argument kao ADR-034. Odluka o
+      > dodavanju polja `captured` donosi se OVDE, ne u 3.7.
+      > `captured` se DODAJE uz `material`, ne zamenjuje ga. Dodavanje
+      > opcionog polja nije nekompatibilna promena (PROTOCOL §9), pa
+      > `v` ostaje 1.
 - [ ] 2.2 `protocol/codec.py` — encode/decode, `ProtocolError`, validacija na granici
 - [ ] 2.3 `server/session.py` — `Player` interfejs, `RemotePlayer`, tok partije
 - [ ] 2.4 `server/clock.py` — `time.monotonic()`, inkrement, pad zastavice
