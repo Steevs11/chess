@@ -285,7 +285,9 @@ tests/
 │   └── test_fen.py
 ├── protocol/
 ├── server/
-├── test_assets.py        sha1 tuđeg materijala + .gitattributes (ADR-039)
+├── test_assets.py        sha1 tuđeg materijala + .gitattributes (ADR-039);
+│                         od 0.6 i lanac licenci — LICENSE, THIRD-PARTY.txt i
+│                         pyproject.toml (ADR-042, ADR-043)
 └── test_layers.py        poziva tools/layer_check.py
 ```
 
@@ -347,9 +349,13 @@ Test koji ne daje isti rezultat pri svakom pokretanju je pokvaren test.
 - test **ne piše na disk** izvan `tempfile`. **Čitanje** fajlova iz repozitorijuma
   je dozvoljeno kad je predmet testa upravo sadržaj repozitorijuma:
   `tests/test_layers.py` obilazi stablo od 0.2b, a `tests/test_assets.py` čita
-  `assets/` i `.gitattributes` od 0.4 (ADR-039). Pravilo je od početka ciljalo na
+  `assets/` i `.gitattributes` od 0.4 (ADR-039), pa `LICENSE`, `THIRD-PARTY.txt` i
+  `pyproject.toml` od 0.6 (ADR-042). Pravilo je od početka ciljalo na
   pisanje — formulacija „ne dira disk" bila je šira od namere i nije opisivala ono
   što projekat već radi.
+  Od 0.6 `test_assets.py` čita i **sopstveni izvor**, da bi tvrdio da je čist ASCII.
+  To nije izuzetak od pravila nego njegov najuži slučaj: provera ne sme da deli
+  sudbinu sa kvarom od kog štiti (ADR-042).
 - test **ne otvara socket** — server se testira kroz `Player` interfejs sa
   lažnom implementacijom, ne kroz mrežu
 - test ne zavisi od drugog testa ni od redosleda izvršavanja
@@ -626,6 +632,12 @@ fajlova i prepravlja namerno zbijene primere (ADR-035). Dokumentacija nije kod.
 
 Nova zavisnost se **ne dodaje bez odobrenja i bez ADR-a.** Trenutna lista je
 `pygame` za klijenta i `ruff` za razvoj. To je sve.
+
+`build-system.requires` u `pyproject.toml` **nije zavisnost projekta**, nego zahtev
+okruženja u kom se paket gradi — a to okruženje `pip` stvara sam, izolovano, i posle
+izgradnje ga briše. Podizanje njegove donje granice zato ne obara rečenicu iznad.
+Trenutno stoji `setuptools>=77`, jer je 77 prvo izdanje koje prihvata `project.license`
+kao SPDX izraz; 76.1.0 ga odbija `ValueError`-om (ADR-043).
 
 Alat koji jednom generiše resurs čiji rezultat ide u git **nije zavisnost
 projekta** (ADR-038). Piše se onim što već postoji; ako to ne ide, bira se između

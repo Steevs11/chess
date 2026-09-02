@@ -834,3 +834,243 @@ videti, a `B6` čuva fajl u repozitorijumu bez obzira šta dekoder radi.
 > Opšte pravilo izvedeno u ovom tasku, i uz `chr(0xFEFF)` drugi njegov slučaj:
 > **provera ne sme da deli sudbinu sa kvarom od kog štiti.** Da obe idu kroz dekoder, jedan
 > pokvaren dekoder bi ućutkao obe odjednom.
+
+---
+
+## 0.6 — `LICENSE`, `THIRD-PARTY.txt` i SPDX oznaka u metapodacima
+
+Prvi task u kom je **plan bio glavni predmet rada, a ne kod**. Fajlovi koji iz njega
+izlaze su kratki: jedna licenca preuzeta gotova, jedan dokument uz nju, tri reda u
+`pyproject.toml`. Ono što je trajalo je pitanje šta tačno tvrdimo i čime to dokazujemo —
+i tri puta se pokazalo da je prva formulacija bila uža ili šira od istine.
+
+| Šta | Gde |
+|---|---|
+| uslovi za naš kod, BSD-3-Clause, kanonski SPDX tekst | `LICENSE` |
+| obim: šta LICENSE ne pokriva, plus blok koji čita test | `THIRD-PARTY.txt` |
+| `license = "BSD-3-Clause"`, `license-files`, `setuptools>=77` | `pyproject.toml` |
+| 9 novih tvrdnji u pet klasa | `tests/test_assets.py` |
+| ADR-042 (uslovi naspram obima), ADR-043 (metapodaci), ⚠️ na ADR-039 | `DECISIONS.md` |
+| §12 dobija pododeljak o našem kodu; §5 stablo dobija dva fajla | `PROJECT.md` |
+| §5 stablo `tests/` i pravilo izolacije; §10 o `build-system.requires` | `CONVENTIONS.md` |
+| unos „SPDX oznaka" | `POJMOVNIK.md` |
+
+### Kopija u repou nije bila kanonski tekst
+
+Plan je rekao dve stvari koje su izgledale kao jedna: *telo je kanonski SPDX tekst* i
+*uzmi telo iz repozitorijuma, ne iz sećanja*. `assets/pieces/LICENSE.txt` već sadrži
+BSD-3, pa se činilo da je izvor tu.
+
+Merenje je to oborilo. Poređene su **reči**, sve beline sažete, pa prelom ne pravi lažne
+razlike. Pet mesta:
+
+| | SPDX kanonski | `assets/pieces/LICENSE.txt` |
+|---|---|---|
+| red o pravima | `Copyright (c) <year> <owner>. ` | `Copyright (c) 2006 Cburnett` |
+| oznake klauzula | `1.` `2.` `3.` | `  * ` |
+| klauzula 3 | `the copyright holder` | `Cburnett` |
+| odricanje, 1. rečenica | `THE COPYRIGHT HOLDERS AND CONTRIBUTORS` | `... HOLDER AND ...` |
+| odricanje, 2. rečenica | `THE COPYRIGHT HOLDER OR CONTRIBUTORS` | `... HOLDER AND ...` |
+
+Prva tri su bila očekivana — nosilac je drugi. **Poslednja dva nisu.** Da je telo uzeto
+iz repoa, naš `LICENSE` bi nasledio varijantu odricanja koju taj isti fajl u svom
+objašnjenju naziva kanonskom, a koja to nije. Kvar se ne bi video ni na jednom gate-u:
+`ruff`, `unittest` i `layer_check` prolaze nad savršeno pogrešnom licencom (isto kao u
+0.4).
+
+Telo je zato preuzeto sa SPDX-a, 1460 bajtova, `sha256 5a93d583…`, i heš je zapisan u
+ADR-042 — isti oblik kao `sha256` arhive u `PROVENANCE.txt`.
+
+Nalaz o `assets/pieces/LICENSE.txt` **nije ispravljen u ovom tasku**, po odluci: fajl je
+naš tekst o tuđoj licenci, ispravka traži svoj plan, a commit treba da ostane o jednoj
+stvari. Zaveden je uz 0.7 u `ROADMAP.md`.
+
+### Prelom se dokazuje, ne tvrdi
+
+`licensee`, detektor koji GitHub koristi, normalizuje beline — pa prelamanje na 75
+kolona ne dira poklapanje. Ali „to je samo prelom" je tvrdnja kao svaka druga i traži
+dokaz:
+
+```
+reci kanonski    : 216
+reci prelomljeno : 216
+razlika          : PRAZNA
+a == b           : True
+redova koji se zavrsavaju crticom: 0
+```
+
+Usput je pao i razlog zbog kog je provera crtica tražena: `textwrap` podrazumevano lomi
+na crtici, ali **u celom kanonskom telu nema nijedne crtice** (`canon.count('-')` → `0`).
+U klauzuli 2 je kosa crta, `and/or`, na koju `break_on_hyphens` ne deluje. Tvrdnja
+stoji, iz drugog razloga nego što je pretpostavljeno.
+
+Prva verzija je imala i uvlačenje nastavaka klauzula na tri razmaka. Uveo ga je
+`subsequent_indent` u skripti, nije bilo odlučeno — a nema ga ni kanonski tekst ni kopija
+u repou. Uklonjeno: dva različita izgleda iste licence u istom repozitorijumu, bez dobiti.
+
+### Pravilo koje je bilo uže od istine — uhvaćeno u pregledu plana
+
+Prva verzija tačke 3 čitala je red `SPDX-License-Identifier:` izrazom sa `re.MULTILINE`
+nad celim tekstom `THIRD-PARTY.txt`-a, usidrenim sa `[ \t]*$`.
+
+`\r` nije ni razmak ni tab. `THIRD-PARTY.txt` namerno nema red u `.gitattributes`, pa uz
+`core.autocrlf=true` prvi `git clone` na Windows-u daje CRLF — izraz prestaje da pogađa,
+tvrdnja o SPDX oznaci tiho pada, i to **kod druge osobe, nikad kod nas**. Isti kvar kao
+`autocrlf` nad `sha1` vrednostima u 0.4, jednu tvrdnju dalje.
+
+Uzrok nije bio previd nego **preusko formulisano pravilo**: L10 u planu je govorio o
+„parseru bloka", a čitalac je bio drugi. Ispravka je zato dvostruka — fajl se čita jednom
+kroz `read_bytes()` → `decode()` → `splitlines()` i **oba** čitaoca rade nad tom listom
+redova, a u ADR-042 pravilo je izrečeno za **svakog** čitaoca tog fajla, ne za parser.
+
+Izmereno posle svega, da ne ostane argument:
+
+```
+LICENSE           1493 B   CR=27   LF=27   CRLF=27      (upisan kao 1466 B, LF)
+THIRD-PARTY.txt   4326 B   CR=95   LF=95   CRLF=95      (upisan kao 4231 B, LF)
+core.autocrlf     true
+ijedan red posle splitlines() sadrzi CR?  False
+53 testa                                  OK
+```
+
+Fajlovi na disku **jesu** CRLF u ovom trenutku, `git diff` je prazan, i suite prolazi.
+
+### Isti defekt, tri puta, na tri mesta
+
+Ista greška se u ovom tasku ponovila u tri oblika i sva tri puta glasi: **čitalac bez
+tvrdnje ispred sebe pada bez dijagnoze.**
+
+1. `PackageMetadataTest` je čitao `THIRD-PARTY.txt` bez ijedne prethodne tvrdnje, dok je
+   `ThirdPartyManifestTest` imao `setUp` sa imenovanom porukom. Isti fajl, dva čitaoca,
+   dve sudbine — `FileNotFoundError` (ERROR, bez rečenice) naspram FAIL sa rečenicom.
+   Nađeno u pregledu, pre pokretanja.
+2. `RootLicenseTest` je imao **isti** defekt unutar sebe: jedan test je tvrdio
+   `is_file()`, drugi nije. Nađeno tek pokretanjem — prvo pokretanje dalo je 6 FAIL i
+   **1 ERROR**, i taj jedan ERROR je bio to.
+3. Straža od `None` u sva četiri testa `ThirdPartyManifestTest`-a postoji iz istog
+   razloga: bez nje bi `sorted(None)` pukao `TypeError`-om.
+
+Treći slučaj je i razlog zašto tabela kvarova ispod ne pogađa brojeve.
+
+### Šest namernih kvarova
+
+Pre svega `git add -A`, jer su `LICENSE` i `THIRD-PARTY.txt` novi fajlovi pa bez indeksa
+`git checkout --` nad njima ne radi uopšte, a nad `pyproject.toml` bi vratio na HEAD i
+**tiho obrisao** izmenu iz koraka 6. Pouka iz 0.5, primenjena bez ponavljanja greške.
+Svaki kvar uveden posebno, vraćen, i provereno praznim `git diff -- <fajl>`.
+
+| kvar | pali testovi | poruka | predviđeno? |
+|---|---|---|---|
+| a) uklonjen `assets/fonts` iz bloka | `test_block_and_disk_agree_...` | `['assets/pieces'] != ['assets/fonts', 'assets/pieces']` | **da**, tačno |
+| b) dodat `assets/sounds`, ne postoji | `test_block_and_disk_agree_...`, `test_every_documented_directory_...` uz `path='assets/sounds'` | oba smera | **da** |
+| c) `LICENSE:` → `LICENCE:` u zaglavlju | **sva četiri** iz `ThirdPartyManifestTest` | **„header not found"** u sva četiri | **ne** — plan je rekao jedan |
+| d) putanje obrisane, zaglavlje ostaje | `test_block_lists_at_least_one_directory`, `test_block_and_disk_agree_...`; `test_block_header_is_still_there` **prolazi** | **„zero paths"** | **ne** — plan je rekao jedan |
+| e) `C4 87` → `63` u `LICENSE` | `test_license_carries_the_copyright_line_it_must_retain` | imenuje `U+0107`, ne ispisuje ga | **da**, tačno |
+| f) `license = "MIT"` | `test_pyproject_and_third_party_state_the_same_license` | `'MIT' != 'BSD-3-Clause'` + rečenica | **da**, tačno |
+
+Tri stvari koje ova tabela kaže, a plan nije predvideo:
+
+1. **Kod (c) i (d) promašen je broj, ne dijagnoza.** Sva četiri testa kod (c) padaju sa
+   istom, tačnom porukom „header not found"; kod (d) padaju dva, jedan sa „zero paths" a
+   drugi zato što prazan blok mora da se razlikuje od diska. Uzrok je straža od `None`,
+   koja je u sva četiri testa ušla **posle** nego što je tabela napisana — isti oblik kao
+   pad `A3` u 0.5. Predviđanje je bilo tačno za test kakav je tada bio.
+2. **Par (c)/(d) je jedini dokaz da `None` naspram `[]` nešto znači.**
+   `test_block_header_is_still_there` kod (c) **pada**, kod (d) **prolazi**. Da parser u
+   oba slučaja vraća `[]`, ta dva kvara bi se na izlazu videla identično — a jedan je kvar
+   u oblikovanju, drugi u sadržaju.
+3. **Kod (e) poruka je prošla svoj sopstveni test.** Ispisuje `b'...\xc4\x87'` i reč
+   `U+0107`, nigde sam znak. Nije akademski: konzola je i u ovom tasku pukla, na `đ`
+   (`UnicodeEncodeError: 'charmap' codec can't encode character` U+0111), pri običnom
+   čitanju `DECISIONS.md`-a.
+
+### Izmereno, a ne pretpostavljeno
+
+**Wheel, pre i posle.** Premisa da `assets/` ne ulazi u paket nije pročitana iz
+`pyproject.toml`-a nego izmerena nad izgrađenim wheel-om:
+
+| | pre | posle |
+|---|---|---|
+| veličina | 5724 B | 6756 B |
+| polja o licenci u `METADATA` | **nijedno** | `License-Expression: BSD-3-Clause`, `License-File: LICENSE` |
+| `.dist-info/licenses/LICENSE` | ne postoji | postoji, sa `\xc4\x87` netaknutim |
+| `assets/` u wheel-u | nema | nema |
+
+**Nezavisna provera bajtova `LICENSE`-a — korak 7 plana, izvršen na drugom mestu.**
+Plan ga je vodio kao zaseban korak posle instalacije; izvršen je odmah po upisu fajla, u
+koraku 4, nad istim bajtovima i sa istim ishodom: `C4 87` na pozicijama 34–35, **jedina
+dva ne-ASCII bajta u celom fajlu**, uz završni `\n`, bez BOM-a i bez ijednog zaostalog
+razmaka. Zapisano ovde da se spisak koraka iz plana i ovaj zapis ne raziđu — merenje
+postoji, samo ne tamo gde ga je plan najavio.
+
+**`setuptools` 76 naspram 77.** Granica nije citirana nego proverena: 76.1.0 odbija
+`license` kao string `ValueError`-om, 77 je prvo izdanje koje ga prihvata. Uz to je
+izmereno da pip u izolovano build okruženje **već povlači 84.0.0**, i pre naše izmene —
+pa `>=77` ne menja šta se povlači nego šta je dozvoljeno.
+
+**Predviđen otkaz koji se nije ostvario.** SPDX oblik tera `Metadata-Version: 2.4`, a u
+venv-u je `pip 24.0`; plan je predvideo mogućnost pada i tačku zaustavljanja. Instalacija
+je prošla bez greške. Zapisano zato što je bilo otvoreno pitanje, ne da bi ličilo na
+savladan rizik.
+
+**Merilo koje je bilo pogrešno postavljeno.** Kontekst plana je rekao da `pip show chess`
+danas ispisuje prazno `License:`. Posle taska ispisuje — **i dalje prazno**, i to je
+ispravno: po PEP 639 se `License` i `License-Expression` isključuju, a `pip 24.0` u `show`
+čita samo staro polje. Tvrdnja je bila tačna kao opis simptoma i pogrešna kao merilo
+uspeha. Merilo je `License-Expression` u `METADATA`.
+
+### Pitanja
+
+**1. `assets/fonts/LICENSE.txt` ima red u `.gitattributes`, a `LICENSE` i `THIRD-PARTY.txt`
+ga nemaju — iako test nad sva tri proverava bajtove. Koji je kriterijum, i zašto bi red za
+`LICENSE` učinio komentar na vrhu `.gitattributes`-a netačnim za sebe?**
+Znao, i preko onoga što je pitano. Kriterijum nije „test čita bajtove" nego **da li tvrdnja
+zavisi od prelazaka reda** — jedino što `-text` štiti, jer `autocrlf` pretvara `\n` u `\r\n`
+i ne dira nijedan drugi bajt.
+
+`assets/fonts/LICENSE.txt` je kopija tuđeg fajla bajt u bajt i `PROVENANCE.txt` uz njega
+vodi `sha256`; heš se računa nad celim sadržajem, pa jedan `\r` više obara tvrdnju. Isto
+važi za `sha1` SVG originala. `LICENSE` i `THIRD-PARTY.txt` su naši i nijedan heš ih ne
+pokriva: tvrdnja o prvom traži `C4 87` kao **podniz** bajtova, koji CRLF ne dira, a tvrdnje
+o drugom idu kroz `splitlines()`, koji `\r\n` tretira isto kao `\n` i ne ostavlja ni jedno.
+Izmereno: posle `git checkout` oba su na disku CRLF (`LICENSE` 1493 B umesto 1466) i svih
+53 testa prolazi.
+
+> Odgovor je otišao dalje od pitanja, na **samoreferentnost**: komentar na vrhu
+> `.gitattributes`-a kaže da su redovi tu zbog tuđeg materijala koji se čuva bajt u bajt.
+> `LICENSE` nije tuđ, **ne** čuva se bajt u bajt — prelomljen je na 75 kolona — i nijedan
+> heš ga ne pokriva. Red bi stajao u fajlu koji o sebi tvrdi nešto što za tu stavku ne važi.
+> Isti oblik kao rečenica koja bi samu sebe pojela iz 0.4, pitanje 2.
+
+**2. Tvrdnja o redu sa autorskim pravima traži taj red kao podniz bajtova, ne kao ceo red i
+ne nad dekodiranim tekstom. Koja dva režima otkaza se time izbegavaju odjednom?**
+Znao, oba, sa konkretnim ishodom za svaki.
+
+**Prelazak reda.** Poređenje celog reda na CRLF disku dalo bi
+`'Copyright (c) 2026 Stefan Obradović\r'`, što nije jednako očekivanom — i palo bi tek kod
+druge osobe posle `git clone`, nikad kod nas. Podniz ne sadrži prelazak reda, pa ga
+`autocrlf` ne može dohvatiti.
+
+**Dekodiranje.** Provera nad dekodiranim tekstom pretpostavlja da je dekodiranje uspelo.
+BOM ili presnimavanje u cp1252 daju `UnicodeDecodeError` iz `read_text` — dakle **ERROR
+umesto FAIL**, bez ijedne rečenice o uzroku, i to baš u slučaju koji provera treba da
+imenuje. Nad sirovim bajtovima nema dekodera koji može da otkaže. Isti razlog zbog kog
+`_BOM` gleda prva tri bajta a ne dekodirani znak, i isti kao kod `B6` u 0.5.
+
+**3. SPDX oznaka stoji na tri mesta. Treći primerak košta još jedan noseći red. Šta
+omogućava što prva dva sama ne mogu?**
+Znao, i odgovor je otišao dalje od pitanja — na ono što lanac **ne** pokriva.
+
+Prva dva se ne mogu porediti međusobno: `LICENSE` nosi **tekst**, ne oznaku — reč
+`BSD-3-Clause` u njemu ne postoji — a `pyproject.toml` nosi oznaku bez ičega da je poredi
+sa. Da neko sutra upiše `license = "MIT"`, ništa ne bi puklo, jer bi to bila jedina mašinski
+čitljiva tvrdnja o licenci u repozitorijumu. Red `SPDX-License-Identifier:` u
+`THIRD-PARTY.txt` daje **drugi nezavisan zapis iste tvrdnje**, pa test poredi dva umesto da
+veruje jednom. Kvar (f) je to i dokazao.
+
+> Nalaz koji nije bio u pitanju i koji je zbog toga ušao u ADR-042 kao izgubljeno:
+> **lanac vezuje oznaku sa oznakom, nikad oznaku sa tekstom.** Nijedan test ne tvrdi da telo
+> u `LICENSE`-u jeste BSD-3-Clause a ne neka druga licenca; poreklo tog tela čuva `sha256`
+> zapisan u ADR-042, ali to je **zapis, ne provera**. Ko sutra zameni telo `LICENSE`-a
+> tekstom MIT licence i ostavi red o autorskim pravima, prolazi kroz svih devet tvrdnji.
+> Isti oblik kao granica iz ADR-041: test tvrdi da ključ postoji, nikad da je prevod tačan.

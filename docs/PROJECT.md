@@ -158,6 +158,8 @@ chess/
 ├── .gitignore
 ├── .gitattributes               tuđi materijal bajt u bajt (ADR-039)
 ├── pyproject.toml
+├── LICENSE                      uslovi za naš kod, BSD-3-Clause (ADR-042)
+├── THIRD-PARTY.txt              obim: šta LICENSE ne pokriva (ADR-042)
 ├── README.md                    (srpski)
 ├── src/chess/
 │   ├── core/
@@ -499,3 +501,29 @@ Zato verzija, izvorna arhiva i `sha256` vrednosti ne stoje u njemu nego u
 naša tvrdnja umetnuta u njega putovala bi dalje kao deo licence kod svakoga ko ga
 prekopira. `PROVENANCE.txt` je naš, i na jednoj rečenici objašnjava zašto se ta dva
 fajla različito tretiraju (ADR-039).
+
+### Naš kod — `LICENSE` i `THIRD-PARTY.txt` u korenu
+
+Sve iznad govori o **tuđem** materijalu. Za naš kod je do 0.6 važilo podrazumevano
+„sva prava zadržana", što na javnom repozitorijumu nije odluka nego propust.
+
+`LICENSE` u korenu je **BSD-3-Clause**, isti tekst pod kojim uzimamo figure — tako su
+uslovi isti kroz celo stablo i razlikuje se samo nosilac prava. Copyleft bi
+protivrečio tome što smo za te iste figure svesno odbili ponuđeni GPL. Telo je
+kanonski SPDX tekst, preuzet a ne prekucan, neizmenjen osim reda o autorskim pravima;
+klauzula 3 ostaje kanonska, bez umetanja imena.
+
+`LICENSE` nosi **uslove i ništa drugo**. Obim — šta taj fajl ne pokriva i gde onda
+stoje uslovi — nosi `THIRD-PARTY.txt` pored njega. Isti odnos kao `LICENSE.txt` naspram
+`PROVENANCE.txt` kod fonta, iz istog razloga: naša rečenica umetnuta u standardni tekst
+licence putovala bi dalje kao deo uslova.
+
+Razlog zbog kog obim uopšte mora da se izriče: `LICENSE` imenuje jednog nosioca i jedne
+uslove, a prva klauzula BSD-3 traži da se zadrži **baš to** obaveštenje koje je uz
+materijal došlo, dok treća zabranjuje promociju imenom nosioca. Isti tekst uz dva
+nosioca obavezuje dvaput, prema dve različite strane.
+
+`THIRD-PARTY.txt` sadrži blok koji se **čita mašinski**: `tests/test_assets.py` poredi
+spisak putanja u njemu sa direktorijumima na disku koji nose svoj `LICENSE.txt`, u oba
+smera. Kriterijum je taj fajl, pa `assets/i18n` ispada sam od sebe. Ista licenca stoji i
+u `pyproject.toml` kao SPDX izraz, i test veže to dvoje da ne odlutaju (ADR-042, ADR-043).

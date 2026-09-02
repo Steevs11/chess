@@ -230,6 +230,26 @@ neiskorišćen import, mutabilan podrazumevani argument, goli `except`.
 
 Ne proverava **tipove** — to radi mypy, koji mi ne koristimo.
 
+### SPDX oznaka
+
+Kratko, jednoznačno ime licence iz zvaničnog spiska koji vodi SPDX projekat:
+`BSD-3-Clause`, `MIT`, `GPL-2.0-or-later`. Alat koji naiđe na tu oznaku zna tačno
+o kom tekstu je reč, bez čitanja fajla.
+
+```toml
+[project]
+license = "BSD-3-Clause"
+```
+
+Stariji način je bio **klasifikator**, `License :: OSI Approved :: BSD License`.
+Njega ne koristimo iz jednog razloga: ne razlikuje dvoklauzulnu od troklauzulne BSD
+licence, a to su različiti uslovi — treća klauzula zabranjuje promociju imenom
+nosioca.
+
+Ista oznaka stoji na tri mesta: u `pyproject.toml`, u `THIRD-PARTY.txt` kao red
+`SPDX-License-Identifier: BSD-3-Clause`, i posredno u `LICENSE`, čiji je tekst ono
+što oznaka imenuje. Prva dva poredi `tests/test_assets.py`.
+
 ### `selectors`
 
 Način da jedna nit opslužuje više konekcija. Umesto niti po klijentu, imaš

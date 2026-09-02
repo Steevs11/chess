@@ -12,8 +12,8 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    0.6 — LICENSE u korenu repozitorijuma
-Sledeće:   0.7 — .claude/ se svodi na pokazivače
+Radimo:    0.7 — .claude/ se svodi na pokazivače
+Sledeće:   0.8 — WORKFLOW.md usklađen sa odlukama
 Otvoreno:  ništa
 Grana:     main
 ```
@@ -65,10 +65,25 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > kvarova oborilo je očekivane testove — tabela stoji u `faza-0.md` §0.5, zajedno
       > sa razlogom zašto je kvar (a) oborio i `A3`, koji plan nije predvideo.
       > Obe zaostale ispravke iz 0.4 su izvršene ovim commitom.
-- [ ] 0.6 `LICENSE` u korenu repozitorijuma
+- [x] 0.6 `LICENSE` u korenu repozitorijuma, uz `THIRD-PARTY.txt` i SPDX
+      oznaku u `pyproject.toml`
       > Javan repo bez licence je podrazumevano „sva prava zadržana" —
-      > nejasan svakome ko na njega naiđe. Izbor licence je
-      > korisnikova odluka i traži ADR.
+      > nejasan svakome ko na njega naiđe. Izabran je BSD-3-Clause, isti
+      > tekst pod kojim uzimamo figure (ADR-042).
+      > `LICENSE` nosi **uslove**, `THIRD-PARTY.txt` **obim** — jer LICENSE
+      > imenuje jednog nosioca, a figure i font imaju svoje. Naša rečenica
+      > umetnuta u standardni tekst licence putovala bi dalje kao deo uslova,
+      > isto kao kod fonta u 0.4.
+      > Telo licence je preuzeto sa SPDX-a, ne iz repoa: kopija u
+      > `assets/pieces/LICENSE.txt` razlikuje se na **pet** mesta, od kojih dva
+      > u odricanju od garancije (`HOLDERS`/`OR` naspram `HOLDER`/`AND`).
+      > Blok putanja u `THIRD-PARTY.txt` čita `tests/test_assets.py`, u oba
+      > smera; ista licenca stoji i u `pyproject.toml`, i test veže to dvoje.
+      > Šest namernih kvarova stoji u `faza-0.md` §0.6 — četiri predviđena
+      > tačno, dva sa tačnom dijagnozom ali većim brojem padova nego što je
+      > tabela rekla.
+      > Nalaz zaveden a ne rešen: `assets/pieces/LICENSE.txt` svoje odricanje
+      > naziva „canonical", a SPDX kanonski oblik glasi drugačije. Vidi 0.7.
 - [ ] 0.7 `.claude/` se svodi na pokazivače; `CONVENTIONS.md` §1 dobija
       red o autoritetu
       > `.claude/` nije u hijerarhiji (§1) ni pod pravilom propagacije
@@ -85,9 +100,22 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > šalje Kiwipete brojeve u `tools/perft.py`, koji u 0.7 još ne
       > postoji. Tri od šest stavki sele se tek u fazama 3 i 6.
       > U isti task ide i opšti oblik za `CONVENTIONS.md` §1: **odeljak koji
-      > čita alat ili test nosi rečenicu koja to kaže.** Dva postojeća slučaja
-      > su §2 (`tools/layer_check.py`) i `PROTOCOL.md` §5
-      > (`tests/client/test_i18n.py`, ADR-041).
+      > čita alat ili test nosi rečenicu koja to kaže.** Tri postojeća slučaja
+      > su §2 (`tools/layer_check.py`), `PROTOCOL.md` §5
+      > (`tests/client/test_i18n.py`, ADR-041) i blok putanja u
+      > `THIRD-PARTY.txt` (`tests/test_assets.py`, ADR-042).
+      > Nov nalaz iz 0.6: ništa ne vezuje tabelu ugovora `t()` iz ADR-040 za
+      > ponašanje `src/chess/client/i18n.py`, onako kako `test_i18n.py` vezuje
+      > `PROTOCOL.md` §5 za `sr.json`. Tabela u ADR-u je tvrdnja koju nijedan
+      > test ne proverava; ADR se sme promeniti a da ništa ne pukne.
+      > Drugi nalaz iz 0.6: `assets/pieces/LICENSE.txt` kaže da je njegovo
+      > odricanje od garancije „left in its canonical 3-clause BSD wording",
+      > a kanonski SPDX oblik glasi `HOLDERS ... OR`, ne `HOLDER ... AND`.
+      > Izmereno u 0.6 poređenjem reči. Uslovi time nisu netačni — netačan je
+      > opis koji jednu rasprostranjenu varijantu naziva kanonskom. Fajl se u
+      > 0.6 nije dirao da commit ostane o jednoj stvari; ispravka traži svoj
+      > plan i svoju tačku zaustavljanja, jer je reč o tuđoj licenci.
+      > Oba su zavedena istim mehanizmom kojim je zavedena selidba spone uz 2.1.
 - [ ] 0.8 `WORKFLOW.md` usklađen sa odlukama
       > Fajl je iz prvog commita i propušteno je pravilo propagacije.
       > Četiri neslaganja: `/model opusplan` ne postoji (§2, §6);

@@ -935,6 +935,12 @@ nula zavisnosti, ali traži mrežu pri generisanju i nudi samo standardne velič
 
 ## ADR-039: Tuđi materijal se čuva bajt u bajt — `.gitattributes` i provera
 
+> ⚠️ **Dopunjeno ADR-om 042.** Pravilo „tuđi materijal se čuva bajt u bajt" i sva
+> četiri reda u `.gitattributes` ostaju na snazi. ADR-042 dodaje suprotan slučaj:
+> `LICENSE` i `THIRD-PARTY.txt` su **naši** fajlovi, nose ne-ASCII bajtove, a reda u
+> `.gitattributes` nemaju — jer nijedna tvrdnja ne zavisi od njihovih **prelazaka
+> reda**. Kriterijum je isti onaj po kom reda nemaju `PROVENANCE.txt` i `sr.json`.
+
 **Kontekst.** `assets/pieces/LICENSE.txt` navodi sha1 za svaki od 12 SVG originala,
 a `assets/fonts/LICENSE.txt` je kopija `LICENSE` fajla iz DejaVu arhive, bajt u
 bajt. Obe tvrdnje su **proverljive** — neko ih može izračunati i uporediti.
@@ -1193,3 +1199,240 @@ zavedeno polje `captured`.
 listu, mora prvo da prepravi test — i to je namera, ne smetnja, ali je trenje stvarno.
 Takođe: test tvrdi da **ključ postoji**, nikad da je prevod tačan. Rečenica koja opisuje
 pogrešnu grešku prolazi kroz svih devet tvrdnji.
+
+---
+
+## ADR-042: BSD-3 za naš kod; `LICENSE` nosi uslove, `THIRD-PARTY.txt` nosi obim
+
+**Kontekst.** Repozitorijum je javan i od 0.4 nosi tuđi materijal pod dve licence, a za
+**naš** kod ne izriče nijednu. Javan repo bez licence je podrazumevano „sva prava
+zadržana": onaj ko na njega naiđe zna da ne sme da ga koristi, ne zna zašto, i nema koga
+da pita.
+
+Drugo pitanje je stiglo uz prvo. `LICENSE` u korenu, po prirodi tog fajla, imenuje
+**jednog** nosioca i **jedne** uslove. Kod figura su uslovi isti tekst, ali je nosilac
+drugi (Cburnett, 2006). Kod fonta se razlikuju i nosilac i uslovi. Dakle jedan
+izostavljen nosilac i jedni izostavljeni uslovi — a ne „netačna tvrdnja".
+
+To nije formalnost. Prva klauzula BSD-3 traži da se zadrži **baš to** obaveštenje o
+autorskim pravima koje je uz materijal došlo, a treća zabranjuje korišćenje imena
+nosioca za promociju. Isti tekst uz dva nosioca obavezuje **dvaput, prema dve različite
+strane**.
+
+**Odluka.**
+
+**Naš kod ide pod BSD-3-Clause.** Repozitorijum već nosi taj tekst za figure, pa su
+uslovi isti kroz celo stablo i razlikuje se samo nosilac prava. Copyleft bi
+protivrečio tome što smo za iste te figure svesno odbili ponuđeni GPL (PROJECT §12).
+
+**Telo `LICENSE`-a je kanonski SPDX tekst**, neizmenjen osim reda o autorskim pravima,
+koji glasi `Copyright (c) 2026 Stefan Obradović` — godina iz prvog commita, jedna, bez
+raspona. Klauzula 3 ostaje kanonska (`the copyright holder nor the names of its
+contributors`), bez umetanja imena: standardni tekst licence se ne prepravlja — isto
+pravilo je već izrečeno u `assets/pieces/LICENSE.txt` za odricanje od garancije — a
+`licensee`, detektor koji GitHub koristi, poredi tekst, pa izmenjen tekst smanjuje
+poklapanje.
+
+Telo je **preuzeto**, ne prekucano:
+
+```
+https://raw.githubusercontent.com/spdx/license-list-data/main/text/BSD-3-Clause.txt
+1460 bajtova
+sha256 5a93d5831e1297ab10fe643e1a631e83be392896da14ee2951285a79012df69d
+```
+
+Kopija koja već stoji u `assets/pieces/LICENSE.txt` **nije** taj tekst i nije mogla da
+posluži kao izvor. Izmereno poređenjem reči, sve beline sažete — razlikuje se na **pet**
+mesta:
+
+| | SPDX kanonski | `assets/pieces/LICENSE.txt` |
+|---|---|---|
+| red o pravima | `Copyright (c) <year> <owner>. ` | `Copyright (c) 2006 Cburnett` |
+| oznake klauzula | `1.` `2.` `3.` | `  * ` |
+| klauzula 3 | `the copyright holder` | `Cburnett` |
+| odricanje, 1. rečenica | `THE COPYRIGHT **HOLDERS** AND CONTRIBUTORS` | `... **HOLDER** AND ...` |
+| odricanje, 2. rečenica | `THE COPYRIGHT HOLDER **OR** CONTRIBUTORS` | `... HOLDER **AND** ...` |
+
+Prva tri su znana i očekivana. **Poslednja dva nisu bila**, i ona su razlog zbog kog
+izvor mora biti SPDX: da je telo uzeto iz repoa, naš `LICENSE` bi nasledio varijantu
+odricanja koju taj fajl u sopstvenom objašnjenju naziva kanonskom, a koja to nije.
+Prekucavanje iz sećanja je kvar koji nijedan gate ne hvata (faza-0.md §0.4); uzimanje
+iz repoa je bio isti kvar u tišoj varijanti.
+
+Tekst je prelomljen na 75 kolona. To **nije** izmena teksta: spisak reči prelomljenog i
+kanonskog tela je identičan (216 naspram 216, prazna razlika, `a == b`), nijedan red se
+ne završava crticom, a `licensee` normalizuje beline pri poređenju. Uvlačenja nastavaka
+klauzula nema — nema ga ni kanonski tekst ni kopija u repou, i dva različita izgleda iste
+licence u istom repozitorijumu ne donose ništa.
+
+**Tvrdnja o obimu NE ide u `LICENSE`.** Obim nosi zaseban fajl u korenu,
+`THIRD-PARTY.txt`. Isti odnos kao `assets/fonts/LICENSE.txt` naspram `PROVENANCE.txt`:
+tuđ ili kanonski dokument se ne dopunjuje našom rečenicom, jer bi je onaj ko ga prekopira
+poneo kao deo uslova (ADR-039).
+
+**Ime nije `NOTICE.txt`.** `NOTICE` je konvencija Apache-2.0 sa pravnim značenjem po
+§4(d) te licence i uz BSD-3 navodi na pogrešan zaključak. Nije ni `COPYRIGHT.txt`:
+`licensee` boduje imena fajlova regularnim izrazima, a `COPYING_REGEX = /copy(ing|right)/i`
+daje `COPYRIGHT.txt` 0.85 — odmah iza `LICENSE` (1.00). Ušao bi u isti spisak kandidata
+za fajl licence, a nije licenca. `THIRD-PARTY.txt` ne pogađa nijedan regex iz te tabele.
+
+**Obim je materijal koji stoji u ovom repozitorijumu.** Deklarisane zavisnosti se ne
+nabrajaju: `pygame` pip donosi pri instalaciji i mi ga ne redistribuiramo. Preispituje se
+ako faza 7 („Deploy (opciono)") ikad spakuje izvršni fajl — LGPL tada traži mogućnost
+relinkovanja, jer je to uslov na **distribuciju**, ne na upotrebu.
+
+`THIRD-PARTY.txt` je na engleskom, kao `assets/pieces/LICENSE.txt` i `PROVENANCE.txt`.
+Nije ni `README.md` ni `docs/`, nego dokument uz licencu, i obraća se onome ko naiđe na
+repozitorijum.
+
+**Spisak putanja je ograničen blok koji čita test.** Red zaglavlja
+`DIRECTORIES WITH THEIR OWN LICENSE:`, jedna putanja po redu **od prve kolone**, prazan
+red kao kraj. Fajl nosi rečenicu koja imenuje test — opšti oblik koji `CONVENTIONS.md` §1
+dobija u 0.7. Kriterijum je „direktorijum ima svoj `LICENSE.txt`", pa `assets/i18n`
+ispada sam od sebe, bez izuzetka u kodu. Putanje idu od prve kolone iako parser radi
+`strip()`: oblik fajla i parser se slažu izričito, umesto da uvlačenje preživi zato što
+ga je `strip()` progutao.
+
+**Svaki čitalac `THIRD-PARTY.txt`-a dekodira pa koristi `splitlines()`.** Ne deli sirove
+bajtove po `\n` i **ne primenjuje nijedan izraz na ceo tekst sa `re.MULTILINE`**.
+
+Pravilo je namerno šire od jednog čitaoca. Prva verzija plana vezala ga je za „parser
+bloka", pa je drugi čitalac istog fajla — pronalaženje reda `SPDX-License-Identifier:` —
+prošao sa `re.MULTILINE` i sidrom `[ \t]*$`. `\r` nije ni razmak ni tab, pa bi izraz
+prestao da pogađa čim fajl na disku bude CRLF: kod nas bi prolazio, kod prve druge osobe
+padao. Uže formulisano pravilo propustilo je drugog čitaoca **pre nego što je i jedan red
+koda napisan** — zato ovde stoji šire.
+
+Zbog toga `THIRD-PARTY.txt` **nema red u `.gitattributes`**: red je obaveza koju neko mora
+da održava, a `splitlines()` je jednom napisan i ne traži ništa. Kad postoje dva načina da
+se ista stvar obezbedi, biramo onaj koji ne traži da se neko seti.
+
+`LICENSE` takođe **nema red u `.gitattributes`**, i obrazloženje je uže nego što bi se
+očekivalo: nijedna tvrdnja ne zavisi od njegovih **prelazaka reda**, a to je jedino što
+`-text` štiti. Šira formulacija („ne zavisi od njegovih bajtova") bila bi netačna — test
+iz ovog istog commita čita njegove bajtove. CRLF pretvara `\n` u `\r\n` i ne dira `C4 87`.
+
+Izmereno, ne pretpostavljeno: posle `git checkout --` uz `core.autocrlf=true` oba fajla su
+na disku CRLF (`LICENSE` 1493 B umesto 1466, `THIRD-PARTY.txt` 4326 umesto 4231), `git
+diff` je prazan, nijedan red posle `splitlines()` ne sadrži `\r`, i svih 53 testa prolazi.
+
+**Lanac čuva `tests/test_assets.py`**, kao i u ADR-039 — ADR beleži odluku, on je ne
+sprovodi. Provera znaka U+0107 je **stalna** tvrdnja, ne jednokratna provera: kvar
+(presnimavanje kroz editor u cp1252, loš merge) nastaje kasnije, a tada se izvršava suite
+a ne mi. Isti kriterijum po kom `sha1` provera iz 0.4 živi u testu a ne u alatu; uz to,
+prva klauzula BSD-3 traži da baš to obaveštenje preživi.
+
+Provera se gradi **iz kodne tačke**, `chr(0x0107)`, nikad iz doslovnog znaka u izvoru
+testa, i poruka o padu imenuje `U+0107` a ne ispisuje ga. Da test sadrži doslovan znak,
+isto što bi ga pokvarilo u `LICENSE`-u pokvarilo bi ga i u testu, pa bi se poredilo
+pokvareno sa pokvarenim. Nije teorijski: konzola je i u ovom tasku pukla na `đ`
+(`UnicodeEncodeError: 'charmap' codec can't encode character` U+0111), isto kao u 0.5.
+
+**`LICENSE` i `THIRD-PARTY.txt` time nisu ASCII fajlovi**, za razliku od `.py` fajlova gde
+smo čistotu ASCII-ja izričito tražili. Oba nose tačno dva ne-ASCII bajta, `C4 87`. Ime se
+piše kako se piše.
+
+**Posledice.**
+
+Ko naiđe na repozitorijum vidi pod čim sme da ga koristi, i vidi da to ne važi za figure i
+font. Metapodaci paketa nose istu tvrdnju (ADR-043), a test je vezuje za `THIRD-PARTY.txt`,
+pa dva mesta ne mogu tiho da odlutaju.
+
+**Šta smo izgubili.**
+
+1. **Još dva noseća oblika.** Red `SPDX-License-Identifier:` i zaglavlje bloka su od sada
+   tekst koji obara suite kad se promeni. Ista cena kao u ADR-041 za `PROTOCOL.md` §5, i
+   ista namera.
+2. **Pravilo o ASCII-ju se ne prenosi na ova dva fajla.** „Izvor je čist ASCII" važi za
+   kod; ovde ne važi i ne sme. Razliku od sada mora da zna svako ko ta dva fajla dira.
+3. **Provera ASCII-ja pokriva jedan fajl zato što fajl ima jedan.** `AsciiSourceTest` čita
+   `Path(__file__)` i ništa drugo. Ako se tvrdnje o licencama ikad razdvoje na više test
+   modula, provera se **ne prenosi sama** i pravilo tiho prestaje da važi za nov fajl.
+   Zapisano i u komentaru iznad tog testa, jer ADR niko ne čita dok deli fajl.
+4. **`THIRD-PARTY.txt` mora da se održava.** Treći direktorijum sa tuđim materijalom obara
+   `LicensedDirectoriesTest` — namerno, jer hardkodovan broj 2 traži da to bude svestan
+   događaj — ali je to obaveza koju niko ne pogađa iz imena fajla.
+5. **Lanac vezuje oznaku sa oznakom, nikad oznaku sa tekstom.** `LICENSE` nosi **tekst**
+   licence i reč `BSD-3-Clause` se u njemu ne pojavljuje; test poredi `pyproject.toml` sa
+   `THIRD-PARTY.txt`, dakle dva zapisa **iste oznake**. Nijedna tvrdnja ne kaže da je telo
+   u `LICENSE`-u zaista BSD-3-Clause a ne neka druga licenca — ko zameni telo tekstom MIT
+   licence i ostavi red o autorskim pravima, prolazi kroz svih devet tvrdnji. Poreklo tela
+   čuva `sha256` zapisan iznad, ali to je **zapis, ne provera**. Ista granica kao u
+   ADR-041: test tvrdi da ključ postoji, nikad da je prevod tačan.
+
+---
+
+## ADR-043: Licenca se izriče i u metapodacima paketa; SPDX oblik traži `setuptools>=77`
+
+**Kontekst.** `LICENSE` u korenu vidi čovek. `pip`, PyPI i svaki alat koji čita `METADATA`
+vide `pyproject.toml`. Do ovog taska `[project]` nije imao nijedno polje o licenci, pa je
+wheel koji gradimo nosio **nijedan red o licenci** — izmereno, ne pretpostavljeno.
+
+**Odluka.**
+
+```toml
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+
+[build-system]
+requires = ["setuptools>=77"]
+```
+
+SPDX izraz, ne tabela i ne klasifikator. Razlozi su **izmereni**, ne citirani:
+
+- `setuptools` 76.1.0 odbija `license` kao string tvrdo: `ValueError: invalid
+  pyproject.toml config: 'project.license'`; šema tada zna samo `{file=}` i `{text=}`.
+  Granica je stvarno 77.
+- `setuptools` 84.0.0 prijavljuje `SetuptoolsDeprecationWarning` i za `project.license`
+  kao TOML tabelu i za klasifikator `License :: OSI Approved :: BSD License`, sa rokom:
+  „By 2027-Feb-18 ... your builds will no longer be supported".
+- Klasifikator ne razlikuje dvoklauzulnu od troklauzulne BSD licence, a ceo task postoji
+  da tvrdnja bude tačna. **Ispravka premise iz plana:** `pyproject.toml` klasifikator
+  nikad nije ni imao, pa je ovo razlog da se **ne doda**, a ne da se ukloni.
+- Paket ne ide na PyPI, što izbor pojačava u istom smeru: jedini potrošač klasifikatora je
+  PyPI-jev prikaz.
+
+**Podizanje granice ne dodaje zavisnost.** `build-system.requires` opisuje okruženje u kom
+pip gradi paket, a to okruženje pip stvara sam. Lista zavisnosti projekta ostaje `pygame` i
+`ruff` (CONVENTIONS §10, dopunjena istim commitom da to kaže).
+
+Izmereno pre izmene, da granica ne bude pretpostavka: pip u izolovano build okruženje već
+povlači **najnoviji** setuptools (84.0.0), pa 84 već radi. `>=77` ne menja **šta se
+povlači**, nego **šta je dozvoljeno** — sprečava da neko sa zakucanim starijim
+setuptools-om dobije `ValueError` umesto paketa.
+
+**Wheel se gradi sa `pip wheel . --no-deps -w dist`**, i pre i posle izmene. `build` se
+**ne** instalira — nije naša zavisnost i nikad nije bio pokrenut u ovom projektu. `pip` je
+već tu i sam stvara izolovano build okruženje. `build/`, `dist/` i `*.egg-info/` su već u
+`.gitignore`, pa izgradnja ne prlja radno stablo — provereno, ne pretpostavljeno.
+
+**Posledice.**
+
+Mereno nad wheel-om, pre i posle:
+
+| | pre | posle |
+|---|---|---|
+| veličina | 5724 B | 6756 B |
+| polja o licenci u `METADATA` | **nijedno** | `License-Expression: BSD-3-Clause`, `License-File: LICENSE` |
+| `.dist-info/licenses/LICENSE` | ne postoji | postoji, sa `C4 87` netaknutim |
+| `assets/` u wheel-u | nema | nema |
+
+**`pip show` i dalje ispisuje prazno `License:`, i to je ispravno.** Po PEP 639 se
+`License` i `License-Expression` međusobno isključuju, a `pip 24.0` u `show` čita samo
+staro polje. Merilo tačnosti je `License-Expression` u `METADATA`, ne izlaz jedne stare
+komande. Zapisano izričito da neko za pola godine ne „popravi" tačnu metapodatku zato što
+`pip show` o njoj ćuti.
+
+Predviđena tačka otkaza koja se **nije** ostvarila: SPDX oblik tera `Metadata-Version:
+2.4`, a u venv-u je `pip 24.0`. Instalacija je prošla bez greške. Zabeleženo jer je bilo
+otvoreno pitanje, ne da bi izgledalo kao rizik koji smo savladali.
+
+**Šta smo izgubili.**
+
+1. **Predviđen pad, isti oblik kao B11 u ADR-040.** Zbog `[tool.setuptools.packages.find]
+   where = ["src"]` `assets/` ne ulazi u wheel, pa je tvrdnja o licenci u metapodacima
+   danas tačna za ono što se pakuje. Kad u fazi 4 ili 7 resursi budu morali u paket,
+   `license-files` **mora** da poraste, inače wheel nosi tuđi materijal bez ijedne licence.
+   **Nijedna provera iz ovog taska to ne hvata.**
+2. Donja granica `setuptools`-a je od sada broj koji neko mora da brani. Spuštanje ispod 77
+   vraća `ValueError`, i to se vidi tek pri izgradnji, ne pri čitanju fajla.

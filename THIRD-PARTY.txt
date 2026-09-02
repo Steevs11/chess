@@ -1,0 +1,95 @@
+================================================================================
+WHAT LICENSE COVERS, AND WHAT IT DOES NOT
+================================================================================
+
+LICENSE in the root of this repository states the terms for the code of this
+project. It names one copyright holder, Stefan Obradović, and one set of terms:
+
+SPDX-License-Identifier: BSD-3-Clause
+
+That file covers what we wrote. It does not cover the third-party material that
+also sits here, and could not: the chess pieces are under the same 3-clause BSD
+text but belong to Cburnett, and the font is under neither BSD nor a single
+license. One notice cannot speak for three parties. The first BSD condition
+requires that a redistribution retain the copyright notice it was given, and the
+third forbids using the holder's name to promote anything derived from the
+material - so the same text under two holders binds twice, towards two different
+people.
+
+The scope is stated in this file rather than inside LICENSE on purpose. LICENSE
+carries terms and nothing else; a sentence of ours added to a standard license
+would travel on as if it were part of those terms, to everyone who copies the
+file into their own project. That is the same reason assets/fonts/LICENSE.txt
+was copied byte for byte and the notes about it live in PROVENANCE.txt beside it
+(ADR-039, ADR-042).
+
+This file is UTF-8 and is not ASCII, and neither is LICENSE. A person's name is
+written the way it is written, so the holder's name ends in U+0107 in both. The
+checks that guard those bytes name that code point and never print it: a console
+that cannot encode the character would otherwise break the very message meant to
+report it, which is not hypothetical here (faza-0.md, 0.5).
+
+
+SCOPE
+-----
+
+This file describes material that STANDS IN THIS REPOSITORY.
+
+Declared dependencies are a different question and are not listed here. pygame
+is fetched by pip at install time, is never redistributed by us, and carries its
+own terms wherever it is installed. Should a later phase ever ship a packaged
+executable, that answer changes - relinking under the LGPL is a condition on
+distribution, not on use - and this file would have to grow to match.
+
+
+THE BLOCK BELOW IS READ BY A TEST
+---------------------------------
+
+tests/test_assets.py reads the block that follows and compares it against the
+directories on disk, in both directions: every directory under assets/ that
+carries a LICENSE.txt of its own has to be listed here, and every path listed
+here has to exist and carry one. The criterion is that file, which is why
+assets/i18n is absent without an exception being written anywhere - sr.json is
+ours and has no separate terms.
+
+The header line below and the blank line that ends the block are both part of
+what the test reads. One path per line, starting in the first column. Reshaping
+this block breaks the suite, and that is the intention, not an accident
+(ADR-041, ADR-042).
+
+DIRECTORIES WITH THEIR OWN LICENSE:
+assets/fonts
+assets/pieces
+
+
+CHESS PIECES - assets/pieces/
+-----------------------------
+
+Copyright (c) 2006 Cburnett. The 12 standard "Cburnett" SVG pieces from Wikimedia
+Commons, offered by their author under a choice of licenses, of which we select
+the 3-clause BSD License. The PNG files next to them are rasterizations of those
+SVGs and are derivative works under the same terms.
+
+Full terms, the author's own wording, the permalinks pinned to the revisions that
+were read, and a sha1 for each of the 12 originals are in:
+
+    assets/pieces/LICENSE.txt
+
+
+FONT - assets/fonts/
+--------------------
+
+DejaVu Sans 2.37. Not one license and not BSD: the base fonts are (c) Bitstream,
+Inc., the DejaVu changes are in the public domain, and glyphs imported from the
+Arev fonts are (c) Tavmjong Bah. The license requires the copyright notice, the
+trademark notice and the permission notice to travel with every copy, which is
+why a separate license file exists here at all and is not summarised.
+
+Full terms, copied out of the upstream archive byte for byte:
+
+    assets/fonts/LICENSE.txt
+
+Version, source archive and sha256 values - our claims, not theirs, and kept out
+of the license for that reason:
+
+    assets/fonts/PROVENANCE.txt

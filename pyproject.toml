@@ -3,6 +3,14 @@ name = "chess"
 version = "0.1.0"
 description = "Sahovska aplikacija za dva igraca preko mreze"
 requires-python = ">=3.11"
+# SPDX expression, not a table and not a classifier (ADR-043). The classifier
+# "License :: OSI Approved :: BSD License" does not tell 2-clause from 3-clause,
+# and this whole task exists so that the statement is exact. license-files is
+# spelled out rather than left to the default: today it lists what the wheel
+# actually ships, and if assets/ ever has to go into the package, this line is
+# where that shows up as a change instead of as silence.
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 dependencies = [
     "pygame>=2.5",
 ]
@@ -13,7 +21,11 @@ dev = [
 ]
 
 [build-system]
-requires = ["setuptools>=68"]
+# 77 is the first release that accepts project.license as an SPDX string; 76.1.0
+# rejects it outright. This is a requirement on the environment pip builds the
+# package in, which pip creates itself - not a dependency of the project, so the
+# list in CONVENTIONS 10 is still pygame and ruff (ADR-043).
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
