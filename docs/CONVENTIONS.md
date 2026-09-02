@@ -274,6 +274,9 @@ varijanta. Tada komentar nosi broj ADR-a.
 ```
 tests/
 ├── __init__.py
+├── client/
+│   ├── __init__.py
+│   └── test_i18n.py      sr.json, t(), i spona sa PROTOCOL §5 (ADR-040, ADR-041)
 ├── core/
 │   ├── __init__.py
 │   ├── test_board.py
@@ -420,7 +423,11 @@ json.dump(data, f, ensure_ascii=False, indent=2)
 - putanja do resursa se računa od modula, nikad od radnog direktorijuma:
 
 ```python
-ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
+# broj .parent zavisi od dubine modula - broji se do korena, jedan po nivou
+ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"          # src/chess/<modul>.py
+
+# prepisano iz src/chess/client/i18n.py: i18n.py -> client -> chess -> src -> koren
+CATALOG = Path(__file__).resolve().parent.parent.parent.parent / "assets" / "i18n" / "sr.json"
 ```
 
 - konfiguracija ide kroz promenljivu okruženja sa razumnim podrazumevanim:
@@ -440,6 +447,58 @@ ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
 Nijedan tekst vidljiv korisniku ne stoji u kodu. Sve ide kroz ključ u
 `assets/i18n/sr.json`. Font koji se pakuje mora da podržava č ć š ž đ —
 DejaVu Sans, ne podrazumevani pygame font.
+
+Šahovska notacija se **ne prevodi**: `e4`, `Nf3`, `O-O`, `1-0`, FEN, PGN su međunarodni
+standard i ostaju kakvi jesu.
+
+### Ključevi: `oblast.stvar`
+
+Malim slovima, tačno jedna tačka: `^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`.
+
+Dve vrste ključeva, i pravilo **nije isto** za obe:
+
+| Vrsta | Odakle ime | Primer |
+|---|---|---|
+| **izveden** | mehanički iz zatvorenog skupa u `PROTOCOL.md` (ADR-041) | `error.illegal_move` iz koda `ILLEGAL_MOVE`; `termination.checkmate` iz `"checkmate"` |
+| **slobodan** | izmišljen kad tekst nastane | `menu.play` |
+
+Izveden ključ se **ne izmišlja i ne preimenuje** — dobija se pravilom
+(`"error." + kod malim slovima`), a `tests/client/test_i18n.py` poredi oba spiska u oba
+smera. Slobodan ključ bira onaj ko piše tekst.
+
+Kad se dodaje ključ, prvo se pogleda kojoj vrsti pripada. Za `menu.play` niko ne pita;
+za `error.*` i `termination.*` protokol je već odlučio.
+
+### Ugovor `t()` (ADR-040)
+
+`t(key, params=None) -> str`. Puni tekst odluke je u ADR-040; ovde stoji ono što obavezuje
+kod:
+
+- **`t()` ne baca na loš podatak.** Nepostojeći ključ vraća se kao sam ključ, a parametar
+  koji nije prosleđen ostaje vidljiv kao `{{ime}}`. Oba uz WARNING — koji je **drugi kanal
+  pored simptoma na ekranu, nikad jedini.**
+- **Baca na pogrešan poziv:** `RuntimeError` ako `load()` nije pozvan, `TypeError` ako
+  parametar nije `str`.
+- **`load()` odbija loš podatak glasno** — `ValueError` na BOM, neispravan JSON i duplirani
+  ključ. Poruka je engleska i namenjena programeru (§6); korisnički tekst nikad ne izlazi iz
+  izuzetka.
+- Zamena je `{{ime}}`, ne `str.format` — funkcija se u 4.7 prevodi 1:1 u JavaScript.
+  **Parametri su stringovi; `t()` ne poziva `str()`** (`str(1.0)` je `"1.0"`, `String(1.0)`
+  je `"1"`). Broj se formatira na pozivnom mestu.
+
+### Ton korisničkog teksta
+
+> Tekst za korisnika je bezličan: bez drugog lica, bez prefiksa „Greška:", bez pripisivanja
+> krivice. Poruka koju je izazvala radnja igrača opisuje stanje. Poruka koju je izazvao kvar
+> imenuje šta se pokvarilo i šta sledi, nikad ono što je igrač uradio.
+
+```
+DA   Sada je protivnik na potezu.
+NE   Greška: niste vi na potezu!
+
+DA   Program je poslao neispravnu poruku. Veza je prekinuta.
+NE   Poslali ste neispravnu poruku.
+```
 
 ---
 

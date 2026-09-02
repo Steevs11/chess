@@ -220,7 +220,7 @@ zaseban posao i ne pripada tasku o `pyproject.toml`-u.
 
 ### Sadržaj iz `.claude/` koji po ADR-028 pripada gitu
 
-*„Ako nešto radi i bez asistenta, ide u git."* Šest stavki ispunjava taj uslov, a
+*„Ako nešto radi i bez asistenta, ide u git."* Sedam stavki ispunjava taj uslov, a
 živi samo u folderu koji CONVENTIONS §8 zabranjuje da uđe u commit. Ne sele se
 sada — svaka stiže u task u kom se koristi i tada je razumljiva. Lista postoji da
 se ne izgubi:
@@ -229,8 +229,9 @@ se ne izgubi:
 |---|---|---|
 | „Socket u svojoj niti; pygame se nikad ne dira iz mrežne niti" | `rules/client-boundaries.md` | **3.2** → CONVENTIONS §3 |
 | „`BotScene` u fazi 6 mora biti nov fajl, ne prepravka postojećih" | `rules/client-boundaries.md` | **6.7** → ROADMAP ili ADR |
-| Konvencija i18n ključeva `oblast.stvar` | `rules/i18n.md` | **0.5** → CONVENTIONS §7 |
-| `t()` vraća ključ kad prevoda nema, ne baca | `rules/i18n.md` | **0.5** → CONVENTIONS §7 (kandidat za ADR — izbor je mogao ići drugačije) |
+| ✅ Konvencija i18n ključeva `oblast.stvar` | `rules/i18n.md` | **preseljeno u 0.5** → CONVENTIONS §7 |
+| ✅ `t()` vraća ključ kad prevoda nema, ne baca | `rules/i18n.md` | **preseljeno u 0.5** → CONVENTIONS §7 i ADR-040 (kandidat za ADR se ostvario) |
+| ✅ Notacija se ne prevodi (`e4`, `Nf3`, `O-O`, `1-0`, FEN, PGN) | `rules/i18n.md` | **preseljeno u 0.5** → CONVENTIONS §7 |
 | Kiwipete FEN + brojevi d1–d3 · tabela simptom→uzrok | `skills/perft/SKILL.md` | **1.3** → `tests/core/test_perft.py` uz komentar o izvoru, odnosno docstring `tools/perft.py` |
 | „`b1`/`b8` mora biti prazno, ali sme biti napadnuto" | `skills/chess-rules/SKILL.md` | **1.4** → `PROJECT.md` §7 |
 
@@ -647,3 +648,189 @@ zna, a zakucan broj bi pucao čim se zameni set figura.
 > bagove koje nisi predvideo.** Ovaj bag niko nije predvideo.
 
 ---
+
+## 0.5 — `sr.json`, `t()` i spona sa protokolom
+
+Prvi task koji **veže dokument za test**. Do sada je `PROTOCOL.md` §5 nabrajao devet
+`ERROR` kodova, a `CONVENTIONS.md` §7 tvrdio da svaki korisnički tekst ide kroz ključ —
+ali nijedan od tih ključeva nije postojao. Pravilo je bilo obećanje.
+
+| Šta | Gde |
+|---|---|
+| devet ključeva, UTF-8 bez BOM-a | `assets/i18n/sr.json` |
+| `load()` i `t()`, samo stdlib | `src/chess/client/i18n.py` |
+| 23 nova testa u tri grupe (A spona, B fajl, C ponašanje) | `tests/client/test_i18n.py` |
+| pravilo izvođenja `message_key` + napomena da se prva kolona čita mašinski | `PROTOCOL.md` §5 |
+| ADR-040 (ugovor `t()`), ADR-041 (zatvoren skup iz protokola), ispravka ADR-039 | `DECISIONS.md` |
+| stablo `tests/`, putanja sa četiri `.parent`, ključevi, ugovor `t()`, ton | `CONVENTIONS.md` §5 i §7 |
+
+### Granica koja nosi ceo ugovor
+
+Ugovor se **ne** zove „`t()` ne baca". Zove se: `t()` ne baca **na loš podatak**.
+
+Bez tog razlikovanja `RuntimeError` i `TypeError` u `t()` izgledaju kao rupa u pravilu.
+Sa njim su njegova granica: loš podatak je sadržaj `sr.json`-a i ono što stiže sa mreže,
+a pogrešan poziv je greška u našem kodu. Prvo se toleriše i prikazuje, drugo pada odmah.
+
+Druga granica ide kroz `load()`: on je jedino mesto koje odbija glasno. Zato `load()` sme
+`ValueError`, a `t()` posle njega ne sme ništa da baci na sadržaj.
+
+WARNING je pri tom **drugi kanal pored simptoma na ekranu, nikad jedini** — zato tri reda
+ugovora imaju log, a dva nemaju: kod njih na ekranu nema šta da se vidi.
+
+### Dokaz da spona nije dekor — i bag koji je usput ispao
+
+Suite je pokrenut **pre** nego što je napomena upisana u `PROTOCOL.md` §5. Očekivanje:
+pada tačno `A5`. Palo je **četiri** testa, pa se stalo.
+
+Uzrok nije bio u dokumentu nego u parseru: isečak teksta posle zaglavlja tabele počinje
+prelaskom u nov red, pa prvi element `splitlines()` bude prazan string, ne počinje sa `|`,
+i petlja pukne na `break` pre nego što vidi ijedan red. Parser je **oslepeo i vratio nula
+kodova**.
+
+Ono što je važno: nije prošao praznog hoda. Oborila ga je tvrdnja o broju kodova koja
+stoji **pre** petlje — ista zaštita zbog koje je u 0.4 dodata tvrdnja „unosa ima 12".
+Posle ispravke (`lstrip`) padao je tačno `A5`, i to je dokaz koji se tražio: **imenovan
+test pada iz imenovanog razloga.** Sa napomenom u §5: 44 testa, `OK`.
+
+### Pet namernih kvarova
+
+Svaki uveden posebno, pa vraćen sa `git checkout -- <fajl>` i proveren praznim
+`git diff -- <fajl>`. Pre svega toga `git add -A`, jer bez indeksa `checkout` nad
+`PROTOCOL.md` vraća na HEAD i **tiho briše** napomenu iz koraka 5.
+
+| kvar | pali testovi | predviđeno? |
+|---|---|---|
+| a) uklonjen red `NOT_IN_GAME` iz tabele kodova | `A2`, `A3`, `A4` | plan je predviđao `A2` i `A4` |
+| b) BOM na početku `sr.json` | **FAIL** `B6`; **ERROR** `A3`, `A4`, `B7`–`B11` | da |
+| c) deseti red koji ponavlja postojeći ključ istom vrednošću | `B7` | da |
+| d) ispražnjena vrednost za `error.move_pending` | `B9` | da |
+| e) U+0161 zamenjeno sa U+00C4 | `B11` (`code_point='U+00C4'`) | da |
+
+Tri stvari koje ova tabela kaže, a plan nije predvideo:
+
+1. **Zašto je (a) oborio i `A3`.** Ne na nedostajućem ključu — njegova petlja preko
+   preostalih osam kodova bi prošla — nego na **straži od prazne petlje**
+   (`8 != 9`, linija 167). Straža je dodata u poslednjem krugu pregleda plana, dakle
+   posle predviđanja. Predviđanje je bilo tačno za test kakav je tada bio.
+2. **Kod (b) izolacija nije dostižna i ne glumi se.** Ali razlika u vrsti pada nosi
+   informaciju: `B6` je **FAIL** — tvrdnja je proverena i netačna; ostalih sedam su
+   **ERROR** — `json.loads` je pukao pre ijedne tvrdnje. `B6` gleda bajtove baš zato da
+   ne deli sudbinu sa dekodiranjem.
+3. **Kod (e) `B10` i dalje prolazi.** Ostale vrednosti imaju dijakritik. To je i poenta:
+   `B10` hvata **izostanak** dijakritika, `B11` **pokvaren** dijakritik. Dva kvara; prvi
+   ne pokriva drugi.
+
+### Escape sekvenca koja se pretvorila u sam znak
+
+Nalaz iz alata, ne iz koda. Escape sekvenca za U+FEFF, napisana u izvornom kodu, stigla je
+na disk kao **doslovna tri bajta `EF BB BF`** — alat za pisanje fajlova je dekodirao
+sopstveni ulaz:
+
+```
+0000000   A       =       " 357 273 277   "  \n      <- napisano kao escape, upisano kao znak
+0000020   B       =       c   h   r   (   0   x   F   E   F   F   )  \n
+```
+
+Provera BOM-a bi tako postala poređenje sa nevidljivim znakom — a to je tačno kvar od kog
+štiti. Zato u kodu stoji `_BOM = chr(0xFEFF)`: imenuje kodnu tačku, a ne može da se tiho
+pretvori ni u šta. Iz istog razloga su i bela lista u `B11` i skup u `B10` sagrađeni iz
+kodnih tačaka, pa su **oba `.py` fajla čist ASCII** — provereno nad bajtovima.
+
+> Opšte pravilo koje iz ovoga sledi: **provera ne sme da deli sudbinu sa kvarom od kog
+> štiti.** Isti oblik kao `B6` nad bajtovima umesto nad tekstom.
+>
+> Isto važi i za ovaj odeljak: on kvar opisuje, pa ga ne sme sadržati. Zato se ovde nigde
+> ne piše ni sam znak ni escape za njega, a ceo fajl se posle upisa proverava nad
+> bajtovima.
+
+Poruke o padu iz istog razloga imenuju znak kodnom tačkom i nikad ga ne ispisuju. Nije
+teorijski: konzola je tokom rada stvarno pukla na `đ`
+(`UnicodeEncodeError: 'charmap' codec can't encode character` U+0111) — cp1252, tačno
+ono što `CONVENTIONS.md` §7 opisuje.
+
+### `sr.json` i `.gitattributes` — izmereno, pa zapisano
+
+`git checkout --` je uz `core.autocrlf=true` vratio `sr.json` na disk **sa CRLF-om**
+(697 bajtova umesto 686), dok blob ostaje LF i `git diff` je prazan. Svih 44 testa i dalje
+prolazi.
+
+To je odgovor na pitanje zašto `sr.json` **nema** red u `.gitattributes`: red postoji tamo
+gde **tačni bajtovi nose tvrdnju**, a nijedna tvrdnja ne zavisi od njegovih. Isti kriterijum
+po kom reda nema ni `PROVENANCE.txt` (0.4, pitanje 2). ADR-039 je zato ispravljen — on je
+`sr.json` navodio kao sledeći slučaj pravila „tuđi materijal se čuva bajt u bajt", a
+`sr.json` je **naš** fajl. Pogrešan primer, ne promena odluke.
+
+### Ispravka koja neće ostaviti trag u commitu
+
+Zaostala ispravka br. 1 iz 0.4 — red `python tools/rasterize_pieces.py` u sekciji Komande
+— upisana je u `CLAUDE.md`, a taj fajl je u `.gitignore` (ADR-012). `ROADMAP.md` je
+označava kao urađenu i **ništa u repozitorijumu to ne dokazuje**: ko sutra klonira repo
+vidi tvrdnju bez ijednog dokaza.
+
+Zapisano je ovde jer je `faza-0.md` jedino mesto u gitu koje o toj izmeni može da
+posvedoči. Prećutati je značilo bi ostaviti štikliranu stavku bez pokrića.
+
+### Jedna stavka je stigla ranije nego što je tabela predviđala
+
+Tabela za preseljenje u §0.2 dobila je red *„Notacija se ne prevodi"* — stavku koju je
+sama tabela izgubila kad je pisana. Bila je predviđena za **3.7**, ali je stigla odmah:
+§7 se u ovom tasku ionako prepisivao, pa bi ostaviti je u `.claude/` značilo namerno
+ostaviti pravilo u fajlu bez autoriteta. Zavedena je i odmah označena kao preseljena, da
+tabela opisuje stvarno stanje a ne nameru.
+
+### Pitanja
+
+**1. `load()` na kraju prazni skup već prijavljenih ključeva. Da je neko taj skup vezao za
+modul umesto za katalog, koji jedini test bi to prijavio i zašto bi svi ostali prolazili?**
+Znao, i preko onoga što je pitano. Prijavio bi ga **`C21`**, i to je jedini.
+
+Razlog je u tome što `setUp` grupe C radi `importlib.reload`, pa svaki test počinje sa
+potpuno praznim stanjem modula. Dok test uradi samo jedan `load()`, skup vezan za modul i
+skup vezan za katalog ponašaju se **identično** — u oba slučaja je prazan na početku i prvi
+nepostojeći ključ se prijavi. Tako prolaze `C13`, `C15`, `C16`, `C22` i `C23`.
+
+`C20` ni ne pomaže: on zove `t()` dvaput sa istim ključem, ali između ta dva poziva nema
+`load()`-a, pa tačno jedno upozorenje dobija u oba slučaja.
+
+`C21` je jedini koji radi `load()` → `t(nepostojeći)` → `load()` ponovo → `t(isti ključ)`.
+Ako skup pripada modulu i `load()` ga ne dira, ključ je već u njemu, drugo upozorenje se ne
+javi, i `assertLogs` pukne jer nijedan zapis nije nastao.
+
+To je i poenta: odluka „nema `reset_for_tests()`, skup pripada katalogu" bez `C21` ne bi
+bila proverena nijednom tvrdnjom.
+
+**2. `t()` proverava tip parametara pre nego što potraži ključ. Zašto taj redosled, kad bi
+provera posle traženja uštedela posao kad ključ ne postoji?**
+Znao, i preko onoga što je pitano. Zato što bi obrnut redosled dopustio da **greška u
+podacima sakrije grešku u kodu**.
+
+Poziv `t("menu.play", {"n": 1.0})` sa ključem koji ne postoji: da provera tipa ide posle
+traženja, funkcija bi vratila sam ključ, upisala upozorenje o nedostajućem ključu i nikad ne
+bi prijavila `TypeError`. Broj umesto stringa bi ostao neprimećen — a to je tačno onaj kvar
+koji se u fazi 4 pojavljuje tiho.
+
+Gore od toga: isto pozivno mesto bi bacalo ili ne bacalo u zavisnosti od toga da li
+`sr.json` slučajno ima taj ključ. **Greška u našem kodu ne sme da zavisi od sadržaja fajla**
+— mora da pukne deterministički, uvek isto.
+
+Ušteda o kojoj je reč je jedno pretraživanje rečnika sa devet unosa. To nije cena vredna
+pomena naspram progutane greške.
+
+**3. BOM se odbija na dva mesta, ali `B6` gleda bajtove a `load()` tekst. Zašto ta razlika
+nije nemar nego uslov da druga provera nešto znači?**
+Znao. Zato što bi test koji čita fajl na isti način kao `load()` prolazio kroz **ista vrata
+kao bag**, pa bi ponavljao `load()`-ovu pretpostavku umesto da je proverava.
+
+`load()` radi `read_text(encoding="utf-8")` — dakle već je dekodirao pre nego što išta
+tvrdi. Ako dekodiranje pukne ili uradi nešto neočekivano, njegova provera se nikad ne izvrši
+i izuzetak dođe sa drugog mesta. Test koji ide istim putem tada testira dekoder, ne fajl.
+
+`B6` otvara sirove bajtove i poredi prva tri sa `EF BB BF`. Njegova tvrdnja ne zavisi od
+toga da li je dekodiranje uopšte uspelo. Zato dve provere padaju nezavisno: `load()` čuva
+svaki fajl na koji pokaže u vreme izvršavanja, uključujući one koje test u fazi 4 neće
+videti, a `B6` čuva fajl u repozitorijumu bez obzira šta dekoder radi.
+
+> Opšte pravilo izvedeno u ovom tasku, i uz `chr(0xFEFF)` drugi njegov slučaj:
+> **provera ne sme da deli sudbinu sa kvarom od kog štiti.** Da obe idu kroz dekoder, jedan
+> pokvaren dekoder bi ućutkao obe odjednom.

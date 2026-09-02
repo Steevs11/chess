@@ -1,0 +1,11 @@
+{
+  "error.illegal_move": "Taj potez nije dozvoljen po pravilima.",
+  "error.not_your_turn": "Sada je protivnik na potezu.",
+  "error.move_pending": "Prethodni potez još nije potvrđen.",
+  "error.draw_already_offered": "Remi je već ponuđen u ovom potezu.",
+  "error.version_mismatch": "Verzija programa se ne poklapa sa verzijom servera. Veza je prekinuta.",
+  "error.protocol_error": "Program je poslao neispravnu poruku. Veza je prekinuta.",
+  "error.unknown_type": "Server ne prepoznaje vrstu poruke koju je program poslao.",
+  "error.game_not_found": "Tražena partija ne postoji. Moguće je započeti novu.",
+  "error.not_in_game": "Ta radnja je moguća samo tokom partije."
+}

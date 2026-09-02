@@ -978,8 +978,18 @@ da izvuče blob kroz `git cat-file`. Proverljiva tvrdnja koju niko ne može lako
 proveri je za korak od tvrdnje kojoj se samo veruje.
 
 Pravilo se izriče šire nego što je slučaj tražio, jer će se ponoviti: **tuđi
-materijal u ovom repozitorijumu čuva se bajt u bajt.** 0.5 donosi `sr.json`, faza 4
-veb resurse.
+materijal u ovom repozitorijumu čuva se bajt u bajt.** Faza 4 donosi veb resurse.
+
+> **Ispravka primera, task 0.5.** Ova rečenica je kao sledeći slučaj pravila najavljivala
+> `assets/i18n/sr.json`. To je pogrešan primer, ne promena odluke: `sr.json` je **naš**
+> fajl, nastao u ovom repozitorijumu, nema zapisan heš i ne nosi nijednu tvrdnju o
+> poreklu. Zato **nema red u `.gitattributes`** — po istom kriterijumu po kom ga nema ni
+> `assets/fonts/PROVENANCE.txt`: red postoji tamo gde **tačni bajtovi nose tvrdnju**.
+>
+> Izmereno u 0.5, da ne ostane pretpostavka: uz `core.autocrlf=true` `git checkout --`
+> vrati `sr.json` na disk sa CRLF-om (697 bajtova umesto 686), blob ostaje LF, `git diff`
+> je prazan i svih 44 testa prolazi. Konverzija mu ne može ništa jer nijedna tvrdnja ne
+> zavisi od njegovih bajtova — što je upravo razlog da reda nema.
 
 **Posledice.**
 
@@ -1032,3 +1042,154 @@ skraćivati bez čitanja dva `LICENSE.txt` fajla — a to niko ne pogađa iz nje
 imena. Veza je jednosmerna i nevidljiva: ništa u `.gitattributes` ne pokazuje ko
 na njega računa. Test tu vezu sada čuva, ali je i sam deo iste petlje — ko obriše
 i njega, obrisao je i jedino mesto koje bi prijavilo.
+
+---
+
+## ADR-040: Ugovor `t()` — šta se odbija glasno, a šta se vidi na ekranu
+
+**Kontekst.** Task 0.5 uvodi `assets/i18n/sr.json` i `src/chess/client/i18n.py`. Funkcija
+`t()` se u tasku 4.7 prevodi **1:1 u JavaScript**, pa svaki izbor u njoj mora da važi i za
+jezik koji nema `**kwargs`, `str.format` ni Pythonov `str()`.
+
+Otvoreno pitanje nije bilo kako izgleda potpis, nego **šta `t()` radi kad nešto nije u
+redu**. Ako baca, jedan prevod koji fali obara ceo ekran usred partije. Ako ćuti, greška se
+ne primeti nikad — ni na ekranu ni u logu.
+
+**Odluka.**
+
+Ugovor se ne zove „`t()` ne baca". Zove se: **`t()` ne baca na loš podatak.**
+
+- **Loš podatak** je sadržaj `sr.json`-a i ono što stigne sa mreže.
+- **Pogrešan poziv** je greška u našem kodu, na pozivnom mestu.
+
+Bez tog razlikovanja dva izuzetka ispod izgledaju kao rupa u pravilu, umesto kao njegova
+granica.
+
+| Slučaj | Šta `t()` radi | WARNING |
+|---|---|---|
+| ključ ne postoji | vraća sam ključ | da, **jednom po ključu** |
+| parametar fali | `{{ime}}` ostaje vidljivo na ekranu | da |
+| višak parametra | izlaz nepromenjen | da |
+| `t()` pre `load()` | `RuntimeError` | ne |
+| parametar nije `str` | `TypeError` | ne |
+
+**WARNING je drugi kanal, pored vidljivog simptoma na ekranu — nikad jedini.** Zato prva
+tri reda imaju log, a poslednja dva nemaju: kod njih na ekranu nema šta da se vidi, pa
+izuzetak i jeste jedini način da se greška uopšte primeti.
+
+**Granica `load()` naspram `t()`.** Pravilo važi za `t()`, ne za `load()`. `load()` je
+mesto gde se loš podatak odbija **glasno** — `ValueError` na BOM, neispravan JSON i
+duplirani ključ. `t()` posle toga radi samo sa onim što je kroz `load()` prošlo, i na
+sadržaj ne baca ništa.
+
+`CONVENTIONS.md` §6 to potvrđuje sa druge strane: `ValueError` iz `load()` nosi **englesku
+poruku namenjenu programeru**, a ne tekst za korisnika — korisnički tekst ide isključivo
+kroz `message_key` i `sr.json` (ADR-010). Zato izuzetak i sme da bude rečit: niko ga ne
+prikazuje igraču.
+
+**Zamena parametara: `{{ime}}`.** Ne `str.format`, ne `string.Template`, ne `${ime}`.
+Sintaksa mora biti takva da je **nijedan jezik ne implementira sam**, jer se funkcija u 4.7
+prevodi 1:1. `str.format` nosi pristup atributima, indeksiranje, format specifikatore i
+`!r` — ništa od toga JavaScript neće imati, a sve bi se u Pythonu tiho koristilo.
+
+Obrazac je `\{\{([a-z][a-z0-9_]*)\}\}`, sa **doslovnom klasom znakova**, ne `\w`: `\w` je u
+Pythonu Unicode, a u JavaScriptu ASCII, pa bi isti obrazac na dve strane prihvatao različita
+imena. Potpis prima **rečnik**, ne `**kwargs`, iz istog razloga.
+
+**Parametri su stringovi i koriste se doslovno. `t()` ne poziva `str()` ni na čemu:**
+
+```
+Python  str(1.0)     -> "1.0"
+JS      String(1.0)  -> "1"
+```
+
+Formatiranje broja ostaje na pozivnom mestu, u svakom jeziku svojim pravilima. Zapisano je
+sa primerom, a ne samo kao pravilo, jer bi neko ko za godinu dana hoće da „olakša" `t()`
+dodavanjem `str()` inače video samo zabranu bez razloga. Kvar bi se pojavio tek u fazi 4, na
+satu iz 3.7, i to tiho.
+
+**BOM se odbija, `utf-8-sig` se ne koristi.** Obrazloženje ne zavisi od toga kako se
+ponaša `JSON.parse`: `utf-8-sig` znači **popustljivo u Pythonu** — BOM prolazi neopaženo i
+ostaje u repozitorijumu, a da li će faza 4 na njega pući zavisi od izabranog puta čitanja u
+JavaScriptu. Ne nasleđujemo taj rizik; cena strogosti je nula, jer fajl pišemo mi.
+
+Odbijanje stoji na **dva sloja**, namerno duplirano: u `load()` i u testu B6. `load()` prima
+putanju, pa u fazi 4 može da pokaže na fajl koji test ne vidi; test gleda **bajtove**, pa
+tvrdi i kad dekodiranje ne uspe. Poruka iz `json.load` („Expecting value: line 1 column 1")
+ne vodi nikuda.
+
+**Posledice.**
+
+Prevod koji fali degradira ekran umesto da ga obori, a nikad ne prolazi nezapaženo: vidi se
+i na ekranu i u logu. Greška u našem kodu — poziv pre `load()`, broj umesto stringa — pada
+odmah i glasno, tamo gde je i nastala.
+
+Skup već prijavljenih ključeva vezan je za **katalog**, ne za modul: `load()` ga prazni, pa
+ponovo učitan katalog koji i dalje nema ključ mora ponovo da se javi. Bez toga bi „jednom po
+ključu" u dugoj sesiji značilo „jednom zauvek".
+
+**Predviđeno, da u fazi 3 ne izgleda kao pokvaren test:** bela lista dozvoljenih znakova iz
+testa B11 nema `{`, `}` ni `_`. Prvi tekst sa `{{ime}}` u tasku 3.7 **oboriće B11** — dakle
+baš funkcija koju ovaj task uvodi. To je po logici bele liste ispravno: nov znak se dodaje
+svesno, kad ga prvi tekst zatraži.
+
+**Šta smo izgubili.** `t()` je manje udobna nego `str.format`: bez format specifikatora, bez
+pozicionih argumenata, sa obaveznim `str()`-om na pozivnom mestu. Poziv sa brojem, koji bi u
+Pythonu radio, sada je greška. To je cena toga da ista funkcija u dva jezika daje isti
+izlaz, i plaća se na svakom pozivnom mestu, ne jednom.
+
+---
+
+## ADR-041: Zatvoren skup vrednosti iz protokola se čita mašinski
+
+**Kontekst.** `PROTOCOL.md` §5 nabraja devet `ERROR` kodova. `sr.json` treba da ima ključ za
+svaki. Ništa nije sprečavalo da se ta dva spiska raziđu: dodat kod bez ključa daje na ekranu
+`error.nesto` umesto rečenice, a suvišan ključ ostaje zauvek jer niko ne zna da ga protokol
+više ne šalje. Oba kvara su tiha.
+
+Ovo nije pravilo o greškama. `ERROR` kodovi su samo **prvi** zatvoren skup vrednosti koji
+protokol propisuje a klijent prikazuje.
+
+**Odluka.**
+
+**Kad protokol propiše zatvoren skup vrednosti koji korisnik vidi, taj skup se čita mašinski
+iz `PROTOCOL.md` i poredi sa `sr.json`.** Pravilo izvođenja:
+
+```
+message_key = "error." + kod malim slovima
+ILLEGAL_MOVE -> error.illegal_move
+```
+
+`tests/client/test_i18n.py` parsira prvu kolonu tabele iz §5 i tvrdi **oba smera**: svaki kod
+ima svoj ključ, i svaki `error.*` ključ pripada nekom kodu. Jedan smer bi ostavio obim taska
+kao obećanje umesto kao pravilo.
+
+**Poznata sledeća primena:** `termination` iz `GAME_OVER` — `checkmate`, `stalemate`,
+`resignation`, `timeout`, `draw_agreement`, `insufficient_material`, `fifty_move`,
+`threefold_repetition`. Ti ključevi nastaju u fazi 3 i biće `termination.*`, po istom
+pravilu izvođenja. Zapisano ovde da se u 3.9 ne izmišlja ponovo.
+
+**Zašto se ovde parsira, a u §2 prepisuje.** ADR-037.1 je odbio da alat parsira tabelu
+slojeva, jer bi ćelije morale da budu gramatika — „sve gore + `pygame`" i „sve" to nisu.
+Ovde je drugačije: ćelija je **identifikator**, `VERSION_MISMATCH`, i ništa drugo. Parsira se
+identifikator, ne proza.
+
+**Posledice.**
+
+Kod dodat u tabelu bez ključa u `sr.json` obara suite. Ključ bez koda takođe. Napomena o tome
+stoji u §5, ispod tabele, jer se pravilo mora videti tamo gde se tabela menja.
+
+**Cena, ista kao u ADR-037.1: oblikovanje `PROTOCOL.md` postaje noseće.** Tabela iz §5 više
+nije samo tekst za čoveka — promena zaglavlja ili prelazak na drugi oblik liste obara test.
+Zato prva rečenica napomene to izričito kaže, i zato test razlikuje „zaglavlje nije nađeno"
+od „nula kodova": prvi je kvar u oblikovanju, drugi u sadržaju.
+
+**Selidba u 2.1.** Kad `protocol/messages.py` dobije enum kodova, spona se seli sa dokumenta
+na enum, a tvrdnja postaje jača — enum je izvršiv, dokument nije. Napomena u §5 ostaje;
+menja se samo njena druga rečenica, koja imenuje test. Isti mehanizam kojim je u ROADMAP-u
+zavedeno polje `captured`.
+
+**Šta smo izgubili.** Sloboda u oblikovanju §5. Ko sutra hoće da tabelu kodova pretvori u
+listu, mora prvo da prepravi test — i to je namera, ne smetnja, ali je trenje stvarno.
+Takođe: test tvrdi da **ključ postoji**, nikad da je prevod tačan. Rečenica koja opisuje
+pogrešnu grešku prolazi kroz svih devet tvrdnji.

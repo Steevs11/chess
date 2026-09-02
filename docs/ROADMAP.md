@@ -12,8 +12,8 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    0.5 — assets/i18n/sr.json + client/i18n.py sa t()
-Sledeće:   0.6 — LICENSE u korenu repozitorijuma
+Radimo:    0.6 — LICENSE u korenu repozitorijuma
+Sledeće:   0.7 — .claude/ se svodi na pokazivače
 Otvoreno:  ništa
 Grana:     main
 ```
@@ -56,8 +56,15 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > prelazaka reda, jer bi `core.autocrlf` na Windows-u oborio svih 12 `sha1`
       > vrednosti pri prvom kloniranju. `tests/test_assets.py` proverava i vrednosti
       > i redove od kojih zavise (ADR-039).
-- [ ] 0.5 `assets/i18n/sr.json` + `client/i18n.py` sa `t()`
+- [x] 0.5 `assets/i18n/sr.json` + `client/i18n.py` sa `t()`
       **svaki `open()` ide sa `encoding="utf-8"` eksplicitno**
+      > Devet ključeva izvedenih iz tabele kodova u `PROTOCOL.md` §5. Spona se čita
+      > mašinski i tvrdi **oba** smera — kod bez ključa i ključ bez koda (ADR-041).
+      > `t()` ne baca na loš podatak; `load()` ga odbija glasno (ADR-040).
+      > Dokaz da spona nije dekor: pre napomene u §5 padao je tačno `A5`. Pet namernih
+      > kvarova oborilo je očekivane testove — tabela stoji u `faza-0.md` §0.5, zajedno
+      > sa razlogom zašto je kvar (a) oborio i `A3`, koji plan nije predvideo.
+      > Obe zaostale ispravke iz 0.4 su izvršene ovim commitom.
 - [ ] 0.6 `LICENSE` u korenu repozitorijuma
       > Javan repo bez licence je podrazumevano „sva prava zadržana" —
       > nejasan svakome ko na njega naiđe. Izbor licence je
@@ -77,6 +84,10 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > Otvoreno za plan 0.7: tabela za preseljenje iz `faza-0.md` §0.2
       > šalje Kiwipete brojeve u `tools/perft.py`, koji u 0.7 još ne
       > postoji. Tri od šest stavki sele se tek u fazama 3 i 6.
+      > U isti task ide i opšti oblik za `CONVENTIONS.md` §1: **odeljak koji
+      > čita alat ili test nosi rečenicu koja to kaže.** Dva postojeća slučaja
+      > su §2 (`tools/layer_check.py`) i `PROTOCOL.md` §5
+      > (`tests/client/test_i18n.py`, ADR-041).
 - [ ] 0.8 `WORKFLOW.md` usklađen sa odlukama
       > Fajl je iz prvog commita i propušteno je pravilo propagacije.
       > Četiri neslaganja: `/model opusplan` ne postoji (§2, §6);
@@ -160,6 +171,10 @@ uključujući rokadu i mat
       > `captured` se DODAJE uz `material`, ne zamenjuje ga. Dodavanje
       > opcionog polja nije nekompatibilna promena (PROTOCOL §9), pa
       > `v` ostaje 1.
+      > Ovde se seli i **spona `PROTOCOL.md` ↔ `sr.json`**: sa tabele u dokumentu
+      > na enum kodova iz `messages.py`. Enum je izvršiv, dokument nije. Napomena u
+      > §5 ostaje; menja se samo njena druga rečenica, koja imenuje test (ADR-041).
+      > Isti mehanizam kojim je ovde zavedeno polje `captured`.
 - [ ] 2.2 `protocol/codec.py` — encode/decode, `ProtocolError`, validacija na granici
 - [ ] 2.3 `server/session.py` — `Player` interfejs, `RemotePlayer`, tok partije
 - [ ] 2.4 `server/clock.py` — `time.monotonic()`, inkrement, pad zastavice
@@ -247,7 +262,7 @@ uključujući rokadu i mat
 
 Nastaje iz koraka 6 u ritmu po tasku — korisnik prepričava, Claude Code piše.
 
-- [ ] `docs/faze/faza-1.md` … `faza-6.md`
+- [ ] `docs/faze/faza-0.md` … `faza-6.md`
 - [ ] Finalna dokumentacija (sastavlja se iz gornjih)
 - [ ] Prezentacija
 

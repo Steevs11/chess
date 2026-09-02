@@ -275,6 +275,13 @@ njega zna koju figuru da vrati na mesto posle neuspelog drag & drop-a.
 | `GAME_NOT_FOUND` | nema takve partije | ostaje | ne |
 | `NOT_IN_GAME` | akcija van partije | ostaje | ne |
 
+Pravilo izvođenja: **`message_key` = `error.` + kod malim slovima.**
+`ILLEGAL_MOVE` → `error.illegal_move`, `NOT_IN_GAME` → `error.not_in_game` (ADR-041).
+
+> Prva kolona ove tabele se čita mašinski. Dodat ili uklonjen kod obavezuje na izmenu
+> `assets/i18n/sr.json` u istom commitu; izmena oblikovanja tabele obara
+> `tests/client/test_i18n.py` (ADR-041).
+
 ### `PONG`
 ```json
 { "v": 1, "type": "PONG" }
