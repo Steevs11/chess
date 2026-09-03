@@ -232,8 +232,9 @@ se ne izgubi:
 | ✅ Konvencija i18n ključeva `oblast.stvar` | `rules/i18n.md` | **preseljeno u 0.5** → CONVENTIONS §7 |
 | ✅ `t()` vraća ključ kad prevoda nema, ne baca | `rules/i18n.md` | **preseljeno u 0.5** → CONVENTIONS §7 i ADR-040 (kandidat za ADR se ostvario) |
 | ✅ Notacija se ne prevodi (`e4`, `Nf3`, `O-O`, `1-0`, FEN, PGN) | `rules/i18n.md` | **preseljeno u 0.5** → CONVENTIONS §7 |
-| Kiwipete FEN + brojevi d1–d3 · tabela simptom→uzrok | `skills/perft/SKILL.md` | **1.3** → `tests/core/test_perft.py` uz komentar o izvoru, odnosno docstring `tools/perft.py` |
-| „`b1`/`b8` mora biti prazno, ali sme biti napadnuto" | `skills/chess-rules/SKILL.md` | **1.4** → `PROJECT.md` §7 |
+| ~~Kiwipete FEN + brojevi~~ | `skills/perft/SKILL.md` | **obrisani u 0.7, ne preseljeni.** U fajlu su stajali d1–d4, ne d1–d3 kako je ovaj red tvrdio. Prepisuju se sa Chess Programming Wiki u **1.3**, direktno u `tests/core/test_perft.py` uz komentar o izvoru — **nikad iz ovog fajla** |
+| tabela simptom→uzrok | `skills/perft/SKILL.md` | **1.3** → docstring `tools/perft.py` |
+| ✅ „`b1`/`b8` mora biti prazno, ali sme biti napadnuto" | `skills/chess-rules/SKILL.md` | **preseljeno u 0.7** → `PROJECT.md` §7 (stiglo ranije od predviđenog 1.4) |
 
 ### Pitanja
 
@@ -1074,3 +1075,218 @@ veruje jednom. Kvar (f) je to i dokazao.
 > zapisan u ADR-042, ali to je **zapis, ne provera**. Ko sutra zameni telo `LICENSE`-a
 > tekstom MIT licence i ostavi red o autorskim pravima, prolazi kroz svih devet tvrdnji.
 > Isti oblik kao granica iz ADR-041: test tvrdi da ključ postoji, nikad da je prevod tačan.
+
+---
+
+## 0.7 — `.claude/` se svodi na pokazivače
+
+### Šta je urađeno
+
+Šest fajlova van gita svedeno je na adresu i okidač: gde piše pravilo i kada da se otvori.
+Kriterijum je ADR-044 — rečenica sme da ostane van gita samo ako je **nijedna izmena u
+`docs/` ne može učiniti netačnom** — a jedinica provere je **rečenica, ne fajl**.
+
+**Ovaj task nema `git diff` za svoj glavni proizvod.** `.claude/` je u `.gitignore`, pa
+izmena šest fajlova nigde ne ostavlja trag. Zato je tabela uklonjenih rečenica ispod jedini
+dokaz u gitu da je posao urađen, i zato je red po **rečenici**, a ne po fajlu.
+
+### Inventar
+
+| | Redova | Bajtova |
+|---|---|---|
+| pre | 380 | 13.996 |
+| posle | 152 | 5.823 |
+| razlika | **−228 (−60 %)** | **−8.173 (−58 %)** |
+
+Mereno sa `find .claude -type f` i `wc -lc`, bez `settings.json` — on se u ovom tasku nije
+dirao. Sa njim: 423 → 195 redova.
+
+### Tabela uklonjenih rečenica
+
+**`rules/core-purity.md`** (44 → 17)
+
+| Tvrdnja | Kuda |
+|---|---|
+| `core/` mora da radi neizmenjen u vebu i botu | PROJECT §6; CONVENTIONS §2, posledica 1 |
+| nikad `pygame`, `socket`, `sqlite3` | §2, red `core/*` |
+| `print()` i bilo kakav I/O | §7 „Logovanje" |
+| import iz `protocol/`, `server/`, `client/` | §2 |
+| `frozen=True, slots=True` za vrednosne objekte | §4 „Dataclass-ovi" |
+| `Square` nije dataclass, alias `= int`, 0–63 | §4 „Tipovi" (ADR-013, ADR-031) |
+| `Board` je mutabilan | §4 (ADR-006) |
+| type hints na svakoj javnoj funkciji | §4 „Tipovi" |
+| koordinate kroz `Square`, nikad pikseli | §2, posledica 2 |
+| make/unmake, nikad kopiranje table | §4 (ADR-006); ROADMAP 1.2 |
+| globalne promenljive i singletoni | **§4 „Bez stanja i bez hijerarhije" — napisano u ovom tasku** |
+| komanda ≠ upit | **§4 — napisano u ovom tasku** |
+| `Enum` za `Color` i `PieceType` | **§4 — napisano u ovom tasku** |
+| figura je podatak, ne `class Pawn(Piece)` | **§4 — napisano u ovom tasku** |
+| „`tests/core/**` sme da uvozi **sve**" | **obrisano — netačno.** §2 bira red po `*/__init__.py`, pa `tests/core/__init__.py` sme samo stdlib (ADR-037.3) |
+
+**`rules/client-boundaries.md`** (40 → 28)
+
+| Tvrdnja | Kuda |
+|---|---|
+| klijent postoji da crta i hvata unos | §3 |
+| tabela fajlova „sme pygame?" | §2 |
+| `net.py`/`state.py` se u fazi 4 prevode 1:1 | §2, posledica 3 (ADR-004) |
+| nijedno šahovsko pravilo u klijentu | §3 (ADR-024) |
+| `Rect`/`Surface` van `render.py` i `scenes/` | §2, posledica 2 |
+| pikseli kao izvor istine | §2, posledica 2 |
+| odbrojavanje sata kao izvor istine | §3, red „`clocks` iz `STATE`" |
+| tekst za korisnika napisan u kodu | §7 |
+| `MenuScene`, `GameScene` od prvog dana | ROADMAP 3.1 |
+| socket u svojoj niti | **ostaje** — dom stiže u 3.2 |
+| `BotScene` mora biti nov fajl | **ostaje** — dom stiže u 6.7 |
+
+**`rules/i18n.md`** (49 → 19)
+
+| Tvrdnja | Kuda |
+|---|---|
+| nijedan tekst za korisnika u kodu, uvek ključ | §7 „Font i tekst" |
+| `sr.json`, JSON zbog oba jezika | §7; fajl postoji od 0.5 |
+| konvencija ključeva `oblast.stvar` | §7 „Ključevi" *(preseljeno u 0.5)* |
+| notacija se ne prevodi | §7 *(preseljeno u 0.5)* |
+| logovi na engleskom, bez dijakritika | §7 „Logovanje" (ADR-010) |
+| protokol šalje `message_key` | PROTOCOL §5 |
+| font mora da nosi č ć š ž đ | §7 „Font i tekst" |
+| „`t()` vraća ključ **umesto da baci izuzetak**" | **obrisano — protivreči ADR-040.** Ugovor glasi „ne baca **na loš podatak**"; `RuntimeError` i `TypeError` postoje |
+
+**`skills/chess-rules/SKILL.md`** (118 → 28)
+
+| Tvrdnja | Kuda |
+|---|---|
+| pet uslova rokade · en passant „samo odmah" · podpromocija · mat i pat · tabela remija · profili `online`/`fide` · pad zastavice i izuzetak materijala · `time.monotonic()` · poeni figura | PROJECT §7 — duplikat od ranije |
+| „Test pozicije vredne pamćenja" | ADR-026 — duplikat |
+| `b1`/`b8` sme biti napadnuto | **PROJECT §7 „Rokada" — napisano u ovom tasku** |
+| pešak na 5. odnosno 4. redu kod en passanta | **PROJECT §7 „En passant" — u ovom tasku** |
+| četiri poteza po promociji | **PROJECT §7 „Promocija" — u ovom tasku** |
+| šest polja FEN-a, polje 5 je brojač polupoteza | **PROJECT §7 „Notacija" — u ovom tasku** |
+| red SAN disambiguacije: kolona → red → oba | **PROJECT §7 „Notacija" — u ovom tasku** |
+
+**`skills/layer-check/SKILL.md`** (37 → 19)
+
+| Tvrdnja | Kuda |
+|---|---|
+| alat parsira uvoze kroz `ast` i prijavljuje kršenja | §2 „Provera" |
+| nepokriven fajl je nalaz, ne izuzetak (ADR-037.2) | §2 „Provera" |
+| u sukobu alata i tabele važi tabela | §2 „Provera", §1 |
+| komanda `python tools/layer_check.py` | §2 „Provera" — komanda je tvrdnja o projektu |
+| „section 2" u `description` | **obrisan broj odeljka** — eager polje ne sme da nosi broj koji se pomera |
+
+**`skills/perft/SKILL.md`** (92 → 41)
+
+| Tvrdnja | Kuda |
+|---|---|
+| početna d1–d5, Kiwipete d1–d4, Kiwipete FEN | **obrisano, ne preseljeno.** Prepisuje se sa Chess Programming Wiki u 1.3, direktno u test |
+| tabela skupova i dubina, Position 3/4/5 | ADR-026 — duplikat |
+| „perft mora biti brz" | ADR-026 |
+| „nikad ne menjaj očekivanu vrednost" | PROJECT §8; WORKFLOW |
+| komande za pokretanje | CONVENTIONS §5 i §10 |
+| tabela simptom→uzrok | **ostaje** — dom stiže u 1.3, docstring `tools/perft.py` |
+
+**`CLAUDE.md`** — tabela git dozvola obrisana, ne premeštena: kolona „Uz odobrenje" je
+nosila `reset --hard`, `rebase` i `clean -fd`, a `settings.json` ih drži u `deny`, pa se to
+odobrenje nije moglo ni ponuditi. Ostala je jedna rečenica: zabrane su u CONVENTIONS §8,
+dozvole izvršiocu u `settings.json`.
+
+### Devet tvrdnji je prvo dobilo dom, pa je tek onda brisano
+
+Pet u `PROJECT.md` §7, četiri u `CONVENTIONS.md` §4. Četiri iz §4 nisu bile u planu:
+grep nad `docs/` je pokazao **nula** pogodaka za `singleton`, `globaln` i `upit`, a
+PROJECT §6 ima sedam pravila nadogradivosti i nijedno od ta četiri. Živele su samo u
+`CLAUDE.md`, koji je takođe van gita — dakle brisanje bez pisanja bi ih izgubilo.
+
+### `checkout --` je izmeren, pa tek onda zapisan
+
+Plan je tvrdio: fajl koji u indeksu nema unosa se vraća sa HEAD-a i time se briše izmena
+tekućeg taska. Mereno u praznom repou, tačno je **obrnuto**:
+
+| Stanje fajla | Šta se desi |
+|---|---|
+| nema unos u indeksu | **odbija se**: `did not match any file(s) known to git`, izlaz `1`, fajl netaknut |
+| praćen, izmenjen, nije `add`-ovan | tiho vrati HEAD verziju, izlaz `0`, bez upozorenja |
+| praćen, `add`-ovan pa izmenjen | vrati `add`-ovano stanje |
+
+Opasan je srednji red, ne prvi: nov fajl git štiti greškom, a fajl koji je pre taska
+postojao odlazi u tišini. Pouka o `git add -A` pre rituala ostaje ista — razlog je drugi.
+CONVENTIONS §8 nosi izmereno.
+
+### Mehanizam je meren dvaput, sa različitim ishodom
+
+**v2.1.258 — radilo.** U ranijoj sesiji ovog istog taska, tri `Read`-a nad `src/chess/`
+donela su tri fajla iz `.claude/rules/`, svaki sa zaglavljem `Contents of ...`.
+
+**v2.1.259 — ne reprodukuje se.** Tri `Read`-a nad tri različita `paths:` globa —
+`src/chess/core/__init__.py`, `assets/i18n/sr.json`, `src/chess/client/i18n.py` — nisu
+donela nijedno pravilo. Eager učitavanje jeste potvrđeno i ovde: čim su tri `SKILL.md`-a
+prepisana, lista skillova se osvežila sa novim opisima.
+
+Između dva merenja se **alat ažurirao u toku taska** — terminal je javio
+`Update installed · Restart to update` — i restart nije izvršen. Uzrok nije utvrđen i nije
+istraživan.
+
+Ono što se lako propusti: da je zapisano samo poslednje merenje, dokument bi tvrdio da
+mehanizam ne radi — a to nije ono što je viđeno. Mehanizam je **prestao da radi između
+dve verzije, ili traži restart posle ažuriranja**, i ta razlika je vredniji nalaz od bilo
+koje od dve pojedinačne tvrdnje, jer imenuje pokretni deo. ADR-044 zato nosi oba merenja i
+kolonu „Potvrđeno" po verziji. Tvrdnja o tuđem sistemu i inače važi samo za verziju uz
+koju je zapisana; ovaj task je to dobio kao demonstraciju, ne kao teoriju.
+
+Svođenje se time ne dovodi u pitanje — zašto ne, stoji u odgovoru na pitanje 3.
+
+### Nema tabele predviđenih padova
+
+Ritual namernih kvarova od 0.4 se ne ukida, ali ovaj task ne pravi nijednu mašinski
+proverljivu tvrdnju: sve što menja je proza u `docs/` i fajlovi van gita. Kvar uveden u
+`.claude/` ne može da obori nijedan test, po konstrukciji — nijedan test ne sme da zavisi
+od foldera koji `git clone` ne donosi. Izmišljati kvarove da bi tabela imala redove bilo bi
+obrnuto od svega što ovaj projekat radi. Umesto toga je pokrenuta pozitivna provera iznad,
+i ona je dala nalaz.
+
+### Pitanja
+
+**1. „Rečenica se sme ukloniti tek kad joj dom postoji" je pravilo propagacije okrenuto
+unazad. Devet puta smo prvo pisali u `docs/`, pa tek onda brisali. Zašto redosled unutar
+jednog commita uopšte igra ulogu, kad je krajnje stanje isto?**
+Znao, i preko onoga što je pitano. Krajnje stanje **nije** isto ako se redosled prekine.
+Commit je jedinica u istoriji, ali nije jedinica rada: između brisanja i pisanja stoji ceo
+niz odobrenja, mogućnost da task stane na nalaz, i odluka korisnika da nešto ne prihvati.
+Brisanje pre pisanja pravi prozor u kom tvrdnja ne postoji nigde — a jedini zapis o njoj je
+tada kontekst sesije, koji `/clear` briše.
+
+> Drugi razlog je jači i ne zavisi od prekida: **redosled je ono što tera da se dom nađe.**
+> Ako se prvo piše u `docs/`, mora se odgovoriti gde tačno ide — i tada se vidi da mesta
+> nema. Tako su ispala četiri pravila za §4: grep je za `singleton`, `globaln` i `upit`
+> vratio nulu. Da je brisanje išlo prvo, ta četiri bi nestala tiho i niko ne bi imao razlog
+> da gleda. Redosled pretvara „nađi dom" iz namere u korak koji se ne može preskočiti.
+
+**2. Blokovi komandi su ispali iz oba skilla, a tabela simptom→uzrok je ostala u perftu.
+Obe su tvrdnje koje izmena u `docs/` može učiniti netačnim. Po čemu se onda razlikuju?**
+Znao. **Po tome ima li tvrdnja parnjaka u gitu, ne po tome da li je oboriva.** To su dva
+različita pravila iz ADR-044: kriterijum kaže koja rečenica **ne sme** da ostane, a pravilo
+o domu kaže kada **sme** da se ukloni. Obe tvrdnje padaju na prvom; samo komande prolaze na
+drugom — `python tools/layer_check.py` stoji doslovno u §2, `CHESS_SLOW_TESTS=1 …` u §5,
+`tools/perft.py` u §10. Brisanje ih ne gubi.
+
+Tabela simptom→uzrok nema parnjaka nigde. Ona nije prepis pravila nego **znanje o tome kako
+se generator kvari** — šta znači previše čvorova, šta premalo, šta odstupanje tek na većoj
+dubini. Dom joj je docstring `tools/perft.py`, koji u 0.7 ne postoji, pa ostaje uz red koji
+imenuje 1.3. Razlika dakle nije u vrsti tvrdnje, nego u tome što jednu čuva git a drugu ne
+čuva niko.
+
+**3. Provera na kraju nije donela nijedno pravilo iz `.claude/rules/`. Zašto svođenje tih
+fajlova ostaje ispravan potez i ako se ispostavi da ih niko ne čita?**
+Znao, sa tri razloga, i nijedan ne zavisi od isporuke.
+
+**Prvo:** pogrešna rečenica ne postaje tačna time što možda ne stiže. `core-purity.md` je
+tvrdio nešto što obara ADR-037.3, `i18n.md` nešto što obara ADR-040 — netačne bez obzira ko
+ih čita. Mehanizam se uz to može vratiti sledećim ažuriranjem, a fajl bi ga dočekao spreman.
+
+**Drugo:** task je već proizveo dobit koja sa učitavanjem nema veze. Devet tvrdnji koje su
+živele samo van gita sada su u `PROJECT.md` §7 i `CONVENTIONS.md` §4. Da `.claude/` sutra
+nestane, te tvrdnje ostaju — merenje je pokazalo da je baš to bio jedini pouzdan deo posla.
+
+**Treće:** neizvesnost menja **gde se zapis oslanja**, ne da li se radi. Dve parkirane
+tvrdnje u `client-boundaries.md` sada zavise od reda u migracionoj tabeli i od „Otvoreno" u
+ROADMAP-u — dakle od gita, ne od mehanizma koji nije potvrđen. To je zavedeno.

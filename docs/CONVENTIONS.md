@@ -45,6 +45,19 @@ DECISIONS.md > PROTOCOL.md > CONVENTIONS.md > PROJECT.md > ROADMAP.md > POJMOVNI
 - **`POJMOVNIK.md`** nema autoritet. On objašnjava, ne propisuje. Ako se ne
   slaže sa bilo čim iznad sebe, POJMOVNIK je taj koji se ispravlja.
 
+### Odeljak koji čita alat nosi rečenicu koja to kaže
+
+Kad tekst iz `docs/` čita alat ili test, taj odeljak nosi rečenicu koja imenuje **šta ga
+čita**. To je obaveštenje čitaocu i dijagnoza kad provera padne — **nije kapija**: nju samu
+ništa ne proverava, i njeno odsustvo ne obara nijedan test. Ko menja takav odeljak mora da
+zna da nešto puca; ko gleda pad mora da zna odakle je krenuo.
+
+| Odeljak | Čita ga |
+|---|---|
+| §2, tabela dozvoljenih uvoza | `tools/layer_check.py`, i kao `tests/test_layers.py` (ADR-033, ADR-037) |
+| `PROTOCOL.md` §5, prva kolona tabele kodova greške | `tests/client/test_i18n.py` (ADR-041) |
+| `THIRD-PARTY.txt`, blok putanja | `tests/test_assets.py` (ADR-042) |
+
 ### Pravilo propagacije (ADR-030)
 
 > Kad ADR obori nešto napisano u `PROJECT.md`, `PROTOCOL.md`, `ROADMAP.md` ili
@@ -232,6 +245,18 @@ Revidira se u fazi 4, kad `core` bude stabilan.
 - `Board` je **mutabilan** — na tome počiva `make`/`unmake` (ADR-006)
 
 Nikad mutabilan podrazumevani argument. Ako treba prazna lista, `field(default_factory=list)`.
+
+### Bez stanja i bez hijerarhije
+
+- **Nema globalnog stanja ni singletona.** Tabla i stanje partije se **prosleđuju** kao
+  argument. Modul koji pamti nešto između poziva ne može da radi neizmenjen u serveru,
+  botu i testu koji ga zove hiljadu puta — a to je uslov iz `PROJECT.md` §6.
+- **Komanda ≠ upit.** Funkcija koja odgovara na pitanje ne sme ništa da promeni:
+  `is_legal()`, `is_in_check()` i `generate_moves()` ostavljaju tablu kakvu su je našle.
+  Ono što menja stanje nosi ime glagola („Imena" iznad).
+- **Figura je podatak, ne klasa u hijerarhiji.** `Color` i `PieceType` su `Enum` — nikad
+  string ni go broj — a `Piece` je `frozen=True, slots=True`. `class Pawn(Piece)` ne
+  postoji: kretanje je stvar generatora poteza, ne figure.
 
 ### Komentari i docstringovi
 
@@ -567,6 +592,12 @@ opisuje je tačno ono što se traži.
 Izlazni kod je obrnut od očekivanog: **`1` = nijedna putanja nije pogođena = čisto**,
 `0` = nešto je pogođeno = stati i ne pushovati.
 
+**Granica ove provere.** Ona vidi samo ono što je bilo u stablu repozitorijuma. Postoje
+fajlovi koji utiču na projekat a žive **izvan** njega — `.gitignore` ih ne opisuje,
+`git rev-list` ih nikad nije video, i nijedna komanda iz ovog odeljka ne može da ih
+prijavi. Izmeren slučaj: `MEMORY.md` i fajlovi uz njega, u Claude Code profilu korisnika.
+Ovde se imenuju, ne rešavaju (ADR-044).
+
 Dok commit stoji samo lokalno, istorija se sme prepisati. Posle `push`-a na `main`
 ispravka traži `push --force`, koji je zabranjen — a kod tajne prepis ionako ne
 pomaže, jer udaljeni server drži objekat dohvatljivim po SHA. Tajna se opoziva i
@@ -575,9 +606,25 @@ menja, ne briše.
 ### Zabranjeno
 
 - `push --force` na `main`
-- `reset --hard`, `rebase`, `clean -fd` bez izričitog odobrenja
+- `reset --hard`, `rebase`, `clean -fd`, `checkout -- <putanja>`, `restore` bez izričitog
+  odobrenja — sve to baca radno stablo, i nijedno ne pita
 - commit koji meša implementaciju i ispravku testa
 - commit koji nosi ADR bez propagacije iz §1
+
+#### `checkout --` vraća iz indeksa, ne sa HEAD-a
+
+`git checkout -- <putanja>` i `git restore <putanja>` vraćaju fajl **iz indeksa**, a šta to
+znači zavisi od toga da li je fajl `add`-ovan. Izmereno:
+
+| Stanje fajla | Šta se desi |
+|---|---|
+| nema unos u indeksu (nov u tasku) | **odbija**: `did not match any file(s) known to git`, izlaz `1`, fajl netaknut |
+| praćen, izmenjen, **nije** `add`-ovan | tiho vrati HEAD verziju — **ceo task nestaje**, izlaz `0`, bez upozorenja |
+| praćen, `add`-ovan pa izmenjen | vrati `add`-ovano stanje — nestaje samo ono posle `add`-a |
+
+Opasan je srednji red: nov fajl git štiti greškom, a fajl koji je pre taska postojao odlazi
+u tišini. Zato ritual namernih kvarova počinje sa `git add -A` — posle njega indeks nosi
+tekući task, pa `checkout --` briše kvar, ne rad.
 
 ### Referenciranje za pregled
 

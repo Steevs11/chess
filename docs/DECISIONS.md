@@ -1436,3 +1436,101 @@ otvoreno pitanje, ne da bi izgledalo kao rizik koji smo savladali.
    **Nijedna provera iz ovog taska to ne hvata.**
 2. Donja granica `setuptools`-a je od sada broj koji neko mora da brani. Spuštanje ispod 77
    vraća `ValueError`, i to se vidi tek pri izgradnji, ne pri čitanju fajla.
+
+---
+
+## ADR-044: Fajl van gita nosi adresu i okidač, nikad tvrdnju
+
+**Kontekst.** ADR-012 i ADR-020 su odlučili **šta** ostaje van gita — `CLAUDE.md` i
+`.claude/` — ali ne i **šta u njima sme da piše**. U 0.2 su tri fajla protivrečila
+ADR-ovima; do 0.7 su narasla još dva. `core-purity.md` je tvrdio da `tests/core/**` sme da
+uvozi sve, što obara ADR-037.3 — stigao **jedan task posle** te ispravke; `i18n.md` da
+`t()` ne baca, a ADR-040 kaže: ne baca **na loš podatak**.
+
+Uzrok nije nemar nego struktura. `.claude/` nije u hijerarhiji dokumenata (CONVENTIONS §1)
+ni pod pravilom propagacije (ADR-030/032) — a propagacija radi kroz commit, pa fajl koji u
+commit ne ulazi ne može ni da dohvati. Uz to se učitava **sam**, pa pravilo bez autoriteta
+stiže pred oči pre onog sa autoritetom.
+
+**Izmereno** u ovom projektu, Claude Code **v2.1.258 i v2.1.259**, 3. septembra 2026 — tri
+načina učitavanja, poređana po pretpostavljenoj opasnosti:
+
+| Način | Šta se učita | Kada | Potvrđeno |
+|---|---|---|---|
+| eager | `MEMORY.md` (van stabla) i `description` svakog `SKILL.md` | od prvog tokena, uvek | **da** — izmena tri opisa se istog trena videla u listi skillova |
+| lenj po putanji | `.claude/rules/*.md` po `paths:` globu | pri dodiru fajla koji to pravilo reguliše | **v2.1.258 da, v2.1.259 ne** — vidi ispod |
+| lenj na poziv | telo `SKILL.md`-a | tek kad se skill pozove | da |
+
+Srednji red je razlog zbog kog se `rules/` obrađuje pre `skills/`, i jedini koji je meren
+**dvaput, sa različitim ishodom**:
+
+- **v2.1.258 — potvrđeno.** U ranijoj sesiji ovog istog taska, tri `Read`-a nad
+  `src/chess/` donela su tri fajla iz `.claude/rules/`, svaki sa zaglavljem
+  `Contents of ...`.
+- **v2.1.259 — nereprodukovano.** Tri `Read`-a nad tri različita globa nisu donela nijedno
+  pravilo.
+
+Alat se ažurirao **u toku taska** — terminal je javio `Update installed · Restart to
+update` — i restart nije izvršen. **Uzrok nije utvrđen** i ovde se ne istražuje. Mehanizam
+dakle nije „ne radi": prestao je da radi između dve verzije, ili traži restart posle
+ažuriranja. **Razlika između dva merenja je vredniji nalaz od bilo koje od dve pojedinačne
+tvrdnje**, jer imenuje pokretni deo — a tvrdnja o tuđem sistemu i inače važi samo za
+verziju uz koju je zapisana.
+
+Odluka se time ne menja: rečenica koja ne sme da postoji ne postaje bezopasna time što
+možda ne stiže.
+
+**Odluka.** Klasa nije `.claude/` nego **fajl van gita koji utiče na projekat**.
+**Kriterijum:** rečenica sme da ostane van gita samo ako je **nijedna izmena u `docs/` ne
+može učiniti netačnom.** Jedinica provere je **rečenica**, ne fajl. „Pravilo X — vidi §2"
+nije pokazivač nego duplikat sa citatom, i truli isto kao duplikat bez njega.
+
+**Oblik.** Pokazivač ima **adresu** (gde) i **okidač** (kada), a okidač imenuje
+**situaciju**, nikad sadržaj pravila. „Pre nego što dodirneš `core/`, pročitaj §2" je
+ispravno; „…imaj na umu da `core/` uvozi samo stdlib — vidi §2" nije: sve posle crte je §2.
+
+**Tri odredišta.** Pravilo projekta → `docs/`. Dozvola izvršiocu → `.claude/settings.json`.
+Rečenica o `docs/` → pokazivač. Opšte: **rečenica stoji tamo gde je izvor onoga o čemu
+govori, ili kao pokazivač na taj izvor, nikad kao kopija.**
+
+**Opis alata se briše.** Rečenica koja opisuje ponašanje Claude Code-a („plan mod je režim
+u kom…") nema odredište — truli **tiho**, jer se i posle promene alata čita razumno
+(presedan: `_hooks_disabled` iz 0.2, mrtav ključ kao treća vrsta laži). Naša **politika** o
+korišćenju alata („plan mod za sve veće od jedne funkcije") ima izvor kod nas i pripada
+`docs/`. Merilo: **opis truli tiho, politika pada glasno.**
+
+**Rečenica se sme ukloniti tek kad joj dom postoji.** Ako se briše tvrdnja koja u `docs/`
+nema parnjaka, dom se pravi u **istom commitu** — propagacija primenjena unazad.
+
+**Posledice.** `.claude/` bez `settings.json` pada sa **380 na 152 reda**. Dva izmerena
+neslaganja nestaju **svođenjem**, a ne pojedinačnom ispravkom — nestao im je nosač; prva
+tri su u 0.2 ispravljena pojedinačno i to ih nije sprečilo da se ponove. U istom
+commitu su `PROJECT.md` §7 i `CONVENTIONS.md` §4 dobili **devet** tvrdnji koje su do sada
+živele samo van gita: pravilo o domu primenjeno, ne izuzetak od njega.
+
+**Šta smo izgubili:**
+
+1. **Skup okidača raste sa svakim ADR-om** koji uvede pravilo suprotno podrazumevanom
+   ponašanju modela — a fajl koji ih nosi je jedini koji propagacija ne može da dohvati.
+   Napetost je nerešiva po konstrukciji: okidač mora da bude u fajlu koji se učitava sam, a
+   to je baš fajl van gita. Rešenje truli **postepeno**, umesto da pukne odjednom.
+2. **Tri tvrdnje su ostale bez doma**, svaka sa imenovanim taskom u kom ističe: socket u
+   svojoj niti (3.2), `BotScene` kao nov fajl (6.7), tabela simptom→uzrok (1.3). Krajnje
+   stanje nije „nula tvrdnji" nego tri zabeležene — i pošto je migraciona tabela u
+   `faza-0.md` §0.2 već tri puta ispala nepotpuna, **svaka nosi red i u samom fajlu**.
+3. **Pokazivač košta jedno čitanje više.** Blokovi komandi su ispali iz oba skilla, jer je
+   i komanda tvrdnja o projektu — da alat postoji, na toj putanji, pod tim imenom.
+4. **`MEMORY.md` i njegov folder su peti slučaj klase, i najjači.** Ti fajlovi nose
+   `type: feedback` i `originSessionId`, dakle nastaju **sami**, iz korisnikovih ispravki:
+   paralelan korpus pravila raste iz razgovora, van stabla, eager, i nijedan naš dokument
+   ne zna da postoji. CONVENTIONS §8 ga od sada imenuje kao granicu provere istorije, i tu
+   se staje — **imenuje se, ne rešava.**
+5. **Ne znamo više da li `.claude/rules/` iko čita.** Na v2.1.258 jeste, na v2.1.259 se ne
+   reprodukuje, uzrok nije utvrđen. Dok tako stoji, dve tvrdnje parkirane u
+   `client-boundaries.md` čekaju 3.2 i 6.7 u fajlu za koji ne znamo da se otvara — pa je
+   red u migracionoj tabeli jedini zapis koji pouzdano radi, jer je u gitu. Zavedeno u
+   ROADMAP „Otvoreno".
+6. **Ovaj task nema test.** Glavni proizvod je po konstrukciji neproverljiv suite-om:
+   `.claude/` je van gita, pa nijedan test ne sme da zavisi od njega — inače bi svež
+   `git clone` padao kod svakoga. Gate su inventar pre i posle i tabela uklonjenih rečenica
+   u `faza-0.md` §0.7, ne tvrdnja da je urađeno.

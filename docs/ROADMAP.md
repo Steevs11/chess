@@ -5,16 +5,25 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 **Kako se koristi:** pročitaj blok TRENUTNO, pa prvi neodštikliran red. To je sledeći task.
 
 > Verzija 3 — ažurirano posle tri kruga tehničkog pregleda.
-> Izmene su obrazložene u `docs/DECISIONS.md`, ADR-013 do ADR-034.
+> Izmene su obrazložene u `docs/DECISIONS.md` — svaka odluka nosi svoj ADR.
 
 ---
 
 ## TRENUTNO
 
 ```
-Radimo:    0.7 — .claude/ se svodi na pokazivače
-Sledeće:   0.8 — WORKFLOW.md usklađen sa odlukama
-Otvoreno:  ništa
+Radimo:    0.8 — WORKFLOW.md usklađen sa odlukama
+Sledeće:   1.1 — core/types.py
+Otvoreno:  .claude/rules/ se učitavalo na v2.1.258, ne reprodukuje se na v2.1.259 —
+           alat se ažurirao u toku 0.7, restart nije izvršen, uzrok nije utvrđen
+           MEMORY.md i samopišuće memorije van stabla — ADR-044 ih imenuje, ne rešava
+           ostatak CLAUDE.md — mereno u 0.7, ide u 0.8
+           tabela ugovora t() iz ADR-040 nije vezana ni za jedan test nad client/i18n.py
+           indeks ADR-ova u DECISIONS.md, mašinski proveren u oba smera
+           ritual šest namernih kvarova nije zaveden nigde od 0.4
+           CONVENTIONS §2 nema red za client/__main__.py
+           settings.json: git show/switch nisu u §8; push --force širi nego §8
+           assets/pieces/LICENSE.txt svoje odricanje zove „canonical" a nije (iz 0.6)
 Grana:     main
 ```
 
@@ -84,38 +93,32 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > tabela rekla.
       > Nalaz zaveden a ne rešen: `assets/pieces/LICENSE.txt` svoje odricanje
       > naziva „canonical", a SPDX kanonski oblik glasi drugačije. Vidi 0.7.
-- [ ] 0.7 `.claude/` se svodi na pokazivače; `CONVENTIONS.md` §1 dobija
+- [x] 0.7 `.claude/` se svodi na pokazivače; `CONVENTIONS.md` §1 dobija
       red o autoritetu
-      > `.claude/` nije u hijerarhiji (§1) ni pod pravilom propagacije
-      > (ADR-030/032), a `rules/*.md` se učitavaju AUTOMATSKI PO
-      > PUTANJI — pravilo bez autoriteta stiže pred oči pre onog sa
-      > autoritetom, i to baš u tasku koji dira taj sloj. Tri fajla su
-      > tako protivrečila ADR-ovima (`faza-0.md`, 0.2). Sadržaj je
-      > ispravljen, struktura nije, pa se ponavlja sa svakim sledećim
-      > ADR-om. Kriterijum po ADR-020/028: `.claude/` sme operativno
-      > uputstvo („pročitaj §2 pre nego što dodirneš `core/`"), nikad
-      > tvrdnju o projektu. Traži ADR — druga opcija je da pravila
-      > ostanu, uz obaveznu ADR referencu uz svaku tvrdnju.
-      > Otvoreno za plan 0.7: tabela za preseljenje iz `faza-0.md` §0.2
-      > šalje Kiwipete brojeve u `tools/perft.py`, koji u 0.7 još ne
-      > postoji. Tri od šest stavki sele se tek u fazama 3 i 6.
-      > U isti task ide i opšti oblik za `CONVENTIONS.md` §1: **odeljak koji
-      > čita alat ili test nosi rečenicu koja to kaže.** Tri postojeća slučaja
-      > su §2 (`tools/layer_check.py`), `PROTOCOL.md` §5
-      > (`tests/client/test_i18n.py`, ADR-041) i blok putanja u
-      > `THIRD-PARTY.txt` (`tests/test_assets.py`, ADR-042).
-      > Nov nalaz iz 0.6: ništa ne vezuje tabelu ugovora `t()` iz ADR-040 za
-      > ponašanje `src/chess/client/i18n.py`, onako kako `test_i18n.py` vezuje
-      > `PROTOCOL.md` §5 za `sr.json`. Tabela u ADR-u je tvrdnja koju nijedan
-      > test ne proverava; ADR se sme promeniti a da ništa ne pukne.
-      > Drugi nalaz iz 0.6: `assets/pieces/LICENSE.txt` kaže da je njegovo
-      > odricanje od garancije „left in its canonical 3-clause BSD wording",
-      > a kanonski SPDX oblik glasi `HOLDERS ... OR`, ne `HOLDER ... AND`.
-      > Izmereno u 0.6 poređenjem reči. Uslovi time nisu netačni — netačan je
-      > opis koji jednu rasprostranjenu varijantu naziva kanonskom. Fajl se u
-      > 0.6 nije dirao da commit ostane o jednoj stvari; ispravka traži svoj
-      > plan i svoju tačku zaustavljanja, jer je reč o tuđoj licenci.
-      > Oba su zavedena istim mehanizmom kojim je zavedena selidba spone uz 2.1.
+      > Kriterijum (ADR-044): rečenica sme da ostane van gita samo ako je
+      > nijedna izmena u `docs/` ne može učiniti netačnom. Jedinica provere
+      > je **rečenica**, ne fajl. Bez `settings.json`: **380 → 152 reda**,
+      > 13.996 → 5.823 bajta.
+      > Novo pre duplikata: `PROJECT.md` §7 dobio pet tvrdnji, `CONVENTIONS.md`
+      > §4 četiri — devet koje su živele samo van gita. Bez toga bi brisanje
+      > prekršilo pravilo da dom mora postojati pre uklanjanja.
+      > Dve netačnosti su nestale svođenjem, ne pojedinačnom ispravkom:
+      > `core-purity.md` je tvrdio da `tests/core/**` sme da uvozi sve (obara
+      > ADR-037.3), `i18n.md` da `t()` ne baca (ADR-040: ne baca **na loš
+      > podatak**).
+      > `checkout --` je izmeren, ne prepisan: fajl bez unosa u indeksu se
+      > **odbija greškom**, a praćen fajl koji nije `add`-ovan odlazi u tišini —
+      > plan je tvrdio obrnuto. CONVENTIONS §8 nosi izmereno.
+      > Mehanizam je meren dvaput, sa različitim ishodom: na v2.1.258 su tri
+      > `Read`-a donela tri fajla iz `.claude/rules/`, na v2.1.259 nijedan.
+      > Alat se ažurirao u toku taska i restart nije izvršen; uzrok nije
+      > utvrđen. Eager učitavanje `description` polja potvrđeno u obe.
+      > Zavedeno u „Otvoreno", ne rešeno.
+      > Tri tvrdnje su ostale bez doma, sa imenovanim taskom isteka: socket u
+      > svojoj niti (3.2), `BotScene` (6.7), tabela simptom→uzrok (1.3).
+      > Nalaz iz 0.6 koji ovaj task nije dirao: `assets/pieces/LICENSE.txt`
+      > svoje odricanje naziva „canonical", a kanonski SPDX oblik glasi
+      > `HOLDERS ... OR`, ne `HOLDER ... AND`. Tuđa licenca — traži svoj plan.
 - [ ] 0.8 `WORKFLOW.md` usklađen sa odlukama
       > Fajl je iz prvog commita i propušteno je pravilo propagacije.
       > Četiri neslaganja: `/model opusplan` ne postoji (§2, §6);
@@ -127,6 +130,10 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > Poslednje je najgore: ostala tri pucaju glasno, ovo ne puca
       > uopšte — ko radi po dokumentu preskoči korak 4 i to se vidi
       > tek na odbrani.
+      > Prima i **ostatak `CLAUDE.md`**: u 0.7 je pala samo tabela git
+      > dozvola, jer je bila netačna. Ostalo je mereno i odloženo ovamo,
+      > pošto mu je dom `WORKFLOW.md` — a on je predmet ovog taska
+      > (ADR-044).
 
 ---
 

@@ -255,16 +255,23 @@ Ne projektuje se dvaput — prevodi se.
 
 > **Česta greška:** top **sme** biti napadnut i **sme** proći kroz napadnuto polje.
 > Ograničenje važi samo za kralja. Perft ovo hvata.
+> Kod velike rokade polje `b1`/`b8` mora biti **prazno**, ali **sme biti napadnuto** —
+> kralj kroz njega ne prolazi.
 
 ### En passant
 
 Samo **odmah** posle protivničkog dvopoteznog pomeranja pešaka. Propušten potez
 znači da pravo nestaje zauvek.
 
+Pešak koji uzima mora biti na **5. redu** (beli), odnosno na **4. redu** (crni).
+
 ### Promocija
 
 Dama, top, lovac ili skakač. **Podpromocija mora da radi.** Ne može ostati pešak,
 ne može postati kralj.
+
+Generator emituje **četiri** poteza za svaku promociju — jedan po figuri, ne jedan
+potez sa izborom.
 
 ### Kraj partije
 
@@ -329,8 +336,12 @@ ilegalan potez → server odbija sa jasnom greškom, klijent vraća figuru
 
 ### Notacija — implementiramo sve tri
 
-- **FEN** — pozicija (uključuje brojač polupoteza, što je tačno ono što treba za pravilo 50 poteza)
-- **SAN** — potezi sa disambiguacijom (`Nbd2`)
+- **FEN** — pozicija; šest polja razdvojenih razmakom: raspored (od 8. reda ka 1.,
+  velika slova = beli) · ko je na potezu · prava na rokadu · en passant **ciljno**
+  polje · brojač polupoteza · broj poteza. Polje 5 je tačno ono što treba za
+  pravilo 50 poteza.
+- **SAN** — potezi sa disambiguacijom, i to **ovim redom**: kolona (`Nbd2`) → ako
+  kolona ne razlikuje, red (`N1d2`) → ako ni to, oba (`Nb1d2`)
 - **PGN** — cela partija
 
 ### Poeni figura
