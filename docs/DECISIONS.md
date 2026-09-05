@@ -1441,6 +1441,12 @@ otvoreno pitanje, ne da bi izgledalo kao rizik koji smo savladali.
 
 ## ADR-044: Fajl van gita nosi adresu i okidač, nikad tvrdnju
 
+> ⚠️ **Merenje posle 0.7 obara „uzrok nije utvrđen".** Isti test ponovljen na
+> Claude Code **v2.1.259 posle restarta**, 4. septembra 2026 — `.claude/rules/`
+> se učitava. Uzrok je **neizvršen restart** posle ažuriranja u toku 0.7, ne
+> promena između verzija. Zapis merenja: `docs/faze/faza-0.md` §0.8. Oznaka po
+> ADR-045; telo ispod ostaje kako je zapisano.
+
 **Kontekst.** ADR-012 i ADR-020 su odlučili **šta** ostaje van gita — `CLAUDE.md` i
 `.claude/` — ali ne i **šta u njima sme da piše**. U 0.2 su tri fajla protivrečila
 ADR-ovima; do 0.7 su narasla još dva. `core-purity.md` je tvrdio da `tests/core/**` sme da
@@ -1534,3 +1540,86 @@ commitu su `PROJECT.md` §7 i `CONVENTIONS.md` §4 dobili **devet** tvrdnji koje
    `.claude/` je van gita, pa nijedan test ne sme da zavisi od njega — inače bi svež
    `git clone` padao kod svakoga. Gate su inventar pre i posle i tabela uklonjenih rečenica
    u `faza-0.md` §0.7, ne tvrdnja da je urađeno.
+
+---
+
+## ADR-045: Merenje koje obara ADR nosi oznaku; telo ADR-a se ne menja
+
+**Kontekst.** CONVENTIONS §1 i ADR-032 pokrivaju jedan slučaj: **nov ADR obara stariji**,
+stari dobija ⚠️ oznaku i ne briše se. Slučaj u kom **merenje** obara tvrdnju iz ADR-a nije
+pokriven nigde. ADR-044 je 3. septembra 2026. zapisao da se učitavanje `.claude/rules/`
+„ne reprodukuje na v2.1.259, uzrok nije utvrđen". Isti test je posle 0.7 ponovljen nakon
+restarta alata i mehanizam je radio — uzrok je neizvršen restart. Fajl na vrhu hijerarhije
+time zaostaje za onim što je izmereno.
+
+Uz to, „stari ADR se **ne briše**" nije isto što i „telo se **ne dira**". Praksa se sledi
+od ADR-012 — deset ⚠️ blokova stoji iznad netaknutih tela — ali nigde nije zapisana, pa
+važi tačno dok je se neko seća.
+
+**Odluka.**
+
+1. **Telo ADR-a se ne menja posle commita.** Ispravka ide isključivo kao ⚠️ blok iznad
+   tela, odmah ispod naslova. Ono što je odlučeno ostaje čitljivo u obliku u kom je
+   odlučeno; iznad njega stoji šta ga je oborilo.
+2. **Merenje koje obori tvrdnju iz ADR-a stavlja ⚠️ na taj ADR**, sa pokazivačem na mesto
+   gde je merenje zapisano. Cilj pokazivača sme biti i `docs/faze/faza-N.md`, ne samo
+   drugi ADR.
+
+**Merenje ne traži svoj ADR.** §1 nabraja četiri slučaja u kojima se ADR piše i merenje
+nije nijedan od njih. Forsiran ADR bi merenju dao svojstvo odluke — „ne otvara se ponovo" —
+a merenje mora ostati oborivo sledećim pokretanjem. Zato zapis živi u `faza-N.md`, a ADR na
+njega pokazuje.
+
+**Verzija i datum su obavezni.** Tvrdnja o tuđem sistemu važi samo za verziju uz koju je
+zapisana. I ⚠️ oznaka i sam zapis nose verziju alata i datum merenja; bez toga se ne zna
+šta je tačno oboreno, ni čime.
+
+**Posledice.** ADR-044 dobija ⚠️ koji pokazuje na `faza-0.md` §0.8. Oblik ispravke je od
+sada jedan te isti, bez obzira da li obara nov ADR ili merenje.
+
+**Šta smo izgubili.** `DECISIONS.md` prestaje da bude samodovoljan: ADR sada može da zavisi
+od dokumenta **ispod sebe** u hijerarhiji za sopstvenu ispravku, pa čitanje ADR-a više ne
+staje unutar jednog fajla. Imenovano i prihvaćeno — autoritet zapisa dolazi od merenja, ne
+od ranga fajla u kom stoji. Cena je jedan skok pri čitanju; alternativa je bila prepisati
+merenje u ADR i time mu dati trajnost koju nema.
+
+---
+
+## ADR-046: Uslovni STOP-ovi između koraka
+
+**Kontekst.** ADR-021 propisuje ritam po tasku: šest koraka, sa izričitom rečenicom da se
+korak 4 ne preskače. O tome **kada se staje između koraka** nema ništa. U praksi se od 0.4
+koriste četiri tačke zaustavljanja, ali one žive samo u planovima i u korpusu van gita — a
+plan se posle taska ne čuva.
+
+Prva formulacija četvrte glasila je „neuspeo upis". To imenuje poklapanje stringa u izlazu
+alata — **mehanizam, ne zahtev** — pa otkazuje tiho čim se izlaz promeni. Ista greška je u
+0.7 pustila dva pravila da budu prekršena više puta bez ijedne posledice.
+
+**Odluka.** Ritam **nema bezuslovni STOP.** Upit na svaku komandu i svaku izmenu je već
+tačka provere; dodatno stajanje bez povoda samo pomera odluku sa mesta na kom ima podatke.
+Staje se na četiri mesta:
+
+1. **Nalaz koji obara nešto što je plan proglasio odlučenim.** Odluka se ne menja u hodu.
+2. **Nepredviđen pad testa.** Neočekivana **dijagnoza** je STOP; neočekivan **broj** je
+   zapis u `faza-N.md`. Razlika je u tome da li se zna šta se gleda.
+3. **Tačka koju je plan unapred imenovao.** Zakazan sastanak, ne klasa iznenađenja — plan
+   kaže „ovde staješ i pitaš", i tu se staje i kad sve prolazi.
+4. **Zatečeno stanje drugačije od onog koje plan pretpostavlja.** Izvršna klauzula za
+   odeljak u kom plan popisuje šta nije izmerio.
+
+Na svakom STOP-u **zatečeno stanje ostaje netaknuto** dok se ne objasni. Ne popravlja se pa
+prijavljuje; prijavljuje se, pa se čeka odluka.
+
+**Posledice.** `WORKFLOW.md` dobija odeljak „Kad se staje". Plan od sada ima dva odeljka
+koja nose teret: spisak odlučenog, za prvi STOP, i spisak neizmerenog, za četvrti.
+
+**Šta smo izgubili.**
+
+1. **Treći STOP prebacuje teret na plan.** Plan koji ne imenuje nijednu tačku otkaza ga
+   razoružava — pravilo tada ne kaže ništa, a izgleda kao da štiti.
+2. **Četvrti vredi tačno onoliko koliko i spisak neizmerenog.** Plan koji ne popiše svoje
+   pretpostavke ne može njima da bude zaustavljen: nema se sa čim uporediti zatečeno stanje.
+3. Oba su **zahtev, ne mehanizam**, pa se kršenje ne vidi ni u jednom izlazu. Cena je
+   prihvaćena svesno: formulacija koja bi se mogla mašinski proveriti („stani kad grep vrati
+   nulu") pokriva uži slučaj od onog koji nas zanima.

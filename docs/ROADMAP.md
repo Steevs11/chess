@@ -12,16 +12,19 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    0.8 — WORKFLOW.md usklađen sa odlukama
+Radimo:    0.9 — korpusi van gita se svode
 Sledeće:   1.1 — core/types.py
-Otvoreno:  .claude/rules/ se učitavalo na v2.1.258, ne reprodukuje se na v2.1.259 —
-           alat se ažurirao u toku 0.7, restart nije izvršen, uzrok nije utvrđen
-           MEMORY.md i samopišuće memorije van stabla — ADR-044 ih imenuje, ne rešava
-           ostatak CLAUDE.md — mereno u 0.7, ide u 0.8
+Otvoreno:  .claude/rules/ traži restart posle ažuriranja — potvrđeno na v2.1.259,
+           i dalje tvrdnja o tuđem sistemu, pa ostaje otvoreno
+           MEMORY.md i samopišuće memorije van stabla — četiri korpusa, rešava 0.9
            tabela ugovora t() iz ADR-040 nije vezana ni za jedan test nad client/i18n.py
            indeks ADR-ova u DECISIONS.md, mašinski proveren u oba smera
            ritual šest namernih kvarova nije zaveden nigde od 0.4
-           CONVENTIONS §2 nema red za client/__main__.py
+           CONVENTIONS §2 nema red za client/__main__.py, ni komandu za pokretanje
+           klijenta — obe čekaju task u kom se ta ulazna tačka napiše (3.1)
+           CONVENTIONS §1 prepričava ADR-030 i ADR-032 umesto da pokazuje na njih
+           blok „Ritam po tasku" u ovom fajlu prepričava ADR-021 — isti oblik
+           gde se sastavljaju odgovori na korak 4 nije zapisano nigde
            settings.json: git show/switch nisu u §8; push --force širi nego §8
            assets/pieces/LICENSE.txt svoje odricanje zove „canonical" a nije (iz 0.6)
 Grana:     main
@@ -119,21 +122,33 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > Nalaz iz 0.6 koji ovaj task nije dirao: `assets/pieces/LICENSE.txt`
       > svoje odricanje naziva „canonical", a kanonski SPDX oblik glasi
       > `HOLDERS ... OR`, ne `HOLDER ... AND`. Tuđa licenca — traži svoj plan.
-- [ ] 0.8 `WORKFLOW.md` usklađen sa odlukama
-      > Fajl je iz prvog commita i propušteno je pravilo propagacije.
-      > Četiri neslaganja: `/model opusplan` ne postoji (§2, §6);
-      > „sam pokreće perft skill" protiv ADR-028 (§2); kontrolna lista
-      > ima šest stavki, CONVENTIONS §9 ima sedam (§5); §8 kaže da
-      > `faza-N.md` nastaje na kraju faze iz prepričavanja, a ADR-021
-      > traži dva reda posle svakog taska i CONVENTIONS §9 to vodi kao
-      > stavku gotovog taska.
-      > Poslednje je najgore: ostala tri pucaju glasno, ovo ne puca
-      > uopšte — ko radi po dokumentu preskoči korak 4 i to se vidi
-      > tek na odbrani.
-      > Prima i **ostatak `CLAUDE.md`**: u 0.7 je pala samo tabela git
-      > dozvola, jer je bila netačna. Ostalo je mereno i odloženo ovamo,
-      > pošto mu je dom `WORKFLOW.md` — a on je predmet ovog taska
-      > (ADR-044).
+- [x] 0.8 `WORKFLOW.md` usklađen sa odlukama; ADR-045 i ADR-046
+      > **Devet** neslaganja, ne četiri koliko je ovaj red tvrdio. Uz
+      > `/model opusplan` (§2, §6), „sam pokreće perft skill" (§2),
+      > kontrolnu listu (§5) i nastanak `faza-N.md` (§8) — još i spisak
+      > šta se automatski učita (§4), smer pitanja iz koraka 4 (§2),
+      > `CLAUDE.md` u šablonu prompta (§7), tabela git dozvola i
+      > „Izvršavanje ide samo" (§9). Ta tabela je bila poslednja preživela
+      > kopija one koja je u 0.7 pala kao netačna.
+      > `CLAUDE.md` 191 → 45 redova, 7479 → 2041 bajta. Sto četiri rečenice,
+      > od toga 102 oborive; uklonjeno 96, osam ostaje. Četiri su dom dobile
+      > u ovom commitu (CONVENTIONS §4, §5, §8), dve su obrisane bez seljenja.
+      > Broj je meren četiri puta i menjao se svaki put — sva merenja stoje
+      > u faza-0.md §0.8, jer je razlika među njima nalaz o jedinici brojanja.
+      > ADR-045: merenje koje obara ADR nosi oznaku, telo ADR-a se ne menja.
+      > ADR-046: četiri uslovna STOP-a, do sada samo u planovima.
+- [ ] 0.9 Korpusi van gita se svode
+      > Četiri korpusa: `MEMORY.md` i njegov folder, memorija planskog
+      > chata, `.claude/rules/`, `settings.json`. ADR-047 im daje isti
+      > kriterijum koji ADR-044 već daje `CLAUDE.md`-u.
+      > Dve mašinske kapije: upis se proverava nad bajtovima (§7);
+      > trajleri ne ulaze u istoriju poruka (§8).
+      > Nalaz iz 0.8: pravilo „ime nikad ni u jedan fajl" je apsolut koji
+      > `LICENSE` već obara, jer ime nosioca stoji tamo po ADR-042. Klasa
+      > je ista kao kod trajlera — opseg, ne apsolut.
+      > Načelo koje se podiže iz obrazloženja jedne stavke u pravilo:
+      > provera ne sme da deli sudbinu sa kvarom od kog štiti — §5, sa
+      > izvršnim delom u §7.
 
 ---
 

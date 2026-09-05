@@ -4,19 +4,16 @@ Ovaj dokument je kompletan opis projekta. Čita se jednom, na početku.
 
 | Dokument | Sadržaj |
 |---|---|
-| `CLAUDE.md` | svakodnevna pravila, učitava se u svaku sesiju |
-| `docs/CONVENTIONS.md` | konvencije projekta (nastaje u 0.2) |
+| `CLAUDE.md` | pokazivači na `docs/`, van gita (ADR-044) |
+| `docs/CONVENTIONS.md` | konvencije projekta — obavezuju kod |
 | `docs/WORKFLOW.md` | tok rada, kada nova sesija |
 | `docs/ROADMAP.md` | lista taskova i trenutno stanje |
 | `docs/PROTOCOL.md` | ugovor između servera i klijenta |
 | `docs/DECISIONS.md` | sve odluke sa obrazloženjem (ADR) |
 | `docs/POJMOVNIK.md` | objašnjenja termina — FEN, Zobrist, perft |
 
-**Hijerarhija kad se dokumenti ne slažu** (ADR-030):
-
-```
-DECISIONS.md  >  PROTOCOL.md  >  PROJECT.md  >  ROADMAP.md
-```
+**Hijerarhija kad se dokumenti ne slažu** stoji u `CONVENTIONS.md` §1
+(ADR-032). Ovaj dokument joj je podređen.
 
 ADR koji obori nešto napisano u ovom dokumentu ispravlja ga u **istom commitu**.
 

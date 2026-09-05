@@ -286,6 +286,8 @@ varijanta. Tada komentar nosi broj ADR-a.
 - linija do 100 znakova (`ruff` to sprovodi)
 - funkcija koja ne staje na ekran je kandidat za razdvajanje
 - rani `return` umesto ugnježdenih `if`-ova
+- apstrakcija se ne uvodi pre nego što je zatražena ili pre nego što postoji
+  drugi pozivalac — sloj bez drugog korisnika je trošak bez pokrića
 
 ---
 
@@ -384,6 +386,19 @@ Test koji ne daje isti rezultat pri svakom pokretanju je pokvaren test.
 - test **ne otvara socket** — server se testira kroz `Player` interfejs sa
   lažnom implementacijom, ne kroz mrežu
 - test ne zavisi od drugog testa ni od redosleda izvršavanja
+
+### Redosled
+
+> **Test se piše pre implementacije, a bag prvo dobije test koji pada.**
+
+Implementacija koja postoji pre testa određuje šta će test proveravati: test tada opisuje
+ono što kod radi, umesto onoga što se od koda traži. Ispravka bez testa koji ju je
+zahtevao ne dokazuje ništa — ne zna se ni da je bag reprodukovan, ni da se neće vratiti.
+Redosled kod bagova je: test koji pada iz istog razloga iz kog je bag prijavljen, pa
+ispravka, pa isti test prolazi.
+
+Pravilo obavezuje kod u `src/` i `tools/`. Task koji menja samo `docs/` ili fajlove van
+gita nema šta da testira; njegove kapije su ostale stavke iz §9.
 
 ### Pravilo koje se ne krši
 
@@ -543,7 +558,8 @@ NE   Poslali ste neispravnu poruku.
 
 ### Commit
 
-Jedan task = jedan commit. Poruka na engleskom, u imperativu:
+Jedan task = jedan commit. Poruka na engleskom, u imperativu, po standardu
+**Conventional Commits**:
 
 ```
 <tip>: <šta, malim slovom, bez tačke>

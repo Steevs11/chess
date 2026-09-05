@@ -1290,3 +1290,348 @@ nestane, te tvrdnje ostaju — merenje je pokazalo da je baš to bio jedini pouz
 **Treće:** neizvesnost menja **gde se zapis oslanja**, ne da li se radi. Dve parkirane
 tvrdnje u `client-boundaries.md` sada zavise od reda u migracionoj tabeli i od „Otvoreno" u
 ROADMAP-u — dakle od gita, ne od mehanizma koji nije potvrđen. To je zavedeno.
+
+---
+
+## 0.8 — dokumenti u gitu se dovode u saglasnost
+
+### Šta je urađeno
+
+`WORKFLOW.md` je jedini dokument iz prvog commita koji nikad nije prošao kroz pravilo
+propagacije. Pregled je našao **devet** neslaganja sa važećim ADR-ovima; ROADMAP je
+tvrdio četiri. Uz njega su ispravljena tri zaostajanja u drugim fajlovima, zavedena su
+dva ADR-a, i `CLAUDE.md` je sveden na adresu i okidač po ADR-044 — isto što je 0.7
+uradio sa `.claude/`.
+
+Nijedna linija koda, testa ni alata nije dirana. Broj testova je ostao 53.
+
+### Inventar `CLAUDE.md`
+
+| | Redova | Bajtova |
+|---|---|---|
+| pre | 191 | 7.479 |
+| posle | 45 | 2.041 |
+| razlika | **−146 (−76 %)** | **−5.438 (−73 %)** |
+
+Mereno sa `wc -l` i `wc -c`. Fajl je i dalje u `.gitignore` (red 3), pa ni ovaj task
+nema `git diff` za taj proizvod — tabela ispod je jedini zapis u gitu.
+
+### Broj je meren četiri puta i menjao se svaki put
+
+| Merenje | Broj | Jedinica | Zašto je pogrešno |
+|---|---|---|---|
+| 0.7 | ~35 | blok | cela lista „Kraj taska" = 1 umesto 12; ceo blok komandi = 1 umesto 11 |
+| 0.8, prvo | 66 | mešano | uvodni pasus proglašen neoborivim, bez provere |
+| 0.8, drugo | 70 | mešano | uvodni pasus ispravljen, ali sažeti redovi ostali |
+| 0.8, konačno | **104** | rečenica | — |
+
+Sva četiri se čuvaju, jer razlika među njima je nalaz. ADR-044 kaže da je jedinica
+provere **rečenica**, ali nijedno od prva tri merenja se tog pravila nije držalo do
+kraja, i svaki put je odstupanje išlo u istom smeru — naniže, jer je sažimanje lakše
+od razlaganja.
+
+Drugo merenje je oboreno kad je korisnik tražio `grep -rn "dvosmislen" docs/`. Uvodni
+pasus je bio proglašen opisom odnosa, ne pravilom projekta; `PROJECT.md` §8 nosi i
+tabelu uloga i pasus 358–360, dakle dom postoji i te rečenice **jesu** oborive. Isti
+obrazac kao `checkout --` u 0.7: nalaz je stigao tek kad je izmereno ono što je zapis
+već proglasio tačnim.
+
+Treće je oboreno na sopstvenoj protivrečnosti. Iznad tabele je stajalo „jedan red =
+jedna rečenica", a tri odeljka su imala zaglavlje sa većim brojem nego što su imala
+redova — jer su redovi poput „sedam kućica definicije gotovog taska" sažimali po više
+rečenica. To je brojanje po bloku, tačno ono što je dva pasusa iznad bilo imenovano kao
+greška iz 0.7. Uz to se zbir zaglavlja (72) nije slagao sa tvrdnjom u tekstu (70).
+
+Od 104 rečenice su **dve neoborive** — jezik razgovora sa korisnikom i „pročitaj kad
+zatreba, ne unapred" — pa je oborivih **102**. Uklonjeno je **96**; osam ostaje, šest
+od njih prerađeno u pokazivač ili okidač.
+
+### Tabela uklonjenih rečenica
+
+Jedan red = jedna rečenica iz starog fajla. **Podebljano** je ono što dom dobija tek u
+ovom commitu, ili što se briše bez seljenja.
+
+**Zaglavlje** — 8 rečenica, 7 uklonjeno
+
+| Tvrdnja | Kuda |
+|---|---|
+| ti si vodeći inženjer | PROJECT §8:358 |
+| korisnik je student i arhitekta: on donosi odluke, ti predlažeš i obrazlažeš | PROJECT §8, tabela i :359 |
+| cilj je da korisnik razume svaku liniju — brani projekat usmeno | PROJECT §8:360; „Obrnuti pregled" |
+| ako se ne slažeš sa nečim, reci | PROJECT §8:358 |
+| ne izvršavaj plan za koji misliš da je pogrešan | PROJECT §8:355 i :358 |
+| pravila po kojima se piše kod stoje u CONVENTIONS, ne ovde | CONVENTIONS §1; :6–7 |
+| ovaj fajl je uputstvo asistentu i ne ide u git | **ostaje** — prerađeno u uvodni blok |
+| kad se njih dva raziđu, važi CONVENTIONS | CONVENTIONS §1 |
+
+**Jezik** — 11 rečenica, 10 uklonjeno
+
+| Tvrdnja | Kuda |
+|---|---|
+| kod → engleski | CONVENTIONS:9 |
+| komentari → engleski | :9 |
+| docstringovi → engleski | :9; §4 „Komentari i docstringovi" |
+| commit poruke → engleski | :9; §8 „Commit" |
+| logovi → engleski | §7 „Logovanje" |
+| imena grana → engleski | **obrisano — netačno.** §8:556 propisuje `faza-1`, `faza-2`; isti `CLAUDE.md` to ponavlja u redu 143 i protivreči sam sebi |
+| razgovor sa korisnikom → srpski | **ostaje van gita** — tvrdnja koju nijedna izmena u `docs/` ne može oboriti; CONVENTIONS:10 pokriva dokumentaciju i interfejs, ne jezik razgovora |
+| `README.md` i `docs/` → srpski | CONVENTIONS:10 |
+| tekst vidljiv korisniku nikad u kodu, uvek ključ iz `sr.json` | §7 „Ključevi"; ADR-040 |
+| šahovska notacija se ne prevodi | §7:497 |
+| logovi bez dijakritika — Windows konzola nije UTF-8 | §7 „Logovanje" (ADR-010) |
+
+**Arhitektura** — 5 rečenica, sve uklonjene
+
+| Tvrdnja | Kuda |
+|---|---|
+| dijagram smera zavisnosti | §2 |
+| smer zavisnosti se ne obrće nikad | §2 |
+| tabela dozvoljenih uvoza po modulu je u §2 | §2 |
+| sprovodi je `tools/layer_check.py` | §2 „Provera"; §10 (ADR-033) |
+| pokreće se i kao test, ne skillom | §2 „Provera" (ADR-033) |
+
+**Granice koje se ne prelaze** — 18 rečenica, 16 uklonjeno
+
+| Tvrdnja | Kuda |
+|---|---|
+| `core/` uvozi samo stdlib — bez pygame, socket, `print` | §2, red `core/*` |
+| pygame tipovi ne izlaze iz `render.py` i `scenes/` | §3 |
+| klijent čita poziciju, ne odlučuje o legalnosti | §3 (ADR-024) |
+| sme da uvozi samo `core/types.py` i `core/fen.py` | §3 |
+| parsiranje FEN-a i crtanje table su dozvoljeni, računanje poteza nije | §3 |
+| server je jedini autoritet | §3; PROJECT §1 |
+| nikad `pickle` na mreži; protokol je JSON, verzionisan | PROTOCOL:18; PROJECT §6:221 |
+| nema globalnog stanja ni singletona — tabla se prosleđuje | §4 „Bez stanja i bez hijerarhije" (0.7) |
+| `Color` i `PieceType` su enumi | §4 (0.7) |
+| `Piece` je `frozen=True, slots=True` dataclass | §4 „Dataclass-ovi" |
+| nikad hijerarhija nasleđivanja | §4 (0.7) |
+| make/unmake, nikad kopiranje table | §4 (ADR-006) |
+| komanda ≠ upit: `is_legal()` ne menja ništa | §4 (0.7) |
+| nikad ne menjaj test da bi prošao — pada kod dok se ne dokaže suprotno | §5 „Pravilo koje se ne krši" |
+| ako je test zaista pogrešan, to je zaseban commit sa obrazloženjem | §5 |
+| svaki bag prvo dobije test koji pada | **§5 „Redosled" — napisano u ovom tasku** |
+| sve ostalo stoji u CONVENTIONS §4–§7 | **ostaje** — prerađeno u tabelu okidača |
+| pročitaj ih pre pisanja koda; ne parafraziraj ih ovde | **ostaje** — isto |
+
+**Radni tok** — 14 rečenica, sve uklonjene
+
+| Tvrdnja | Kuda |
+|---|---|
+| plan mod za sve veće od jedne funkcije | WORKFLOW §6 |
+| plan pokazuješ, ne izvršavaš odmah | WORKFLOW §2, uokvireni korak |
+| test prvo, pa implementacija | **§5 „Redosled" — napisano u ovom tasku** |
+| ako je zadatak dvosmislen — pitaj, ne pretpostavljaj | PROJECT §8:355 |
+| ne uvodi apstrakciju koju korisnik nije tražio | **§4 „Dužina i oblik" — napisano u ovom tasku** |
+| ritam po tasku ima numeraciju na koju se poziva §9 | ADR-021; CONVENTIONS §9 |
+| korak 1 — plan mod, korisnik čita plan pre nego što kod postoji | ADR-021; WORKFLOW §2 |
+| korak 2 — implementacija | ADR-021 |
+| korak 3 — objašnjenje u 3–5 rečenica, sa odbačenom alternativom | ADR-021; WORKFLOW §2 |
+| korak 4 — dva do tri pitanja korisniku, obavezno | ADR-021; §9; WORKFLOW §2 |
+| pitanja su o zašto, ne o šta | ADR-021; WORKFLOW §2 |
+| korak 5 — korisnik odgovara; ako ne zna, objasni drugačije | ADR-021; WORKFLOW §2 |
+| korak 6 — na kraju faze korisnik prepričava celu fazu | ADR-021; WORKFLOW §8 |
+| posle svakog taska dva reda u `faza-N.md` | CONVENTIONS §9; WORKFLOW §8 |
+
+**Propagacija odluka** — 7 rečenica, sve uklonjene
+
+| Tvrdnja | Kuda |
+|---|---|
+| ADR koji obori dokument ispravlja ga u istom commitu, bez izuzetka | §1 „Pravilo propagacije" i „Proširenje" |
+| dokument koji zaostaje gori je od dokumenta koji ne postoji | §1, isto mesto |
+| stari ADR se ne briše, dobija ⚠️ koja pokazuje na novi | §1 (ADR-032) |
+| `DECISIONS.md` je append-only | §1 |
+| ADR se piše u četiri slučaja | §1 „Kad se piše ADR" |
+| ne piše se za imena promenljivih ni sitne refaktore | §1 |
+| format je Kontekst → Odluka → Posledice, uz „šta smo izgubili" | §1 |
+
+**Kraj taska** — 12 rečenica, sve uklonjene
+
+| Tvrdnja | Kuda |
+|---|---|
+| task nije gotov dok ne prođe svih sedam stavki | §9, uvodna rečenica |
+| kućica: `unittest discover` prolazi | §9 |
+| kućica: `ruff check` i `ruff format --check` čisti | §9 |
+| kućica: perft pokrenut ako je diran generator, obavezno od 1.3 | §9 |
+| kućica: pročitan `git diff`, ceo | §9 |
+| kućica: odgovoreno na pitanja iz koraka 4, zapisano u `faza-N.md` | §9 |
+| kućica: `ROADMAP.md` ažuriran, `DECISIONS.md` dopunjen uz propagaciju | §9 |
+| kućica: commitovano | §9 |
+| provera koja se ne štiklira: korisnik može naglas da objasni | §9 |
+| ako to ne prolazi, ne prelazi se na sledeći task | §9 |
+| predloži commit poruku u Conventional Commits formatu | **§8 „Commit" — ime standarda upisano u ovom tasku** |
+| reci koji je sledeći task i predloži `/clear` | ROADMAP, blok TRENUTNO; WORKFLOW §4 |
+
+**Git** — 5 rečenica, 4 uklonjene
+
+| Tvrdnja | Kuda |
+|---|---|
+| zabrane su u §8, dozvole izvršiocu u `settings.json`, to su dva pitanja | **ostaje** — prerađeno u okidač |
+| grana po fazi: `faza-1`, `faza-2` | §8 „Grane" |
+| merge u `main` sa `--no-ff` kad checkpoint prođe | §8 „Grane" |
+| nikad commit koji meša implementaciju sa ispravkom testa | §5 |
+| nikad commit koji nosi ADR bez propagacije | §1 |
+
+**Komande** — 11 rečenica, sve uklonjene
+
+| Tvrdnja | Kuda |
+|---|---|
+| `pip install -e ".[dev]"` | §10; ADR-029 |
+| bez toga `discover` ne nalazi paket | ADR-029; §10 |
+| `[dev]` nije opcion — bez njega nema `ruff`-a | ADR-036 |
+| `python -m unittest discover -s tests` | §9, prva kućica |
+| `CHESS_SLOW_TESTS=1 …` | §5 „Perft" |
+| `ruff check . && ruff format .` | §10 |
+| `ruff check . && ruff format --check .` | §9, druga kućica |
+| `python tools/layer_check.py` | §2 „Provera"; §10 |
+| `python tools/rasterize_pieces.py` | §10 (ADR-038) |
+| `python -m chess.server` | PROTOCOL:23 |
+| `python -m chess.client` | **obrisano — jedina komanda bez doma.** `client/__main__.py` ne postoji; dom dobija u 3.1, dotle stoji red u ROADMAP „Otvoreno" |
+
+**Referentni dokumenti** — 13 rečenica, 10 uklonjeno
+
+| Tvrdnja | Kuda |
+|---|---|
+| pročitaj kad zatreba, ne unapred | **ostaje** — nije oboriva |
+| `CONVENTIONS.md` — kako se piše kod | §1 „Ko odgovara na koje pitanje" |
+| `DECISIONS.md` — zašto je nešto odlučeno | §1 |
+| `PROTOCOL.md` — kako server i klijent razgovaraju | §1 |
+| `PROJECT.md` — šta pravimo i zašto | §1 |
+| `ROADMAP.md` — šta je sledeće i gde smo stali | §1 |
+| `WORKFLOW.md` — kako izgleda jedna radna sesija | §1 |
+| `POJMOVNIK.md` — šta znače termini | §1 |
+| hijerarhija od šest dokumenata | §1 „Hijerarhija kad se dokumenti ne slažu" |
+| CONVENTIONS ne sme da protivreči protokolu | §1 (ADR-032) |
+| POJMOVNIK nema autoritet: objašnjava, ne propisuje | §1 |
+| ovaj fajl nije u toj listi | **ostaje** — prerađeno u uvodni blok |
+| ne propisuje ništa što CONVENTIONS već ne kaže | **ostaje** — isto |
+
+### Devet neslaganja u `WORKFLOW.md`
+
+| # | Šta je pisalo | Šta je radilo pre ispravke |
+|---|---|---|
+| 1 | `/model opusplan` (§2, §6) | komanda ne postoji; ko je otkuca dobije grešku i ne zna da li mu fali podešavanje |
+| 2 | „testovi prolaze → sam pokreće perft skill" (§2) | obara ADR-028 — perft je `tools/perft.py` i pokreće se izričito; dokument je obećavao automatiku koje nema |
+| 3 | kontrolna lista od sedam kućica (§5) | šest se poklapalo sa CONVENTIONS §9, **falili su perft i pitanja iz koraka 4**, a sedma („razumem naglas") je greška kategorije: §9 je izričito drži van liste jer se ne može odštiklirati |
+| 4 | „napiši `faza-N.md`" na kraju faze (§8) | ko radi po dokumentu preskoči korak 4 iz ADR-021 — i to se ne vidi ni na jednom testu, nego tek na odbrani |
+| 5 | „Izvršavanje ide samo" (§9) | dozvoljavalo je da se posle odobrenog plana ne pita više ništa |
+| 6 | tabela git dozvola (§9) | poslednja preživela kopija one koja je u 0.7 obrisana iz `CLAUDE.md`-a **zato što je bila netačna**; ista greška je preživela u drugom fajlu |
+| 7 | spisak „šta se automatski učita" (§4) | opis tuđeg alata bez verzije; ADR-044 je isti spisak izmerio i dobio različit rezultat po verziji |
+| 8 | „Zašto si X odvojio od Y?" kao jedini prikaz pitanja (§2) | obrnut smer — po ADR-021 Claude pita korisnika; obavezan korak je bio nevidljiv |
+| 9 | „šta iz `CLAUDE.md` se odnosi na ovo" (§7) | posle ADR-044 `CLAUDE.md` ne nosi pravila, pa je šablon upućivao na prazno |
+
+Uz devet je ispravljeno i poravnanje kutije oko `git diff`, koja je tvrdila da je čitanje
+diffa **jedini** korak koji se ne preskače. Otkako korak 4 iz ADR-021 stoji u istom
+odeljku, ta reč nije tačna.
+
+### Merenje: `.claude/rules/` traži restart, ne novu verziju
+
+Ovo je zapis na koji pokazuje ⚠️ oznaka sa ADR-044, pa mora da stoji sam za sebe.
+
+| Kada | Verzija | Ishod |
+|---|---|---|
+| 3. septembra 2026, ranija sesija 0.7 | v2.1.258 | tri `Read`-a nad `src/chess/` donela tri fajla iz `.claude/rules/`, svaki sa zaglavljem `Contents of …` |
+| 3. septembra 2026, kasnija sesija 0.7 | v2.1.259, **bez restarta** | tri `Read`-a nad tri različita `paths:` globa — nijedno pravilo |
+| 4. septembra 2026 | v2.1.259, **posle restarta** | pravila se učitavaju |
+
+Između prva dva merenja alat se ažurirao u toku taska; terminal je javio
+`Update installed · Restart to update` i restart nije izvršen. ADR-044 je zato zapisao
+„uzrok nije utvrđen", što je u trenutku pisanja bilo tačno. Treće merenje ga obara:
+**uzrok je neizvršen restart, ne promena između verzija.**
+
+Tvrdnja i dalje važi samo za v2.1.259 i i dalje je tvrdnja o tuđem sistemu, pa red u
+ROADMAP „Otvoreno" ostaje — skraćen, ne obrisan. Operativna posledica je jedan red u
+`WORKFLOW.md` §4: alat javio ažuriranje u toku taska → restartuj pre nastavka.
+
+### Zašto rečenica napisana kao mehanizam ne može da otkaže
+
+U 0.7 su dva pravila iz korpusa van gita prekršena više puta i nijedno kršenje nije
+imalo posledicu. Oba su bila napisana kao **mehanizam**: imenovala su poklapanje stringa
+u izlazu alata („neuspeo upis"), a ne zahtev. Kad je stvarna potreba bila zadovoljena
+drugim putem, uslov se nije okinuo — pravilo je ćutalo, iako je ono što štiti bilo
+prekršeno.
+
+Odatle merilo po kom je pisana svaka rečenica koja se u ovom tasku selila:
+
+- **zahtev, ne mehanizam** — rečenica ne imenuje interfejs alata, jer interfejs se menja
+  bez najave i tada rečenica postaje tačna o ničemu;
+- **opseg, ne apsolut** — ako izuzetak postoji, nosi ga i sama rečenica. Zato „test prvo"
+  u CONVENTIONS §5 izričito kaže da obavezuje `src/` i `tools/`: task koji menja samo
+  `docs/` nema šta da testira, a pravilo bez te klauzule bi ga proglasilo prekršajem.
+
+Isto merilo je oborilo prvu formulaciju četvrtog STOP-a u ADR-046 i zamenilo je onom
+koja imenuje situaciju: zatečeno stanje drugačije od onog koje plan pretpostavlja.
+
+### Nema tabele predviđenih padova
+
+Isti razlog kao u 0.7, i ponavlja se jer je klasa ista: task ne pravi nijednu mašinski
+proverljivu tvrdnju. Sve što menja je proza u `docs/` i fajl van gita. Kvar uveden u
+`CLAUDE.md` ne može da obori nijedan test, po konstrukciji — nijedan test ne sme da
+zavisi od fajla koji `git clone` ne donosi.
+
+Kapije su zato inventar pre i posle, stari i novi tekst prikazan pre svake izmene van
+gita, i tabela uklonjenih rečenica iznad. Dodata je jedna pozitivna: za svaku od četiri
+novonapisane tvrdnje `grep` prvo mora da vrati **bar jedan** pogodak, pa se tek onda
+poredi broj — provera koja prolazi na praznom ulazu nije provera. Sve četiri su vratile
+tačno po jedan normativni pogodak.
+
+Dve mašinske kapije koje su razmatrane — provera upisa nad bajtovima i provera da
+trajleri ne ulaze u istoriju poruka — odložene su u 0.9, zajedno sa korpusima van gita
+na koje se odnose.
+
+### Pitanja
+
+**1. ADR-045 kaže da merenje koje obori ADR ne dobija svoj ADR, nego se zapisuje u
+`faza-N.md`, a ADR na njega samo pokazuje. Time je `DECISIONS.md` — fajl na vrhu
+hijerarhije — postao zavisan od fajla ispod sebe. Zašto je to ipak ispravno, i šta bi se
+pokvarilo da smo merenje proglasili ADR-om?**
+
+Znao. **ADR i merenje imaju suprotna svojstva trajanja.** ADR je odluka: ne otvara se
+ponovo, i tačan je zato što smo ga mi tako odlučili — svet ga ne može oboriti. Merenje je
+tvrdnja o tuđem sistemu i mora ostati oborivo prvim sledećim pokretanjem. Da je merenje o
+restartu proglašeno ADR-om, dobilo bi zaštitu „ne otvara se ponovo", pa bi svaka sledeća
+verzija alata koja se ponaša drugačije morala da **obara ADR** umesto da doda red u
+tabelu — lanac bi rastao za jedan ADR po ažuriranju tuđeg programa. Uz to bi CONVENTIONS
+§1 bio prekršen, jer nabraja četiri slučaja u kojima se ADR piše i merenje nije nijedan.
+
+> Zavisnost `DECISIONS.md`-a od fajla ispod njega je stvarna cena i zato je ADR-045
+> imenuje pod „šta smo izgubili". Ispravna je zato što **hijerarhija uređuje ko pobeđuje
+> kad se dva dokumenta ne slažu, a ovde sukoba nema**: merenje ne protivreči odluci, nego
+> činjenici koju je odluka usput zapisala. Autoritet zapisa dolazi od toga što je
+> izmereno, ne od ranga fajla u kom stoji.
+
+**2. U CONVENTIONS §5 pravilo „test prvo" nosi klauzulu da obavezuje samo `src/` i
+`tools/`. Klauzula je duža od samog pravila i lako je reći da je suvišna. Zašto mora da
+stoji u samoj rečenici, a ne u obrazloženju ispod nje?**
+
+Znao, sa dva razloga. **Prvi: obrazloženje nema ko da pročita u trenutku kad pravilo
+otkazuje.** Pravilo se primenjuje tako što neko proveri da li ga je prekršio; ako je opseg
+dole u prozi, provera se radi nad rečenicom koja bez klauzule glasi apsolutno — i 0.8 i
+0.9, koji ne diraju nijednu liniju koda, ispadaju prekršaj. Rečenica koja mora da se čita
+zajedno sa pasusom ispod nije pravilo nego nacrt pravila.
+
+**Drugi je iz ovog istog taska.** Dva pravila iz `MEMORY.md`-a napisana kao apsolut ispala
+su već oborena onim što projekat radi: „ime nikad ni u jedan fajl" protivreči redu o
+autorskim pravima u `LICENSE`-u, koji tamo stoji po ADR-042. Apsolut nastaje kad se
+pravilo napiše iz jednog slučaja, a izuzetak se otkrije kasnije — i tada niko ne zna da li
+je izuzetak dozvoljen ili je pravilo prekršeno. **Klauzula je duža od pravila zato što je
+opseg deo pravila, ne komentar na njega.** Nalaz je zaveden u 0.9.
+
+**3. Broj oborivih tvrdnji je meren četiri puta i svaki put je ispao drugačiji — ~35, 66,
+70, 104. Zapisana su sva četiri. Šta bismo izgubili da stoji samo „104", i zašto je
+odstupanje išlo baš naniže sva tri puta?**
+
+Znao, i drugi deo odgovora je bio bolji od onoga zbog čega je pitanje postavljeno.
+
+**Šta bismo izgubili:** jedini nalaz koji je taj niz proizveo. „104" sam za sebe je broj
+rečenica u fajlu koji od ovog commita više ne postoji u tom obliku — neupotrebljiv posle
+njega. Upotrebljivo je to što je **isti fajl, po istom pravilu iz ADR-044, tri puta
+izbrojan pogrešno**: pravilo „jedinica je rečenica" nije samoprimenljivo i traži da broj
+uvek nosi jedinicu pored sebe. Bez tri odbačena merenja, §0.8 bi tvrdio da je brojanje
+bilo tačno iz prvog puta.
+
+**Zašto naniže:** sažimanje je podrazumevano stanje čitanja, a razlaganje traži odluku. Ko
+čita listu od sedam kućica vidi jednu stvar — „definicija gotovog taska" — jer je tako i
+napisana, kao celina. Da ispadne sedam, mora se stati i pitati koliko tvrdnji taj blok
+nosi. **Greška zato ima smer: nijedno pogrešno brojanje nije dalo previše, sva tri su dala
+premalo.** Isti oblik kao merenje koje se pokrene jednom i potvrdi ono što se očekivalo —
+tri puta u ovom tasku je tek **ponovljeno** merenje oborilo prethodno.

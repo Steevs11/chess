@@ -25,8 +25,6 @@ kasniji zahtev.
 ```
 > claude                          (iz PyCharm terminala, u korenu projekta)
 
-> /model opusplan                 (samo prvi put nakon instalacije)
-
 > Pročitaj @docs/ROADMAP.md i @docs/PROJECT.md.
   Nastavljamo na 1.4 — rokada.
 
@@ -47,18 +45,23 @@ kasniji zahtev.
   └─────────────────────────────────────────┘
 
   → Claude piše testove → padaju → piše implementaciju
-  → testovi prolaze → sam pokreće perft skill
+  → testovi prolaze → perft se pokreće ako je diran generator poteza
+    (uslov je u CONVENTIONS §9, alat je tools/perft.py)
 
-> Zašto si _rook_path_clear odvojio od _king_path_safe?
+  → Claude objasni u 3–5 rečenica: šta je urađeno, zašto tako i koja
+    alternativa je odbačena
 
-  → Claude objasni. Pitaj sve što ti nije jasno.
+  → Claude TEBI postavi 2–3 pitanja o napisanom kodu, o zašto a ne o šta
+    (ADR-021, korak 4 — ne preskače se)
+
+> Odgovaraš. Gde ne znaš, tražiš drugačije objašnjenje, pa opet.
+  Sve što tebi nije jasno pitaš ovde.
 
 > git diff
 
 > ┌─────────────────────────────────────────┐
   │  PROČITAJ DIFF.                         │
-  │  Ovo je jedini korak koji se ne          │
-  │  preskače nikad.                         │
+  │  Ovo se ne preskače nikad.              │
   └─────────────────────────────────────────┘
 
 > Commituj.
@@ -69,6 +72,19 @@ kasniji zahtev.
 ```
 
 Dva uokvirena koraka su tvoja i ne preskaču se. Sve između njih ide brzo.
+
+### Kad se staje
+
+Ritam nema bezuslovni STOP — upit na svaku komandu i svaku izmenu je već tačka
+provere. Staje se na četiri mesta (ADR-046):
+
+1. **Nalaz obara nešto što je plan proglasio odlučenim.**
+2. **Nepredviđen pad testa** — neočekivana *dijagnoza* je STOP; neočekivan *broj*
+   je zapis u `faza-N.md`.
+3. **Tačka koju je plan unapred imenovao** — tu se staje i kad sve prolazi.
+4. **Zatečeno stanje je drugačije od onog koje plan pretpostavlja.**
+
+Na svakom STOP-u zatečeno stanje ostaje netaknuto dok se ne objasni.
 
 ---
 
@@ -98,11 +114,13 @@ Podfaze iz `ROADMAP.md` (1.1, 1.2, 1.3...) su već kalibrisane kao jedan task.
 | Novi dan | `/clear` |
 | `/context` ispod 30% slobodnog | `/clear` ili `/compact` |
 | Usred taska, kontekst se puni | `/compact` (sažima i nastavlja) |
+| Alat javio ažuriranje u toku taska | restartuj pre nastavka |
 
 `/clear` briše razgovor. Ostaješ u istom terminalu i projektu.
 
-**Šta se automatski učita u svaku novu sesiju:**
-`CLAUDE.md` · `.claude/rules/` (kad putanja odgovara) · opisi skillova · `settings.json`
+**Šta se automatski učita** zavisi od verzije alata. Izmereno je i zapisano u
+ADR-044, u tabeli koja nosi verziju i datum — ovde se ne prepisuje, jer bi kopija
+zastarela sa prvim ažuriranjem.
 
 **Šta se NE prenosi:** razgovor, pročitani fajlovi, sve što je dogovoreno usmeno.
 
@@ -110,18 +128,14 @@ Podfaze iz `ROADMAP.md` (1.1, 1.2, 1.3...) su već kalibrisane kao jedan task.
 
 ---
 
-## 5. Kontrolna lista pre `/clear`
+## 5. Pre `/clear`
 
-- [ ] Testovi prolaze
-- [ ] `ruff` čist
-- [ ] Pročitao sam diff
-- [ ] Commitovano
-- [ ] `ROADMAP.md` ažuriran
-- [ ] `DECISIONS.md` dopunjen ako je doneta odluka
-- [ ] Razumem šta je urađeno — mogu da objasnim naglas
+Kontrolna lista je **CONVENTIONS §9** — sedam stavki, plus provera koja se ne
+štiklira jer se ne može odštiklirati. Ovde se ne prepisuje: dve liste istih stavki
+znače da jedna sutra zaostane, a ne zna se koja.
 
-Poslednja stavka je najvažnija. Ako ne prolazi, ne prelazi dalje —
-pitaj Claude Code da objasni, ili donesi kod na claude.ai.
+Ta neštiklirana provera je najvažnija. Ako ne prolazi, ne prelazi dalje — traži da
+ti se objasni drugačije, ili odnesi kod na claude.ai.
 
 ---
 
@@ -130,13 +144,11 @@ pitaj Claude Code da objasni, ili donesi kod na claude.ai.
 | Komanda | Kada |
 |---|---|
 | `Shift+Tab` | plan mod — za sve veće od jedne funkcije |
-| `/model opusplan` | jednom, na početku |
 | `/clear` | između taskova |
 | `/compact` | usred taska, kad se kontekst puni |
-| `/context` | kad osetiš usporenje |
-| `/usage` | potrošnja u odnosu na plan |
-| `/memory` | pregled i izmena CLAUDE.md |
-| `/help` | spisak komandi tvoje verzije |
+
+Ovo su tri mesta na kojima komanda nosi **našu** politiku. Spisak komandi svoje
+verzije daje sam alat; ovde ne stoji, jer bi zastareo bez ijednog znaka (ADR-044).
 
 ---
 
@@ -145,7 +157,7 @@ pitaj Claude Code da objasni, ili donesi kod na claude.ai.
 ```
 Kontekst: [koji fajl, koji sloj, šta trenutno radi]
 Zadatak:  [jedna konkretna stvar]
-Pravila:  [šta iz CLAUDE.md se odnosi na ovo]
+Pravila:  [šta iz docs/CONVENTIONS.md se odnosi na ovo]
 Provera:  [kako znam da je gotovo]
 
 Ako je nešto dvosmisleno, pitaj pre nego što počneš.
@@ -164,26 +176,27 @@ Ako je nešto dvosmisleno, pitaj pre nego što počneš.
 
 ## 8. Na kraju faze
 
-1. **claude.ai** — ispričaš šta je urađeno svojim rečima. Claude ispituje.
-   Gde zapneš, tu se vraćaš na kod.
-2. **Claude Code**, nova sesija — task je: napiši `docs/faze/faza-N.md`.
-   Claude pročita kod, `ROADMAP.md` i `DECISIONS.md` i napiše tekst na srpskom.
-3. Merge grane u `main` sa `--no-ff`.
+`docs/faze/faza-N.md` **ne nastaje na kraju faze.** Po ADR-021 dobija dva reda posle
+**svakog** taska — postavljeno pitanje i da li si znao odgovor — i CONVENTIONS §9 to
+vodi kao stavku gotovog taska. Na kraju faze se zato sastavlja, ne piše.
+
+1. **claude.ai** — ispričaš celu fazu svojim rečima. Claude ispituje. Gde zapneš, tu
+   se vraćaš na kod.
+2. **Claude Code**, nova sesija — od zapisa po taskovima, koda, `ROADMAP.md`-a i
+   `DECISIONS.md`-a sastavlja se `docs/faze/faza-N.md`.
+3. Merge grane u `main` — oblik i uslov su u CONVENTIONS §8.
 4. `/clear`, pa sledeća faza.
 
 Na kraju projekta "napiši dokumentaciju" postaje sastavljanje, ne pisanje.
 
 ---
 
-## 9. Šta Claude radi sam, a šta traži odobrenje
+## 9. Ko šta odobrava
 
-| Sam | Uz odobrenje | Nikad |
-|---|---|---|
-| čita i pretražuje kod | **plan** | `git push` |
-| pokreće testove | `git commit` | `reset --hard`, `rebase`, `clean -fd` |
-| pokreće `ruff` | `git merge` | briše ili menja test da prođe |
-| poziva skillove | nova zavisnost | `pip install` bez odobrenja |
-| `git add`, `status`, `diff`, `log` | fajl van dogovorene strukture | menja fajlove van plana |
-| piše kod unutar odobrenog plana | izmena `CLAUDE.md` ili pravila | |
+Šta je projektu **zabranjeno** stoji u CONVENTIONS §8. Šta izvršilac sme da pokrene
+**bez pitanja** stoji u `.claude/settings.json`. To su dva različita pitanja i
+nijedno se ovde ne prepisuje (ADR-044).
 
-Plan odobravaš ti. Izvršavanje ide samo.
+Ono što samo ovaj fajl može da kaže: **odobrenje ide na svaku komandu i svaku
+izmenu**, ne jednom na plan. Plan odobravaš pre nego što kod postoji; svaki
+pojedinačan potez posle toga odobravaš u trenutku kad se dešava.
