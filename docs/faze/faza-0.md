@@ -1635,3 +1635,281 @@ napisana, kao celina. Da ispadne sedam, mora se stati i pitati koliko tvrdnji ta
 nosi. **Greška zato ima smer: nijedno pogrešno brojanje nije dalo previše, sva tri su dala
 premalo.** Isti oblik kao merenje koje se pokrene jednom i potvrdi ono što se očekivalo —
 tri puta u ovom tasku je tek **ponovljeno** merenje oborilo prethodno.
+
+---
+
+## 0.9 — korpusi van gita se svode
+
+### Šta je urađeno
+
+Kriterijum ADR-044 je ADR-047 proširio na **tri** korpusa: `.claude/`, `MEMORY.md` sa
+folderom i memoriju planskog chata. `settings.json` nije korpus pravila, nego odredište za
+dozvole izvršiocu. Pravila iz MEMORY foldera su dobila dom u `CONVENTIONS.md` i
+`WORKFLOW.md`, ili su obrisana, pa je folder sveden na prazan `MEMORY.md`. Dodate su dve
+mašinske kapije, **prve u luku 0.7–0.9**: test `tests/test_encoding_bytes.py` (K1) i alat
+`tools/check_commit_trailers.py` (K2). Testova je bilo 53, sada ih je 58.
+
+### Inventar
+
+Mereno sa `find` i `wc -l` / `wc -c` po fajlu, 17. 9. 2026, pre ijedne izmene i posle
+svođenja. U 0.7 je zapisan samo zbir bajtova, pa se po fajlu meri prvi put sada.
+
+**Korpus 1: `.claude/`.** Bez izmena, pa je stanje posle isto kao pre. Poklapa se sa 0.7 i
+po zbiru: 152 reda, 5.823 bajta.
+
+| Fajl | Redova | Bajtova |
+|---|---|---|
+| `rules/client-boundaries.md` | 28 | 897 |
+| `rules/core-purity.md` | 17 | 480 |
+| `rules/i18n.md` | 19 | 578 |
+| `skills/chess-rules/SKILL.md` | 28 | 1.155 |
+| `skills/layer-check/SKILL.md` | 19 | 734 |
+| `skills/perft/SKILL.md` | 41 | 1.979 |
+| `settings.json` (nije korpus) | 43 | 1.240 |
+
+**Korpus 2: MEMORY folder.**
+
+| Fajl | Nastao | Redova | Bajtova | Posle |
+|---|---|---|---|---|
+| `MEMORY.md` | — | 9 | 1.413 | 0 / 0 |
+| `batch-doc-edits-one-call.md` | 31. 8. | 24 | 1.245 | obrisan |
+| `conditional-stops-between-plan-steps.md` | 2. 9. | 25 | 1.127 | obrisan |
+| `measure-before-declaring-absence.md` | **5. 9. 04:09** | 26 | 1.490 | obrisan |
+| `no-claude-attribution-in-repo.md` | 30. 8. | 23 | 1.129 | obrisan |
+| `no-personal-data-in-files.md` | 31. 8. | 28 | 1.372 | obrisan |
+| `record-both-measurements.md` | **3. 9.** | 27 | 1.519 | obrisan |
+| `relay-command-output.md` | 1. 9. | 30 | 1.406 | obrisan |
+| `roadmap-checkbox-and-trenutno.md` | 31. 8. | 20 | 918 | obrisan |
+| `verify-writes-over-bytes.md` | 2. 9. | 25 | 1.261 | obrisan |
+
+Ukupno 237 redova i 12.880 bajtova pre; posle 0 i 0. Datum nastanka je vreme izmene fajla.
+
+**Korpus 3: memorija planskog chata.** Samo inventar pre: četiri fajla, 6.349 bajtova, oko
+50 stavki, mereno 15. 9. 2026 u planskom chatu. Redovi nisu mereni. Svodi se **posle**
+ovog commita, u planskom chatu, jer dom mora prvo da postoji u gitu. **Nijedna kapija ga ne
+dohvata**: ni K1, ni K2, ni četiri kapije iz prve kućice CONVENTIONS §9. To je jedini deo
+taska bez ijedne provere.
+
+### Devet pravila, ne sedam
+
+Plan je poznavao sedam pravila; u folderu ih je bilo devet. Nalaz iz plan moda je bio
+četvrti STOP. Pravilo `record-both-measurements` je dobilo dom u CONVENTIONS §1 („Merenje u
+zapisu"), a `measure-before-declaring-absence` u §5, uz nalaz 1 iz plana. Drugo je nastalo
+**posle** commita `4c71791`, na kraju sesije 0.8. Time je izmereno ono što je plan vodio kao
+neizmereno: pravila u ovom korpusu **nastaju iz razgovora**, bez ijedne odluke po fajlu.
+T4 ostaje na snazi: pravilo koje se vrati samo od sebe obara ADR-047, tačku 2.
+
+`conditional-stops-between-plan-steps` je nabrajao **tri** uslovna STOP-a, a ADR-046 ih ima
+četiri. Truljenje kopije koje ADR-044 opisuje uhvaćeno je u korpusu koji se upravo svodio.
+
+### Nova nit: provera nije užeg domena od tvrdnje
+
+U nizu sa nitima iz 0.4–0.8. U 0.8 je za svaku rečenicu iz korpusa postavljeno pitanje „ima
+li dom u `docs/`", i grep je išao nad `docs/`. Takva provera utvrđuje **gde** rečenica
+pripada, ne **da li je tačna**. Kontraprimer za „ime nikad ni u jedan fajl" živeo je u
+`LICENSE`-u, u korenu, van domena grepa.
+
+> **Provera koja traži kontraprimer samo tamo gde se pravilo očekuje ne proverava tvrdnju,
+> nego adresu na koju tvrdnja upućuje.**
+
+Dom: CONVENTIONS §5, „Provera i njen domen".
+
+### Devet grepova
+
+Grepovi su pokrenuti **pre** svođenja, kroz Bash `grep -rnIE`, ne kroz alat za pretragu,
+jer on poštuje `.gitignore` (T1). Za svaki domen je prvo dokazano da nije prazan.
+
+| Domen | Tekstualnih fajlova | Uslov |
+|---|---|---|
+| A: stablo | **52** | bez `.git/`, `.venv/`, `__pycache__`, `*.egg-info`, `.claude/`, `.idea/`, `.ruff_cache/` |
+| A: stablo, plan mod | **68** | bez `.git/`, `.venv/`, `__pycache__`, `*.egg-info` |
+| B: `.claude/` + MEMORY | 7 + 10 | — |
+| C: korpus 3 | 4 | grepovao planski chat, 17. 9. 2026 |
+
+**68 − 52 = 16 = 7 (`.claude/`, premešten u B) + 7 (`.idea/`) + 2 (`.ruff_cache/`).** Oba
+merenja su koristila `-I`, pa se razlika ne duguje njemu. U dodatim izuzećima nema teksta
+koji pišemo mi. `build/lib/` je ostao u domenu A; njegov pogodak uz grep 6 je generisana
+kopija `src/` i broji se kao zavisan.
+
+Upisani su broj pogodaka i mesta, **nikad pogođeni red**. Uz grep 4 bi pogođeni red bio baš
+prekršaj pravila koje se u ovom commitu piše.
+
+| # | Pravilo | A: stablo | B | C: korpus 3 |
+|---|---|---|---|---|
+| 1 | conditional-stops | 14: ADR-046, WORKFLOW §2, ROADMAP:139, faza-0:1561; 2 šum (ADR-027, POJMOVNIK) | 4, samo u pravilu | 1, poklapa se sa ADR-046 (duplikat) |
+| 2 | roadmap-checkbox | 26: ROADMAP, tabele faza-0 §0.8, `CLAUDE.md`:30 | 8, samo u pravilu | 2, pokazivač na TRENUTNO |
+| 3 | relay-command-output | „ne vidi" / „sažet" 17, sve šum; „izlaz" 33 | 6 + 8 | 0 |
+| 4 | no-personal-data | ime: 5 mesta (`LICENSE`:1, `THIRD-PARTY.txt`:6, `tests/test_assets.py`:116 očekivana; `DECISIONS.md`:1229, `faza-0.md`:1051 kontekst ADR-a); e-mail 0; autor 16/16 commitova | 0 | **kontraprimer**: ime arhitekte 10 mesta; prezime i indeks 1; ime mentora 1; e-mail 0 |
+| 5 | batch-doc-edits | 5: faza-0 176, 632, 745; 2 šum | 5, samo u pravilima | 0 |
+| 6 | verify-writes | 34 u 7 fajlova (jedan je `build/lib/`, zavisan) | 8 | 0 po obrascu; načelo na 2 mesta |
+| 7 | no-claude-attribution | 2, šum (BSD „atribucija"); trajleri 0 | 4 | 0 |
+| 8 | record-both | 130 u 9 fajlova, širok obrazac | 20 | 3, sve šum |
+| 9 | measure-absence | 5: `CLAUDE.md`:42, CONVENTIONS:52 (šum), DECISIONS:1523, **faza-0:1488**, ROADMAP:120 | 5 | 0; kandidat po sadržaju u `overview` |
+
+**Presuda o `faza-0.md`:1488** („jedina komanda bez doma"): nije kontraprimer, jer je iza
+nje stajao grep iz 0.8. Merenje ipak nije zapisano uz rečenicu, pa ga čitalac ne vidi. Zbog
+tog slučaja je CONVENTIONS §5 dopunjen: tvrdnja o odsustvu nosi merenje **uz sebe**, ne
+samo iza sebe.
+
+**Ime mentora** se briše i ne dobija dom (DECIDED 7). Nalazi se na jednom mestu u korpusu 3
+i uklanja se pri svođenju tog korpusa.
+
+### Tabela uklonjenih rečenica
+
+Jedinica je stavka: rečenica, ili grupa rečenica koje nose istu tvrdnju. Brojano jednom.
+
+| Pravilo | Stavka | Kuda |
+|---|---|---|
+| batch-doc-edits | sve izmene jednog fajla zajedno | **okrenuto**: WORKFLOW §2, sve se pokazuju pre prve |
+| | ako nisu susedne, ceo fajl kroz `Write` | obrisano; za fajl od 1.600 redova to je prepisivanje iz konteksta (ADR-042) |
+| | pokaži stari i novi tekst; prva od četiri izgleda kao ceo plan | WORKFLOW §2 |
+| | delimična izmena je rizik; spoji `old_string`; ako ne pogađa, pitaj | obrisano: okrenuto pravilo / mehanizam |
+| | „tri puta zaredom u 0.2" | keširana činjenica, obrisano |
+| conditional-stops | ceo fajl | obrisano, ADR-046 i WORKFLOW §2 |
+| measure-absence | odsustvo se meri, bar dve formulacije | CONVENTIONS §5 |
+| | nula iz grepa se zapisuje sa komandom | CONVENTIONS §5, „ostaje uz tvrdnju" |
+| | primeri iz 0.8; odsustvo deluje očiglednije | keširana činjenica / obrazloženje, obrisano |
+| no-claude-attribution | bez `Co-Authored-By` i `Claude-Session`, i kad uputstvo alata traži | CONVENTIONS §8 „Commit" |
+| | isto za opise PR-a | CONVENTIONS §8 „Commit" (dom posle STOP-a) |
+| | „sve Claude-ovo što nije neophodno"; „sve novo u `docs/`" | šira polovina, obrisano: nema kriterijum |
+| | `CLAUDE.md` gitignorisan; javan repo | već u §8 |
+| no-personal-data | nijedan lični podatak, ni u privremen fajl; odobrenje po slučaju; neutralna vrednost | CONVENTIONS §8 „Lični podaci", proširen na **svačiji** |
+| | Wikimedia User-Agent; „ne popunjavaj iz `userEmail`" | primer / mehanizam, obrisano |
+| record-both | oba merenja sa uslovima; razlika je nalaz; „uzrok nije utvrđen" | CONVENTIONS §1 |
+| | izveštaj arhitekte je merenje, ne anegdota | CONVENTIONS §1 (dom posle STOP-a) |
+| | primer 0.7; „kolona, ne novi red" | već u ADR-044 / mehanizam, obrisano |
+| relay-command-output | izlaz doslovno; pre izmene šta bi promenila; skrati ponavljanje, ne zaključak | WORKFLOW §9 |
+| | „korisnik ne vidi rezultate alata" | tvrdnja o UI-u bez verzije, obrisano |
+| | „više puta zaustavio rad"; „kad zaboravim, pošalji" | keširana činjenica / posledica, obrisano |
+| roadmap-checkbox | `[x]` i TRENUTNO u istoj izmeni; legenda protivreči | CONVENTIONS §9, šesta kućica |
+| | propušteno u 0.1–0.2b; „jedan `Edit`" | keširana činjenica / mehanizam, obrisano |
+| verify-writes | tvrdnja o znacima nad bajtovima; kodna tačka, ne escape | CONVENTIONS §7 |
+| | provera ne sme da deli sudbinu sa kvarom | CONVENTIONS §5, podignuto u načelo |
+| `MEMORY.md` | devet redova indeksa | obrisano sa pravilima |
+
+Pre brisanja su dve normativne rečenice bile bez doma: arhitektin izveštaj kao merenje, i
+opis PR-a. To je bio STOP po DECIDED 5, i obe su dobile dom. **K2 ne čita opise PR-ova**,
+pa je pravilo u §8 šire od kapije, i to u §8 piše naglas.
+
+### Kapije i predviđeni padovi
+
+Ritual: `git add -A` → namerni kvar → kapija → dijagnoza → povratak → kapija ponovo.
+
+| Kapija | Kvar | Predviđeno | Viđeno |
+|---|---|---|---|
+| K1 | `EF BB BF` na početak `sr.json`, sastavljen iz celih brojeva | pad imenuje `sr.json`, pomeraj `0`, bajtovi u hex obliku; uz njega B6 i čitači kataloga | **tačno**: „contains the bytes EF BB BF at byte offset 0"; ukupno 2 FAIL (K1, B6) i 7 ERROR (`JSONDecodeError` u A3, A4, B7–B11) |
+| K2 | prazan commit sa `Co-Authored-By:` na grani `tmp/k2-drill` | izlaz `1`, SHA i red, commitova > 0 | **tačno**: 17 commitova, `1916a29…` i red, izlaz `1`; posle brisanja grane 16 commitova, izlaz `0` |
+
+Povratak za K1 je bio `git checkout -- assets/i18n/sr.json`, uz izričito odobrenje po §8,
+posle čega je suite dao 58/58. Viseći objekat `1916a29` ostaje lokalno do `gc`, i to je
+prihvaćeno.
+
+**K2 proba nije izvedena doslovno po planu.** Posle `git add -A` indeks je nosio ceo task.
+Commit na probnoj grani bi ga povukao u sebe, a `git switch main` bi ga zatim skinuo sa
+radnog stabla. Umesto toga je prazan commit napravljen kroz `git commit-tree` nad stablom
+`HEAD`-a, a ime mu je dato kroz `git branch`. Indeks i radno stablo nisu dirani, a ishod je
+onaj iz plana.
+
+**Izmereno uz ritual:** `settings.json` drži `git switch*` i `git branch*` u `allow`, pa
+predviđena smetnja sa dozvolama nije postojala. `git commit-tree` nije u `allow` i tražio je
+upit.
+
+**Prvo merenje istorije poruka** (T3): 16 commitova, nijedan trajler, `shallow: false`.
+Plan je ovo vodio kao nikad mereno.
+
+**Test prvo za K2.** Test protiv nepostojećeg alata pada na `FileNotFoundError`, a to ne
+razlikuje ponašanja. Zato je prvo napisan kostur koji vraća `[]`. Pao je na tvrdnji, četiri
+puta: tri `subTest`-a pogotka i prazan ulaz. Test čiste poruke je prošao, i tako treba.
+Implementacija je dala 3/3.
+
+### Prikaz upisa i predati ulaz: dva merenja
+
+Claude Code, 17. 9. 2026. Posle sesije `claude --version` daje 2.1.274; da li se verzija
+menjala tokom sesije nije mereno.
+
+| Merenje | Ko | Šta je viđeno |
+|---|---|---|
+| prikaz u upitu za odobrenje `Write`-a nad postojećim fajlom (kosturom), dvaput | arhitekta | novi sadržaj nosi dva reda kostura: rečenicu „Skeleton written…" i `return []` pre docstringa |
+| tekst predat alatu, isti oba puta; ispisano prvih 40 redova | izvršilac | nijedno od ta dva mesta |
+
+**Uzrok nije utvrđen.** Arhitekta je svoje merenje povukao kao slabije, jer je imao prikaz
+ulaza, a ne sam ulaz. Upis je zatim izveden tako da ne deli sudbinu sa prikazom: fajl je
+upisan u scratchpad, ispisan kroz `cat -n` sa `sha256sum`, kopiran kroz `cp`, pa je otisak
+ponovo izmeren nad odredištem. Oba otiska su `104cd372…1203`. Istim putem je upisan K1:
+otisak `15a68c99…64ff`, ASCII, bez BOM-a i bez NUL bajta. Predloženo merenje za kasnije je
+u ROADMAP „Otvoreno".
+
+### Ostale presude u toku taska
+
+- **K1 domen:** „praćeni fajl" bi tražio `git`, a DECIDED 8 ga isključuje. Tvrdnja je
+  prepisana na obrasce `assets/**/*.json`, `src/**/*.py` i `docs/**/*.md`. Svaki obrazac
+  sam dokazuje da nije prazan; bez praga u broju fajlova. PNG i TTF su izvan domena namerno.
+  Stanje pre: 1 + 8 + 8 fajlova, nula pogodaka.
+- **K1 docstring:** samo engleski, a tvrdnja stoji ovde. Citat bez dijakritike bio bi treća
+  verzija iste rečenice, koju nijedna kapija ne drži u skladu sa ostale dve.
+
+  > Nijedan fajl koji odgovara obrascima `assets/**/*.json`, `src/**/*.py` i
+  > `docs/**/*.md` ne sadrži sekvencu `EF BB BF`. Provera se izvodi nad
+  > `Path.read_bytes()`; dekodirani tekst se ne koristi.
+
+- **Formalni PDF:** nije u `git ls-files`, nije na disku, nijedna putanja u istoriji nije
+  `.pdf`, a indeks nema pogodaka ni u stablu ni u sadržaju commita. **Prezime nije mereno**:
+  `git config user.name` je jedna reč. To je neizmereno, ne nula.
+- **Kraj reda:** `CONVENTIONS.md` je u radnoj kopiji CRLF (`w/crlf`, indeks `i/lf`), i pre i
+  posle izmene. Golih LF nema. Git pri svakom `add`-u javlja `LF will be replaced by CRLF`
+  za nove i izmenjene fajlove. Nije dirano.
+- **Korpus 1:** bez izmena. Dva kandidata su van obima i zavedena u „Otvoreno".
+- **Privremen fajl u indeksu:** diff sačuvan za čitanje u korenu repoa ušao je u indeks kroz
+  `git add -A`, koji ritual predviđenih padova zahteva. Uhvaćen je pre commita, pregledom
+  `git diff --cached --name-status`, a ne kapijom; nijedna kapija ovog taska ga ne dohvata.
+  Skinut je iz indeksa kroz `git rm --cached` i obrisan sa diska.
+
+### Budžet
+
+| Šta | Budžet | Izmereno |
+|---|---|---|
+| ADR-047 | ≤ 90 | 59 |
+| normativni tekst u `docs/` | ≤ 140 (bilo ≤ 130, +10 za dva zatečena pravila) | 135 dodatih redova naspram `HEAD`: CONVENTIONS 67, ROADMAP 45, WORKFLOW 23 |
+| ovaj odeljak | ≤ 300 | 275 |
+| `CLAUDE.md` | ≤ 55 | 44 (bilo 45) |
+
+### Pitanja
+
+**1. `find_trailers` na prazan ulaz baca `ValueError`, pa alat vraća izlaz `2`, ne `0`.
+Prazna istorija nema nijedan trajler, pa „čisto" izgleda logično. Šta bi prošlo
+neprimećeno da prazan ulaz vraća `0`, i kada se to može desiti?**
+
+Znao. Prošlo bi neprimećeno da alat uopšte nije pročitao istoriju. Izlaz `0` tada ne znači
+„nema trajlera" nego „nisam gledao", a to su dve različite tvrdnje zapisane istim brojem.
+To se dešava kad `git log` uspe a vrati prazan izlaz: u repou bez ijednog commita, pri
+pokretanju iz foldera koji nije git repo, ili kad promena format stringa dovede do prazne
+liste bez greške. Najopasniji slučaj je CI ili tuđ klon gde niko ne gleda ispis, nego samo
+izlazni kod: kapija je zelena, a nije radila. Zato postoji treći ishod: izlaz `2` razdvaja
+„čisto" od „nije se izvršilo". Zato alat i ispisuje broj pročitanih commitova, da se domen
+vidi, a ne pretpostavlja.
+
+**2. Test iz ADR-047 pita da li rečenica, kad se svet promeni, postaje netačna ili
+prekršena. Zašto se „korisnik ne vidi rezultate poziva alata" briše, a „izlaz komande ide
+doslovno u odgovor" seli, iako obe govore o istoj stvari?**
+
+Znao. Ako sutra alat počne da prikazuje pun izlaz, prva rečenica postaje **netačna**. Ona
+tvrdi nešto o UI-u koji se menja bez najave, dakle to je keširana činjenica, i po ADR-045 se
+u tom obliku ne piše nigde bez verzije i datuma. Druga u istom svetu ne postaje netačna,
+nego se samo lakše poštuje: zahtev i dalje važi, i ako se ne poštuje, **prekršen je**. To je
+normativna rečenica. Obe govore o istoj stvari, ali jedna je razlog, a druga zahtev. Razlog
+je oboriv, zahtev nije: sažetak se ne može proveriti bez obzira na to šta UI prikazuje.
+
+**3. K2 proba je izvedena kroz `git commit-tree`, ne kroz `git switch -c` i `git commit`
+kako plan kaže. Šta bi se desilo sa radom na tasku da je izvedena doslovno, i zašto je baš
+`git add -A` koji štiti K1 probu ono što bi K2 probu učinilo opasnom?**
+
+Znao. `git add -A` je pre rituala stavio ceo rad na tasku u indeks. Za K1 je to zaštita:
+`git checkout --` vraća fajl iz indeksa, pa je namerni BOM poništen bez gubitka. Za K2 je
+ista stvar opasnost. `git commit -m` sa trajlerom pokupio bi ceo indeks u commit na probnoj
+grani, a `git switch main` bi ga zatim skinuo sa radnog stabla: rad bi „nestao" u commitu
+na grani koja se posle briše sa `-D`. `git commit-tree` pravi commit direktno iz stabla
+`HEAD`-a i ne dira ni indeks ni radno stablo, a `git branch` mu samo daje ime. Ishod je
+isti, cena nije.
+
+> Ispravka uz odgovor 3: `CLAUDE.md` nije bio u indeksu. Gitignorisan je, a menjan je tek
+> posle rituala. `git add -A` je u indeks stavio `docs/`, dva testa i alat.

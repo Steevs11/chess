@@ -1623,3 +1623,65 @@ koja nose teret: spisak odlučenog, za prvi STOP, i spisak neizmerenog, za četv
 3. Oba su **zahtev, ne mehanizam**, pa se kršenje ne vidi ni u jednom izlazu. Cena je
    prihvaćena svesno: formulacija koja bi se mogla mašinski proveriti („stani kad grep vrati
    nulu") pokriva uži slučaj od onog koji nas zanima.
+
+---
+
+## ADR-047: Kriterijum ADR-044 važi za svaki korpus van gita
+
+**Kontekst.** ADR-044 je kriterijum primenio na `.claude/`, a 0.8 na `CLAUDE.md`. `MEMORY.md` i
+njegov folder ADR-044 imenuje kao peti slučaj klase, sa rečenicom „imenuje se, ne rešava".
+Pored njih postoji i memorija planskog chata na claude.ai, koju Claude Code ne vidi. Nijedan
+od ta dva korpusa nije bio pod kriterijumom.
+
+Izmereno 17. septembra 2026, pre svođenja:
+
+- U MEMORY folderu je bilo **devet** pravila, a plan je poznavao sedam. Dva su nastala iz
+  razgovora, 3. i 5. septembra; drugo **posle** commita `4c71791`, na kraju sesije. Korpus
+  raste sam, bez ijedne odluke po fajlu.
+- `conditional-stops-between-plan-steps` je nabrajao **tri** uslovna STOP-a, a ADR-046 ih ima
+  četiri. Truljenje koje ADR-044 opisuje uhvaćeno je u korpusu koji se upravo svodio.
+- Pravilo „ime nikad ni u jedan fajl" obaraju `LICENSE` po ADR-042 i autor svakog commita.
+  Kontraprimeri su bili van domena provere iz 0.8, koja je gledala samo `docs/`.
+
+**Odluka.**
+
+1. **Korpus pravila** je svaki tekst van gita koji izvršilac čita kao uputstvo za rad na
+   projektu: `CLAUDE.md`, `.claude/rules/`, `.claude/skills/`, `MEMORY.md` sa svojim folderom,
+   i memorija planskog chata. **Nije korpus** `.claude/settings.json`: on je odredište za
+   dozvole izvršiocu (ADR-044) i ne nosi rečenice nego pravila alata.
+2. **Kriterijum ADR-044 važi za svaki korpus jednako**, sa rečenicom kao jedinicom: rečenica
+   sme da ostane van gita samo ako je nijedna izmena u `docs/` ne može učiniti netačnom.
+   Dom se pravi pre brisanja, u istom commitu.
+3. **Test razlikovanja.** Pre odluke o odredištu rečenica se pita: *kad se svet promeni a
+   ona ostane ista, da li postaje **netačna** ili **prekršena**?*
+   - **Prekršena** → **normativna rečenica.** Zahtev važi i dalje, samo se ne poštuje. Dom
+     joj je `docs/`, napisan kao zahtev sa opsegom, ne kao mehanizam.
+   - **Netačna** → **keširana činjenica.** Tvrdnja o stanju projekta, alata ili osobe,
+     tačna dok se nešto ne promeni. Ne seli se. Ako je izvor u gitu, ostaje najviše adresa i
+     okidač. Ako je izvor tuđ sistem, merenje ide u `faza-N.md` sa verzijom i datumom
+     (ADR-045). Ako je lični podatak, briše se.
+   Rečenica koja nosi oboje deli se na dve, pa svaka ide svojim putem.
+4. **Domen provere je svaki korpus plus celo stablo.** Kontraprimer za pravilo iz korpusa
+   može da živi bilo gde, pa grep samo nad `docs/` nije provera.
+5. **Memoriju planskog chata svodi planski chat**, posle commita koji pravi domove. Claude
+   Code je ne vidi i ne može da je izmeni.
+
+**Posledice.** Svih devet pravila iz MEMORY foldera je pročitano rečenicu po rečenicu.
+Osam je dobilo dom u `CONVENTIONS.md` i `WORKFLOW.md`, jednom od njih samo uža polovina, a
+jedno je obrisano bez seljenja (ADR-046 ga je nadmašio). Tabela je u
+`docs/faze/faza-0.md` §0.9. Dva pravila su dobila mašinsku kapiju: provera upisa nad
+bajtovima (`tests/test_encoding_bytes.py`) i trajleri u istoriji poruka
+(`tools/check_commit_trailers.py`).
+
+**Šta smo izgubili.**
+
+1. **Korpus 3 nema nijednu proveru.** Ne dohvataju ga ni kapije iz ovog taska ni četiri
+   kapije iz CONVENTIONS §9. Njegovo svođenje stoji na reči planskog chata.
+2. **MEMORY folder se ponovo puni.** Mehanizam nastanka je tuđ i nije ispitan; ovaj ADR ga
+   ne sprečava, nego daje kriterijum za sledeće svođenje. Pravilo koje se posle svođenja
+   vrati **samo od sebe**, bez novog razgovora, obara tačku 2 ovog ADR-a.
+3. **Šira polovina pravila o atribuciji je obrisana bez doma.** „Sve što ima veze sa
+   Claude-om a nije neophodno" nema kriterijum za „neophodno". Ostala je samo polovina o
+   trajlerima, koja se može proveriti.
+4. **Test razlikovanja je pitanje, ne alat.** Primenjuje ga čitalac i može da pogreši u oba
+   smera. Kapije hvataju samo dva pravila od devet.

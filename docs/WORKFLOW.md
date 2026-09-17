@@ -18,6 +18,13 @@ Razlog za podelu: Claude Code šalje celu konverzaciju sa svakim zahtevom. Duga
 rasprava o arhitekturi unutar sesije za kodiranje usporava i poskupljuje svaki
 kasniji zahtev.
 
+### Predaja teksta između površina
+
+Tekst koji planski chat sastavlja za Claude Code odvojen je od teksta upućenog
+arhitekti tako da se prenosi bez ijedne izmene. Jedan odgovor traži od arhitekte
+najviše jednu radnju: radnje se izvršavaju redom, a druga se izgubi dok prva traje.
+Obavezuje odgovore sa claude.ai; Claude Code ne sastavlja predaju.
+
 ---
 
 ## 2. Anatomija jedne sesije
@@ -71,7 +78,12 @@ kasniji zahtev.
 > /clear
 ```
 
-Dva uokvirena koraka su tvoja i ne preskaču se. Sve između njih ide brzo.
+Dva uokvirena koraka su tvoja i ne preskaču se. Između njih brzo ide sve osim
+pitanja iz koraka 4, koja traže tvoje vreme i takođe se ne preskaču (ADR-021).
+
+Kad se jedan fajl menja na više mesta, **sve izmene tog fajla pokazuju se pre prve**:
+mesto i šta se menja. Posle toga se primenjuju onako kako alat ide. Izmena
+odobrena bez uvida u ostale izgleda kao ceo plan za taj fajl.
 
 ### Kad se staje
 
@@ -109,7 +121,7 @@ Podfaze iz `ROADMAP.md` (1.1, 1.2, 1.3...) su već kalibrisane kao jedan task.
 
 | Situacija | Radnja |
 |---|---|
-| Task završen, commitovan | `/clear` |
+| Task završen, commitovan | provera istorije, `push`, pa `/clear` |
 | Menjaš temu | `/clear` |
 | Novi dan | `/clear` |
 | `/context` ispod 30% slobodnog | `/clear` ili `/compact` |
@@ -117,6 +129,10 @@ Podfaze iz `ROADMAP.md` (1.1, 1.2, 1.3...) su već kalibrisane kao jedan task.
 | Alat javio ažuriranje u toku taska | restartuj pre nastavka |
 
 `/clear` briše razgovor. Ostaješ u istom terminalu i projektu.
+
+**`push` ide posle commita i pre `/clear`-a.** Nije deo taska, jer CONVENTIONS §9 završava
+na commitu. Prethode mu obe provere istorije iz CONVENTIONS §8: ignorisane putanje i
+trajleri u porukama. Posle `/clear`-a nova sesija o nepushovanom commitu ne zna ništa.
 
 **Šta se automatski učita** zavisi od verzije alata. Izmereno je i zapisano u
 ADR-044, u tabeli koja nosi verziju i datum — ovde se ne prepisuje, jer bi kopija
@@ -200,3 +216,8 @@ nijedno se ovde ne prepisuje (ADR-044).
 Ono što samo ovaj fajl može da kaže: **odobrenje ide na svaku komandu i svaku
 izmenu**, ne jednom na plan. Plan odobravaš pre nego što kod postoji; svaki
 pojedinačan potez posle toga odobravaš u trenutku kad se dešava.
+
+Odobrenje bez uvida u ono što se odobrava nije odobrenje, nego potvrda tuđeg sažetka.
+Zato izvršilac **izlaz svake komande čiji ishod nešto dokazuje** (testovi, kapije, brojevi,
+poređenja) **prenosi doslovno** u odgovor. Pre komande koja menja fajlove pokazuje šta bi
+promenila. Dug izlaz sme da skrati za redove koji se ponavljaju, nikad za zaključak.

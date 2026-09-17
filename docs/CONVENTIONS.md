@@ -75,6 +75,17 @@ postojali.
 **ne briše** — dobija ⚠️ oznaku na vrhu koja pokazuje na novi. Fajl je
 append-only i istorija odluka se čuva cela.
 
+### Merenje u zapisu
+
+Kad novo merenje iste stvari da drugačiji ishod od ranijeg, u zapis idu **oba**, svako sa
+uslovima pod kojima je dobijeno: verzija alata, datum, šta je bilo pokrenuto. Staro merenje
+se ne zamenjuje novim. Ako je bilo pogrešno izvedeno, to se kaže uz njega, a ono ostaje
+čitljivo. Razlika između dva merenja imenuje pokretni deo i vrednija je od bilo kog
+pojedinačnog ishoda; „uzrok nije utvrđen" je ispravan zapis. Izveštaj arhitekte da je nešto
+ranije radilo drugačije je merenje sa svojim uslovima i ulazi u zapis kao takvo.
+
+Obavezuje svaki fajl u `docs/`. ADR-045 je uži slučaj istog pravila: merenje koje obara ADR.
+
 ### Kad se piše ADR
 
 Piše se kad odluka:
@@ -315,6 +326,10 @@ tests/
 ├── test_assets.py        sha1 tuđeg materijala + .gitattributes (ADR-039);
 │                         od 0.6 i lanac licenci — LICENSE, THIRD-PARTY.txt i
 │                         pyproject.toml (ADR-042, ADR-043)
+├── test_check_commit_trailers.py
+│                         čista funkcija iz tools/check_commit_trailers.py, bez git-a
+├── test_encoding_bytes.py
+│                         bez BOM-a u assets/, src/ i docs/, nad bajtovima (§7)
 └── test_layers.py        poziva tools/layer_check.py
 ```
 
@@ -386,6 +401,26 @@ Test koji ne daje isti rezultat pri svakom pokretanju je pokvaren test.
 - test **ne otvara socket** — server se testira kroz `Player` interfejs sa
   lažnom implementacijom, ne kroz mrežu
 - test ne zavisi od drugog testa ni od redosleda izvršavanja
+
+### Provera i njen domen
+
+> **Provera ne sme da deli sudbinu sa kvarom od kog štiti.**
+
+Provera koja čita ono što je kvar već izmenio prolazi baš kad treba da padne: dekodiran
+tekst umesto bajtova, ili sopstveni izvor napisan istim alatom koji je upisao kvar. Zato se
+tvrdnja o znacima proverava nad bajtovima (§7), a `test_assets.py` proverava i sam sebe.
+
+**Domen provere nije uži od tvrdnje.** Kontraprimer se traži svuda gde tvrdnja važi, ne samo
+tamo gde se pravilo očekuje. Grep samo nad `docs/` za rečenicu o „svakom fajlu" proverava
+mesto na koje rečenica upućuje, a ne tvrdnju. Pre prvog ishoda dokazuje se da domen nije
+prazan; provera bez ulaza se prijavljuje kao takva, nikad kao čist rezultat.
+
+**Odsustvo se meri kao i prisustvo.** Tvrdnja „nema dom", „nijedna izmena ne može da je
+obori" ili „jedina takva" meri se pre nego što uđe u zapis, sa bar dve formulacije pojma.
+Merenje **ostaje uz tvrdnju**, kao komanda i ishod ili pokazivač na mesto gde stoje: merenje
+koje je postojalo a nije zapisano čitalac ne može da razlikuje od pretpostavke.
+
+Obavezuje testove, alate i zapise u `docs/`.
 
 ### Redosled
 
@@ -465,6 +500,12 @@ json.dump(data, f, ensure_ascii=False, indent=2)
 ```
 
 - **svaki `open()` ide sa `encoding="utf-8"` eksplicitno**
+- **tvrdnja o znacima ili kodiranju proverava se nad bajtovima**, posle svakog upisa: BOM,
+  escape sekvenca, čist ASCII. `read_bytes()`, pa traženje bajtova `EF BB BF` i bajtova
+  preko `0x7F`. Znak se u kodu imenuje kodnom tačkom (`chr(0xFEFF)`), nikad escape
+  sekvencom, jer alat za pisanje ume da dekodira escape iz sopstvenog ulaza i upiše sam
+  znak (`faza-0.md` §0.5). `tests/test_encoding_bytes.py` drži BOM van
+  `assets/**/*.json`, `src/**/*.py` i `docs/**/*.md`.
 - putanje su `pathlib.Path`, nikad spojeni stringovi
 - putanja do resursa se računa od modula, nikad od radnog direktorijuma:
 
@@ -579,6 +620,13 @@ test: add Position 3 and Position 4 perft cases
 Telo se piše kad odluka nije očigledna iz diffa. Ako commit prati ADR, broj ADR-a
 ide u telo.
 
+Poruka commita i opis PR-a su **bez trajlera o autorstvu ili sesiji alata**: nijedan red ne
+počinje sa `Co-Authored-By:` ni sa `Claude-Session:`, niti opis PR-a nosi potpis alata.
+Važi i kad uputstvo alata traži drugačije. Pre `push`-a se pokreće
+`python tools/check_commit_trailers.py`: izlaz `0` je čisto, `1` pogodak, `2` provera nije
+imala ulaz. Alat tvrdi samo za **lokalnu** istoriju poruka, pa na plitkom klonu to i
+ispisuje. **Opis PR-a ne čita**, pa je tu pravilo šire od kapije.
+
 ### Šta nikad ne ulazi u commit
 
 ```
@@ -588,6 +636,21 @@ ide u telo.
 
 Repozitorijum je javan i u gitu se **ništa ne briše** — što uđe u commit, ostaje
 u istoriji zauvek. Zato `.gitignore` postoji pre prvog commita (ADR-012).
+
+### Lični podaci
+
+Lični podatak bilo koga, arhitekte, mentora ili trećeg lica, **ne ulazi ni u jedan fajl
+koji može u commit, ni u poruku commita**. Pod ličnim podatkom se misli na ime, e-mail,
+adresu i broj indeksa. Isto važi za privremen fajl, jer se privremena skripta često preseli
+u `tools/`. Kad API, zaglavlje ili šablon traži kontakt, upisuje se neutralna vrednost (ime
+projekta, svrha) i mesto se prijavi. Drugačije samo uz izričito odobrenje, po slučaju.
+
+Podatak na dva mesta **mora** da stoji:
+
+- **nosilac prava u `LICENSE`**, po ADR-042;
+- **autor svakog commita.** Upisuje ga git sam, iz `user.name` i `user.email`, bez ijedne
+  naše odluke po commitu, i po ADR-012 se odatle ne briše. To je svojstvo alata koje pravilo
+  priznaje, ne izuzetak koji pravimo.
 
 ### Provera da ništa ignorisano nije već ušlo u istoriju
 
@@ -663,8 +726,9 @@ Task nije gotov dok svih sedam ne prođe:
 - [ ] pročitan `git diff` — ceo, ne preleteo
 - [ ] odgovoreno na pitanja iz koraka 4 ritma po tasku; pitanje i odgovor
       zapisani u `docs/faze/faza-N.md` (ADR-021)
-- [ ] `ROADMAP.md` ažuriran; `DECISIONS.md` dopunjen ako je doneta odluka, uz
-      propagaciju iz §1 u **istom commitu**
+- [ ] `ROADMAP.md` ažuriran: kućica taska `[x]` i blok TRENUTNO u **istoj izmeni**, jer
+      legenda i blok ne smeju da protivreče jedno drugom; `DECISIONS.md` dopunjen ako je
+      doneta odluka, uz propagaciju iz §1 u **istom commitu**
 - [ ] commitovano
 
 Poslednja stvarna provera nije na listi jer se ne može odštiklirati:
@@ -686,6 +750,7 @@ drugačije, ili odnesi kod na claude.ai.
 | `tools/cli_client.py` | CLI klijent za testiranje servera | u gitu (ADR-017) |
 | `tools/layer_check.py` | provera uvoza iz §2 | u gitu (ADR-033) |
 | `tools/rasterize_pieces.py` | SVG figure → PNG, dve veličine | u gitu (ADR-038) |
+| `tools/check_commit_trailers.py` | trajleri u lokalnoj istoriji poruka (§8), pre `push`-a | u gitu (ADR-047) |
 
 Konfiguracija `ruff`-a stoji u `pyproject.toml`: `line-length = 100`,
 `target-version = "py311"`, `extend-exclude = ["docs"]`.

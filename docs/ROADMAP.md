@@ -12,20 +12,39 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    0.9 — korpusi van gita se svode
-Sledeće:   1.1 — core/types.py
+Radimo:    checkpoint faze 0
+Sledeće:   REZ, pa 1.1 — core/types.py
 Otvoreno:  .claude/rules/ traži restart posle ažuriranja — potvrđeno na v2.1.259,
            i dalje tvrdnja o tuđem sistemu, pa ostaje otvoreno
-           MEMORY.md i samopišuće memorije van stabla — četiri korpusa, rešava 0.9
+           korpus 3 (memorija planskog chata) svodi planski chat posle commita 0.9;
+           nijedna kapija ga ne dohvata (ADR-047)
+           MEMORY folder se puni iz razgovora — pravilo koje se vrati samo od sebe
+           obara ADR-047, tačku 2 (T4 iz plana 0.9)
            tabela ugovora t() iz ADR-040 nije vezana ni za jedan test nad client/i18n.py
            indeks ADR-ova u DECISIONS.md, mašinski proveren u oba smera
-           ritual šest namernih kvarova nije zaveden nigde od 0.4
+           ritual namernih kvarova izveden u 0.9 (K1, K2), prvi put u luku 0.7–0.9;
+           kao pravilo i dalje nije zaveden nigde od 0.4
            CONVENTIONS §2 nema red za client/__main__.py, ni komandu za pokretanje
            klijenta — obe čekaju task u kom se ta ulazna tačka napiše (3.1)
            CONVENTIONS §1 prepričava ADR-030 i ADR-032 umesto da pokazuje na njih
            blok „Ritam po tasku" u ovom fajlu prepričava ADR-021 — isti oblik
            gde se sastavljaju odgovori na korak 4 nije zapisano nigde
-           settings.json: git show/switch nisu u §8; push --force širi nego §8
+           ADR-021 korak 4 nema klauzulu opsega („o upravo napisanom kodu"), a
+           0.7–0.9 ga tako ne rade — pada na REZ posle checkpointa faze 0
+           ljuska projekta nije proglašena, a kapija iz CONVENTIONS §8 stoji u
+           bash ogradi — traži svoj ADR. Komanda iz §8 je izmerena kao
+           neizvršiva u PowerShell-u pred push commita 4c71791 (commit od
+           5. 9. 2026; dan merenja nije zapisan). Radna zamena postoji i čuva
+           se van repoa, u planu 0.9, dok se ljuska ne presudi
+           settings.json: git show/switch nisu u §8; push --force širi nego §8 —
+           usaglašavanje dve liste, ne svođenje (ADR-047); ističe na REZ posle
+           checkpointa faze 0
+           .claude/skills/layer-check/SKILL.md:16–17 opisuje ponašanje alata
+           (ADR-044: briše se); perft/SKILL.md:26–28 ponavlja „Kad se broj ne
+           poklopi" iz faze 1 — van obima 0.9, koji je sveo korpus 2
+           prikaz upisa nad postojećim fajlom razišao se sa predatim ulazom
+           (v2.1.274, 17. 9. 2026, faza-0 §0.9); predloženo merenje: obrisati
+           fajl, pa upis u nepostojeći
            assets/pieces/LICENSE.txt svoje odricanje zove „canonical" a nije (iz 0.6)
 Grana:     main
 ```
@@ -137,18 +156,26 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
       > u faza-0.md §0.8, jer je razlika među njima nalaz o jedinici brojanja.
       > ADR-045: merenje koje obara ADR nosi oznaku, telo ADR-a se ne menja.
       > ADR-046: četiri uslovna STOP-a, do sada samo u planovima.
-- [ ] 0.9 Korpusi van gita se svode
-      > Četiri korpusa: `MEMORY.md` i njegov folder, memorija planskog
-      > chata, `.claude/rules/`, `settings.json`. ADR-047 im daje isti
-      > kriterijum koji ADR-044 već daje `CLAUDE.md`-u.
-      > Dve mašinske kapije: upis se proverava nad bajtovima (§7);
-      > trajleri ne ulaze u istoriju poruka (§8).
-      > Nalaz iz 0.8: pravilo „ime nikad ni u jedan fajl" je apsolut koji
-      > `LICENSE` već obara, jer ime nosioca stoji tamo po ADR-042. Klasa
-      > je ista kao kod trajlera — opseg, ne apsolut.
-      > Načelo koje se podiže iz obrazloženja jedne stavke u pravilo:
-      > provera ne sme da deli sudbinu sa kvarom od kog štiti — §5, sa
-      > izvršnim delom u §7.
+- [x] 0.9 Korpusi van gita se svode
+      > **Tri** korpusa, ne četiri: `.claude/`, `MEMORY.md` sa folderom i
+      > memorija planskog chata. `settings.json` je odredište za dozvole,
+      > ne korpus pravila. ADR-047 im daje kriterijum ADR-044 i test
+      > razlikovanja: rečenica koja se **prekrši** je norma i seli se u
+      > `docs/`; ona koja postane **netačna** je keš i ne seli se.
+      > U MEMORY folderu je bilo **devet** pravila, ne sedam. Dva su nastala
+      > iz razgovora, jedno posle commita 0.8. Sva su dobila dom ili su
+      > obrisana, a folder je sveden na prazan `MEMORY.md`. Korpus 1 bez
+      > izmena; korpus 3 svodi planski chat.
+      > Pravilo „ime nikad ni u jedan fajl" dobilo je opseg: svačiji lični
+      > podatak, uz dva mesta gde mora da stoji (`LICENSE`, autor commita).
+      > Dve mašinske kapije, prve u luku 0.7–0.9: `tests/test_encoding_bytes.py`
+      > (BOM nad bajtovima, §7) i `tools/check_commit_trailers.py` (izlaz
+      > 0/1/2, §8). Obe su oborene namernim kvarom sa predviđenom
+      > dijagnozom. Testova 53 → 58.
+      > Nova nit: provera ne sme biti užeg domena od tvrdnje, a odsustvo
+      > se meri kao i prisustvo (§5). Push je dobio mesto u ritmu (WORKFLOW §4).
+      > Prikaz upisa i predati ulaz su se razišli; oba merenja su u
+      > `faza-0.md` §0.9, uzrok nije utvrđen.
 
 ---
 
@@ -314,6 +341,7 @@ Nastaje iz koraka 6 u ritmu po tasku — korisnik prepričava, Claude Code piše
 
 - [ ] `docs/faze/faza-0.md` … `faza-6.md`
 - [ ] Finalna dokumentacija (sastavlja se iz gornjih)
+- [ ] Formalni PDF rad (sastavlja se iz finalne dokumentacije)
 - [ ] Prezentacija
 
 ---
