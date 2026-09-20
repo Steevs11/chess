@@ -1913,3 +1913,166 @@ isti, cena nije.
 
 > Ispravka uz odgovor 3: `CLAUDE.md` nije bio u indeksu. Gitignorisan je, a menjan je tek
 > posle rituala. `git add -A` je u indeks stavio `docs/`, dva testa i alat.
+
+---
+
+## Checkpoint faze 0
+
+Checkpoint ne piše kod i ništa ne popravlja — meri i zapisuje. Predmet merenja je
+`b8a35dcce426e52d60349d924709c8c7def2d1bd` kroz **svež klon sa GitHub-a, u novom venv-u,
+van radnog stabla**: da li prolazi red checkpointa faze 0, da li su obe provere istorije
+čiste nad objavljenom istorijom, i da li su korpusi van gita u stanju u kom ih je 0.9
+ostavio.
+
+**Šta se ovim ne tvrdi.** Ništa o radnom stablu osim onoga što tabela izričito nosi;
+ništa o drugim mašinama; ništa o opisima PR-ova, jer ih K2 ne čita (CONVENTIONS §8);
+ništa o putanjama koje nikad nisu bile u stablu repozitorijuma — to je granica provere
+iz §8, zapisana tamo.
+
+> **Ishod: red checkpointa na svežem klonu nije zelen.** Pet subtestova
+> `test_every_svg_matches_its_recorded_sha1` pada, na Linux-u i na Windows-u jednako.
+> Prolazi samo radno stablo, i to iz razloga koji je nalaz 2.
+
+### Tabela merenja
+
+Dva merenja iste stvari stoje **oba**, svako sa svojim uslovima (CONVENTIONS §1).
+Referentne vrednosti iz 0.9 i sa Linux klona su merenja, ne očekivanja.
+
+| Merenje | Uslovi | Ishod |
+|---|---|---|
+| četvrti korpus, inventar „pre" | planski chat, 19. 9. 2026; tekst kakav stiže u kontekst, prepisan u fajl; nije dokazano da je bajt u bajt jednak onome u podešavanjima Projekta | 52 reda (39 nepraznih), 2.684 bajta, 2.623 znaka, 14 pasusa, 8 stavki, 28 rečenica; bez BOM-a i CRLF-a |
+| red checkpointa, svež klon | Linux (Ubuntu 24.04), Python 3.12.3, pip 24.0, ruff 0.16.8, pygame 2.6.1, git 2.43.0, `core.autocrlf` nije postavljen, 19. 9. 2026 | `pip install -e ".[dev]"` prošao; `Ran 58 tests` → `FAILED (failures=5)`; `All checks passed!`; `22 files already formatted` |
+| pet `sha1` vrednosti | isti klon | `wn`, `wb`, `wr`, `bn`, `bb`: zapisana vrednost je `sha1` CRLF oblika; commitovani bajtovi su LF (`i/lf w/lf attr/-text`), jedan commit po fajlu (`cb60748`); ostalih sedam se poklapa |
+| K2 | isti klon | `commits read: 17 … shallow: false`, izlaz `0` |
+| provera iz §8 | isti klon | 95 ulaznih putanja, izlaz `1` |
+| zatečeno stanje radnog stabla | Windows 11, git 2.54.0.windows.1, Claude Code 2.1.278, 20. 9. 2026 | `git status --porcelain` prazno; `HEAD` = `origin/main` = `b8a35dc…`; `core.autocrlf` = `true` (T1 iz plana, poslednji zapis je iz 0.6 i isti je) |
+| red checkpointa, svež klon | Windows 11, Python 3.11.9, pip 24.0, ruff 0.16.8, pygame 2.6.1, git 2.54.0.windows.1, `core.autocrlf=true`, 20. 9. 2026 | `pip install -e ".[dev]"` prošao (T5); `Ran 58 tests` → `FAILED (failures=5)`; `All checks passed!`; `22 files already formatted` |
+| pet `sha1` vrednosti, klon | isti Windows klon | svih 12 `i/lf w/lf attr/-text` **iako je `core.autocrlf=true`**; `sha1` sa diska jednak blobu za svih 12; pet (`bb`, `bn`, `wb`, `wn`, `wr`) se ne poklapa sa zapisanim u `assets/pieces/LICENSE.txt` |
+| pet `sha1` vrednosti, radno stablo | radno stablo, 20. 9. 2026, samo čitanje | tih pet je `i/lf w/crlf attr/-text`; `sha1` sa diska == zapisani, blob != zapisani; ostalih sedam `i/lf w/lf`, disk == blob == zapisani; `git status --porcelain assets/pieces/svg/` **prazno** |
+| stat u indeksu | isto | `git ls-files --debug assets/pieces/svg/wn.svg` → `size: 1325`, jednako veličini CRLF fajla na disku (blob je manji) |
+| K2 | isti Windows klon | `commits read: 17 (local history, all refs; shallow: false)`, izlaz `0` |
+| provera iz §8 | isti Windows klon | 95 ulaznih putanja, izlaz `1` |
+| provera iz §8, oblik komande | Bash alat pod Claude Code-om (Git Bash; `awk` i `sort` postoje), 20. 9. 2026 | oblik iz §8 se izvršava **doslovno**, bez zamene; radno stablo: 95 ulaznih putanja |
+| korpusi van gita | mašina, 20. 9. 2026 | `.claude/` bez `settings.json` 152 reda i 5.823 bajta, po fajlu identično zapisu 0.9; MEMORY folder sadrži samo prazan `MEMORY.md` (0 / 0); `CLAUDE.md` 44 reda, **2.437 bajtova** |
+
+Bajtovi `CLAUDE.md`-a nemaju parnjaka: 0.9 je zapisao samo redove („44 (bilo 45)"), a
+0.8 bajtove za 45 redova. Ovo je zato **prvo merenje bajtova**, ne odstupanje.
+
+### Nalazi
+
+**1. Windows klon potvrđuje pet padova, i obara pretpostavljeni uzrok.** Klon je
+napravljen na mašini sa `core.autocrlf=true`, a checkout je svih 12 SVG-ova ipak zapisao
+sa LF. `.gitattributes` dakle radi tačno onako kako ADR-039 kaže. Pad ne dolazi od
+konverzije prelazaka reda pri kloniranju: **zapisane vrednosti su pogrešne za pet
+fajlova.**
+
+**2. Radno stablo nosi pet fajlova koji se razlikuju od svojih blobova, a `git status`
+ćuti.** U radnom stablu su `bb`, `bn`, `wb`, `wn`, `wr` u CRLF obliku, blobovi su LF, i
+`git status --porcelain` je prazan. Uzrok je izmeren, ne pretpostavljen: unos u indeksu
+za `wn.svg` nosi `size: 1325`, što je veličina **CRLF** fajla na disku. Git poredi stat
+pre sadržaja, nalazi poklapanje i sadržaj nikad ne pročita.
+
+Kako su tu dospeli, izvedeno iz izmerenog: `.gitattributes` i svih 12 SVG-ova ušli su
+**istim commitom** (`cb60748`, `git log --diff-filter=A`), ali `-text` u trenutku
+`git add`-a nije važio — da jeste, blob bi nosio CRLF, a nosi LF. Tih pet je dakle na
+disku već bilo u CRLF obliku i git ih je pri `add`-u normalizovao u LF, dok je `sha1` za
+`LICENSE.txt` računat sa diska. **Zašto je pet od dvanaest bilo CRLF na disku nije
+utvrđeno** — alat kojim su preuzeti nije meren.
+
+> Ovo je jedino što razdvaja zapis „58 OK" iz 0.9 od pet padova na klonu. Razlika između
+> dva merenja imenuje pokretni deo (CONVENTIONS §1): nije platforma, nije `autocrlf`,
+> nego **koji bajtovi su na disku** — a to je kod autora slučajan ostatak, kod svakog
+> drugog ono što je commitovano.
+
+**3. Poruka uz pad pogrešno dijagnostikuje.** `CAUSE` u `tests/test_assets.py` glasi:
+„The recorded sha1 values hold only while .gitattributes keeps git from rewriting line
+endings… with core.autocrlf=true a checkout turns LF into CRLF and every sha1 differs."
+Merenje 1 pokazuje da je `.gitattributes` ispravan, da checkout **ne** pravi CRLF, i da
+se ne razlikuje „svaki" nego tačno pet. Kapija radi — njena dijagnoza ne. Nalaz se ovde
+zavodi; ispravka ide uz R9, jer ista rečenica stoji u tri dokumenta.
+
+**4. Ista tvrdnja je netačna i van testa.** `assets/pieces/LICENSE.txt` kaže „The sha1 is
+of the SVG file as committed here", a ADR-039 u „Posledicama" kaže da `sha1` iz
+`LICENSE.txt` važi na svakoj platformi i proverava se običnim `sha1sum`-om nad fajlom
+koji je pred očima. Za pet od dvanaest fajlova nijedno od toga ne stoji. ADR-039 zato
+dobija ⚠️ po ADR-045, sa pokazivačem na ovaj odeljak; telo ADR-a ostaje netaknuto.
+`LICENSE.txt` se u ovom tasku **ne dira** — to je proizvod, i pripada R9.
+
+**5. Šta je od neizmerenog zatvoreno.** `core.autocrlf` na ovoj mašini je `true` (T1).
+Red checkpointa na Windows klonu je izmeren (T2). Oblik komande iz §8 se pod Claude
+Code-om izvršava doslovno, jer je Bash alat Git Bash (T3 — ali samo za ovu sesiju; šta je
+„ljuska projekta" kao propis ostaje R1). MEMORY folder je i dalje prazan (T4 — merenje
+važi za ovaj trenutak, ne za ceo period od `b8a35dc`, pa ADR-047 tačka 2 nije potvrđena,
+samo nije oborena). `pip install -e ".[dev]"` u praznom venv-u na Windows-u prolazi (T5).
+Upit po dozvolama tražile su `git clone`, `python -m venv` i `pip install` — sve tri
+predviđene u T6, nijedna nije bila STOP.
+
+**6. `ruff format --check .` ne dokazuje ništa o ovom tasku.** `extend-exclude =
+["docs"]` (ADR-035) izbacuje ceo domen izmene. Kapija se pokreće jer je CONVENTIONS §9
+traži, ali njen zeleni ishod ovde nije dokaz.
+
+### Presude
+
+- **Kraj faze iz WORKFLOW §8 ne važi za fazu 0.** Obrnuti pregled je pregled koda, a faza
+  0 ga nema — nijedan `core/` modul još ne postoji. Prvi stvarni obrnuti pregled je na
+  kraju faze 1. Presuda se zapisuje izričito, sa opsegom, da se ne bi čitala kao tiho
+  preskakanje.
+- **Red checkpointa nad svežim klonom ponavlja se jednom**, nad poslednjim `main`-om pre
+  grane `faza-1`. Odluka se zapisuje sada, izvršava posle REZ-a.
+- **Izlazni kod provere iz §8 nije dokaz bez broja ulaznih putanja**, dok R1 ne uđe. Zato
+  oba merenja u tabeli nose i broj ulaza; prazan ulaz bi se prijavio kao „nije imala
+  ulaz", nikad kao čisto.
+- **Pet padova se u ovom tasku ne popravlja** — ni u `assets/`, ni u testu, ni u ADR-u.
+  Ispravka je zaseban task, sa rokom pre 1.1 (R9). Razlog za rok: checkpoint faze je po
+  `PROJECT.md` §9 objektivan uslov, a ovaj ne prolazi kod nikoga osim kod autora.
+- **Zatečeno stanje ostaje netaknuto** (ADR-046): nijedan fajl u `assets/` nije diran,
+  ni u radnom stablu ni u klonu, a korpusi van gita se samo mere.
+
+### Grana koja se ovde ne pravi
+
+`faza-1` se ne otvara u ovom tasku. Između checkpointa i 1.1 stoji REZ — osam stavki
+(R1–R8) u `ROADMAP.md`, „Otvoreno", sve pravila i presude. **R9 nije REZ stavka**: REZ
+seče pravila, a ovo je kvar u proizvodu, i prvo što čitalac ovog repoa uradi jeste klon.
+Zato mu je rok **pre 1.1**, nezavisno od REZ-a.
+
+### Pitanja
+
+**1. ADR-045 traži ⚠️ na oborenom ADR-u, a telo ostaje netaknuto. Ista netačna tvrdnja
+stoji i u `assets/pieces/LICENSE.txt` i u `CAUSE` poruci testa. Zašto ⚠️ ide samo na ADR,
+a druga dva mesta čekaju R9 — i šta bi se izgubilo da su sva tri ispravljena sada?**
+Znao. To su dve različite radnje. ⚠️ je **zapis o merenju**: ne menja telo ADR-039, ne
+dira proizvod, i ide odmah, jer ADR koji je oboren a ćuti o tome je gori od ADR-a koga
+nema — veruje mu se. `LICENSE.txt` i `CAUSE` su **proizvod**: tamo se menjaju bajtovi
+koje test proverava i rečenica koju kapija ispisuje. To je ispravka, a checkpoint meri i
+zapisuje, ne popravlja. Ispravkom sada gube se tri stvari: commit bi mešao klasu merenja
+sa klasom ispravke, pa bi se `git diff` čitao kao dva taska odjednom; ispravka
+`LICENSE.txt`-a traži presudu **koje bajtove proglašavamo tačnim** (disk ili blob) i da
+li se radno stablo renormalizuje — odluka koja zaslužuje svoj plan i svoja pitanja; i R9
+bi nestao kao red u „Otvoreno", pa bi rok „pre 1.1" prestao da postoji kao obaveza
+vidljiva u gitu.
+
+**2. Klon je dao pet padova, radno stablo `58 OK`. Po CONVENTIONS §1 oba ulaze u zapis.
+Koje merenje je dokaz o proizvodu, a koje o nečem drugom — i šta bi čitalac pogrešno
+zaključio da je ostalo samo jedno?**
+Znao, i preko onoga što je pitano. **Klon je dokaz o proizvodu**: u njemu su tačno
+commitovani bajtovi i ništa drugo, i on kaže da repozitorijum ne prolazi sopstvene
+testove. Radno stablo nije dokaz o proizvodu nego **o jednom disku** — ono meri istoriju
+te mašine, pet fajlova koji su tu ostali od `add`-a u 0.4. Da je ostalo samo radno
+stablo, čitalac bi zaključio da je faza 0 zatvorena i checkpoint ispunjen, a mentor bi to
+oborio prvim klonom. Da je ostao samo klon, tražio bi kvar u kloniranju ili u
+`autocrlf`-u, dakle u `.gitattributes`-u koji je ispravan — i nikad ne bi saznao zašto
+„58 OK" iz 0.9 nije laž. Tek oba zajedno imenuju pokretni deo: nije platforma, nego koji
+su bajtovi na disku.
+
+**3. `git status` je prazan iako se pet fajlova razlikuje od svojih blobova. Koja provera
+bi ovo uhvatila, i zašto je baš ovaj oblik kvara opasniji od pada koji se vidi odmah?**
+Znao, i uopštio preko pitanja. Uhvatila bi ga svaka provera čiji domen nisu bajtovi na
+disku nego **bajtovi u gitu**: `git ls-files --eol` nad `assets/pieces/svg/`, `sha1` nad
+izlazom `git cat-file blob` umesto nad fajlom, ili — najjeftinije — pokretanje suite-a na
+svežem klonu, što je upravo ono što checkpoint uvodi. `git status` ovde nije zakazao: on
+poredi stat pre sadržaja, stat se poklapa, pa **deli sudbinu sa kvarom od kog bi trebalo
+da štiti** (CONVENTIONS §5). Pad koji se vidi odmah košta minut i sam nosi dijagnozu.
+Ovaj oblik ne troši ništa, jer sve kapije stoje zelene — i to zeleno se svakim commitom
+potpisuje kao dokaz. Kvar živi tačno onoliko dugo koliko niko ne klonira repo, a kad se
+pojavi, pojavi se na tuđoj mašini, gde dijagnoza više nije tvoja — a ovde je uz to bila i
+pogrešna, jer je `CAUSE` sve vreme pokazivao na `autocrlf`.

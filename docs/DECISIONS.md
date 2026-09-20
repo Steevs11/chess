@@ -935,6 +935,17 @@ nula zavisnosti, ali traži mrežu pri generisanju i nudi samo standardne velič
 
 ## ADR-039: Tuđi materijal se čuva bajt u bajt — `.gitattributes` i provera
 
+> ⚠️ **Merenje obara drugu polovinu „Posledica".** Rečenica „sha1 iz `LICENSE.txt` važi
+> na svakoj platformi, i proverava se običnim `sha1sum`-om nad fajlom koji je pred očima"
+> ne stoji za pet od dvanaest fajlova: za `bb`, `bn`, `wb`, `wn` i `wr` zapisana vrednost
+> je otisak **CRLF oblika iz radnog stabla**, a commitovani bajtovi su LF. Izmereno
+> 20. 9. 2026 na svežem klonu (Windows 11, git 2.54.0.windows.1, Python 3.11.9) i u
+> radnom stablu; zapis: `docs/faze/faza-0.md`, „Checkpoint faze 0". Prva polovina —
+> pravilo „bajt u bajt" i sva četiri reda u `.gitattributes` — **ostaje na snazi**: isti
+> klon je uz `core.autocrlf=true` dobio LF na disku, dakle `-text` radi kako je opisano.
+> Ispravka zapisanih vrednosti je zaseban task, pre 1.1 (ROADMAP „Otvoreno", R9). Telo
+> ispod ostaje kako je zapisano (ADR-045).
+
 > ⚠️ **Dopunjeno ADR-om 042.** Pravilo „tuđi materijal se čuva bajt u bajt" i sva
 > četiri reda u `.gitattributes` ostaju na snazi. ADR-042 dodaje suprotan slučaj:
 > `LICENSE` i `THIRD-PARTY.txt` su **naši** fajlovi, nose ne-ASCII bajtove, a reda u

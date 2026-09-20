@@ -12,14 +12,44 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    checkpoint faze 0
-Sledeće:   REZ, pa 1.1 — core/types.py
-Otvoreno:  .claude/rules/ traži restart posle ažuriranja — potvrđeno na v2.1.259,
+Radimo:    REZ
+Sledeće:   1.1 — core/types.py
+Otvoreno:  R9 (rok: PRE 1.1, ne na REZ) pet sha1 vrednosti u
+           assets/pieces/LICENSE.txt za bb, bn, wb, wn, wr su otisci CRLF oblika,
+           a blob je LF — svež klon pada na pet subtestova
+           test_every_svg_matches_its_recorded_sha1. Ista netačna rečenica stoji
+           na tri mesta: LICENSE.txt, CAUSE u tests/test_assets.py i ADR-039
+           (već nosi ⚠️). Zapis: faza-0.md, „Checkpoint faze 0"
+           git status ćuti o tih pet fajlova, jer unos u indeksu nosi veličinu
+           CRLF fajla — kvar se ne vidi nijednom kapijom u radnom stablu
+           REZ R1: provera iz §8 u Python, po uzoru na K2, uz ADR i sužen red o
+           ljusci (CHESS_SLOW_TESTS=1 … iz §5 ostaje); rok najkasnije 1.8.
+           Izmereno 20. 9. 2026: oblik iz §8 se pod Claude Code-om izvršava
+           doslovno, jer je Bash alat Git Bash; u PowerShell-u je izmeren kao
+           neizvršiv pred push commita 4c71791. Radna zamena za PowerShell
+           postoji van repoa, u memoriji planskog chata, i briše se commitom
+           koji R1 zatvara. Ljuska projekta i dalje nije proglašena, pa merenje
+           važi za sesiju, ne kao propis
+           REZ R2: „test ne poziva spoljni program" nema dom — ide u §5
+           „Izolacija"
+           REZ R3: raspored u §5 opisuje K1 šire od njegovog domena
+           REZ R4: šest normi iz instrukcija Projekta nema dom (među njima i ko
+           sastavlja odgovore na korak 4) — WORKFLOW §1, uz ⚠️ na ADR-047
+           (četvrti korpus nije bio pod kriterijumom)
+           REZ R5: budžet u redovima — presuda da li ostaje kao alat
+           REZ R6: ADR-021 korak 4 nema klauzulu opsega („o upravo napisanom
+           kodu"), a 0.7–0.9 ga tako ne rade — presuda
+           REZ R7: settings.json naspram §8 — git show/switch nisu u §8,
+           push --force je širi nego §8; usaglašavanje dve liste, ne svođenje
+           (ADR-047) — presuda
+           REZ R8: razlog granice K1 i WORKFLOW.md van hijerarhije u §1
+           .claude/rules/ traži restart posle ažuriranja — potvrđeno na v2.1.259,
            i dalje tvrdnja o tuđem sistemu, pa ostaje otvoreno
            korpus 3 (memorija planskog chata) svodi planski chat posle commita 0.9;
            nijedna kapija ga ne dohvata (ADR-047)
            MEMORY folder se puni iz razgovora — pravilo koje se vrati samo od sebe
-           obara ADR-047, tačku 2 (T4 iz plana 0.9)
+           obara ADR-047, tačku 2 (T4 iz plana 0.9). Izmereno 20. 9. 2026: folder
+           je i dalje prazan, što tačku 2 ne potvrđuje nego je ne obara
            tabela ugovora t() iz ADR-040 nije vezana ni za jedan test nad client/i18n.py
            indeks ADR-ova u DECISIONS.md, mašinski proveren u oba smera
            ritual namernih kvarova izveden u 0.9 (K1, K2), prvi put u luku 0.7–0.9;
@@ -28,17 +58,6 @@ Otvoreno:  .claude/rules/ traži restart posle ažuriranja — potvrđeno na v2.
            klijenta — obe čekaju task u kom se ta ulazna tačka napiše (3.1)
            CONVENTIONS §1 prepričava ADR-030 i ADR-032 umesto da pokazuje na njih
            blok „Ritam po tasku" u ovom fajlu prepričava ADR-021 — isti oblik
-           gde se sastavljaju odgovori na korak 4 nije zapisano nigde
-           ADR-021 korak 4 nema klauzulu opsega („o upravo napisanom kodu"), a
-           0.7–0.9 ga tako ne rade — pada na REZ posle checkpointa faze 0
-           ljuska projekta nije proglašena, a kapija iz CONVENTIONS §8 stoji u
-           bash ogradi — traži svoj ADR. Komanda iz §8 je izmerena kao
-           neizvršiva u PowerShell-u pred push commita 4c71791 (commit od
-           5. 9. 2026; dan merenja nije zapisan). Radna zamena postoji i čuva
-           se van repoa, u planu 0.9, dok se ljuska ne presudi
-           settings.json: git show/switch nisu u §8; push --force širi nego §8 —
-           usaglašavanje dve liste, ne svođenje (ADR-047); ističe na REZ posle
-           checkpointa faze 0
            .claude/skills/layer-check/SKILL.md:16–17 opisuje ponašanje alata
            (ADR-044: briše se); perft/SKILL.md:26–28 ponavlja „Kad se broj ne
            poklopi" iz faze 1 — van obima 0.9, koji je sveo korpus 2
@@ -66,6 +85,12 @@ Korak sa pitanjima se ne preskače.
 ## FAZA 0 — Skelet
 **Checkpoint:** `pip install -e ".[dev]"` pa `python -m unittest discover -s tests`
 prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check .` čisti
+
+> **Izmereno 20. 9. 2026 nad `b8a35dc`: ne prolazi na svežem klonu.** `pip install` i
+> obe `ruff` komande su čiste, ali `Ran 58 tests` → `FAILED (failures=5)` — pet `sha1`
+> vrednosti iz `assets/pieces/LICENSE.txt`. Isti ishod na Linux i na Windows klonu;
+> prolazi samo radno stablo, i to iz razloga koji je nalaz 2. Zapis i uslovi:
+> `docs/faze/faza-0.md`, „Checkpoint faze 0". Ispravka je R9, pre 1.1.
 
 - [x] 0.1 Struktura foldera, `src/chess/` sa `__init__.py`, `tests/`, `docs/`, `assets/`, `tools/`
 - [x] 0.2 `pyproject.toml` sa **`pygame` kao zavisnošću**, `ruff` (`line-length = 100`),
