@@ -14,14 +14,13 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ```
 Radimo:    REZ
 Sledeće:   1.1 — core/types.py
-Otvoreno:  R9 (rok: PRE 1.1, ne na REZ) pet sha1 vrednosti u
-           assets/pieces/LICENSE.txt za bb, bn, wb, wn, wr su otisci CRLF oblika,
-           a blob je LF — svež klon pada na pet subtestova
-           test_every_svg_matches_its_recorded_sha1. Ista netačna rečenica stoji
-           na tri mesta: LICENSE.txt, CAUSE u tests/test_assets.py i ADR-039
-           (već nosi ⚠️). Zapis: faza-0.md, „Checkpoint faze 0"
-           git status ćuti o tih pet fajlova, jer unos u indeksu nosi veličinu
-           CRLF fajla — kvar se ne vidi nijednom kapijom u radnom stablu
+Otvoreno:  git status ne vidi razliku između indeksa i radnog stabla kad se stat
+           poklopi (izmereno u R9) — u radnom stablu to ne hvata nijedna kapija;
+           jedina koja hvata je suite na svežem klonu
+           permalinkovi u assets/pieces/LICENSE.txt su permalinkovi stranice
+           opisa, ne fajla: oldid zakucava licencni blok i autora, ali ne i
+           reviziju bajtova (izmereno u R9, T1) — bajtovi se uzimaju sa
+           Special:FilePath/, koji uvek daje tekuću reviziju
            REZ R1: provera iz §8 u Python, po uzoru na K2, uz ADR i sužen red o
            ljusci (CHESS_SLOW_TESTS=1 … iz §5 ostaje); rok najkasnije 1.8.
            Izmereno 20. 9. 2026: oblik iz §8 se pod Claude Code-om izvršava
@@ -91,6 +90,14 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
 > vrednosti iz `assets/pieces/LICENSE.txt`. Isti ishod na Linux i na Windows klonu;
 > prolazi samo radno stablo, i to iz razloga koji je nalaz 2. Zapis i uslovi:
 > `docs/faze/faza-0.md`, „Checkpoint faze 0". Ispravka je R9, pre 1.1.
+
+> **Izmereno posle R9: prolazi na svežem klonu.** Staro merenje iznad ostaje
+> (CONVENTIONS §1). Pet SVG fajlova vraćeno je na bajtove kakve Commons isporučuje, pa se
+> svih 12 blobova poklapa sa `sha1` vrednostima u `assets/pieces/LICENSE.txt` — nijedna
+> vrednost nije menjana. Klon (Windows 11, Python 3.11.9, pip 24.0, git
+> 2.54.0.windows.1, `core.autocrlf=true`, 20. 9. 2026): `Ran 58 tests` → `OK`,
+> `All checks passed!`, `22 files already formatted`. Zapis i uslovi:
+> `docs/faze/faza-0.md`, „R9 — pet sha1 vrednosti".
 
 - [x] 0.1 Struktura foldera, `src/chess/` sa `__init__.py`, `tests/`, `docs/`, `assets/`, `tools/`
 - [x] 0.2 `pyproject.toml` sa **`pygame` kao zavisnošću**, `ruff` (`line-length = 100`),

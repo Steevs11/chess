@@ -935,6 +935,16 @@ nula zavisnosti, ali traži mrežu pri generisanju i nudi samo standardne velič
 
 ## ADR-039: Tuđi materijal se čuva bajt u bajt — `.gitattributes` i provera
 
+> ⚠️ **Ispravljeno u R9; merenje ispod je bilo pogrešno pripisano.** Preuzimanje sa
+> Commons-a (20. 9. 2026, Windows 11, git 2.54.0.windows.1, Python 3.11.9) pokazuje da su
+> za `bb`, `bn`, `wb`, `wn` i `wr` zapisane vrednosti tačni otisci **preuzetih** bajtova, a
+> ne otisci zatečenog radnog stabla: Commons te fajlove isporučuje sa CRLF-om. Pogrešni su
+> bili **blobovi** — `git add` ih je u 0.4 normalizovao u LF pre nego što je `-text` počeo
+> da važi. Ispravka je vratila originalne bajtove; nijedna `sha1` vrednost nije menjana, i
+> od tada svih 12 blobova odgovara zapisanom. Time i rečenica iz „Posledica" ponovo stoji
+> za svih 12. Blok ispod ostaje čitljiv kao merenje sa svojim uslovima (CONVENTIONS §1);
+> zapis: `docs/faze/faza-0.md`, „R9 — pet sha1 vrednosti".
+
 > ⚠️ **Merenje obara drugu polovinu „Posledica".** Rečenica „sha1 iz `LICENSE.txt` važi
 > na svakoj platformi, i proverava se običnim `sha1sum`-om nad fajlom koji je pred očima"
 > ne stoji za pet od dvanaest fajlova: za `bb`, `bn`, `wb`, `wn` i `wr` zapisana vrednost

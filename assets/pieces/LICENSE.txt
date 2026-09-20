@@ -118,11 +118,20 @@ from the downloaded bytes and matches the value Commons reports.
 
 Those values hold as long as git does not rewrite the bytes between the commit
 and the working tree (ADR-039). .gitattributes in the repository root keeps
-end-of-line conversion off for assets/pieces/svg/*.svg. With core.autocrlf=true -
-the usual setting on Windows - a checkout would turn LF into CRLF and every sha1
-below would differ. Deleting that line silently invalidates this whole section,
-and nothing in .gitattributes points back here to say so; tests/test_assets.py
-checks the values and the line they depend on.
+end-of-line conversion off for assets/pieces/svg/*.svg, in both directions.
+Deleting that line silently invalidates this section, and nothing in
+.gitattributes points back here to say so; tests/test_assets.py checks the
+values and the line they depend on.
+
+Line endings are not uniform across the twelve, because Commons serves them that
+way: bb, bn, wb, wn and wr carry CRLF, the other seven LF. The mixture is the
+original material, not damage, and the values above are of those bytes. It is
+also how five of them went wrong once - they were committed in 0.4 before the
+-text rule applied, so git normalized them to LF on the way in while the sha1
+was taken from the file on disk, and only a fresh clone could see it (measured
+2026-09-20; docs/faze/faza-0.md, "R9"). A mismatch is therefore two questions,
+not one: whether git holds the recorded bytes (git cat-file blob) and whether
+the checkout rewrote them (git ls-files --eol).
 
 wp  white pawn      Chess_plt45.svg
     https://commons.wikimedia.org/w/index.php?title=File:Chess_plt45.svg&oldid=1218934628

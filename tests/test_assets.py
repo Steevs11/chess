@@ -1,17 +1,25 @@
 """Check that the third-party pieces on disk are the ones LICENSE.txt claims (ADR-039).
 
-assets/pieces/LICENSE.txt records a sha1 per SVG original. That is a verifiable
-claim, and it holds only as long as nothing rewrites the bytes between the commit
-and the working tree - which is exactly what core.autocrlf=true does on Windows,
-turning LF into CRLF on checkout. .gitattributes switches that off for these paths.
+assets/pieces/LICENSE.txt records a sha1 per SVG original. That is a verifiable claim
+about the downloaded bytes, and git can break it at either end: on the way in, by
+normalizing line endings when the file is committed, and on the way out, by converting
+them again on checkout with core.autocrlf=true. .gitattributes switches both off for
+these paths, which is why its line is checked here too.
+
+Both ends have been measured, not assumed. Five of the twelve files come from Commons
+with CRLF, and in 0.4 they were committed before the -text rule applied: git stored LF
+while LICENSE.txt recorded the sha1 of the file on disk. Every gate stayed green in the
+author's working tree and the suite failed on a fresh clone - this test catching its own
+failure mode, arriving from the other direction (docs/faze/faza-0.md, "R9").
 
 The failure happens on someone else's machine, right after `git clone`. That is why
 this is a test and not a tool in tools/: at that moment the test suite runs and no
 generator does. The mirror-image case is ADR-038, where the failure can only happen
 while rasterizing, so the rasterizer checks its own output instead.
 
-The claim about .gitattributes is what turns a symptom into a diagnosis. "sha1
-mismatch" tells a fresh cloner nothing; naming the cause tells them what to do.
+Naming the cause is what turns a symptom into a diagnosis, and there are two causes, so
+CAUSE below names both and says what to measure to tell them apart. "sha1 mismatch"
+tells a fresh cloner nothing.
 
 The font checks are second-order and rest on a weaker argument. *.ttf is declared
 binary, so end-of-line conversion cannot reach the font files at all - the failure
@@ -94,9 +102,15 @@ _ATTR_LINES = {
 }
 
 CAUSE = (
-    "The recorded sha1 values hold only while .gitattributes keeps git from "
-    "rewriting line endings in assets/pieces/svg/ (ADR-039). Check that first: "
-    "with core.autocrlf=true a checkout turns LF into CRLF and every sha1 differs."
+    "Two different things put bytes on disk that the recorded sha1 does not describe, and "
+    "they need different fixes (ADR-039). Measure both. Compare the sha1 of the file with "
+    "the sha1 of the blob - git cat-file blob HEAD:<path> - to see whether git holds the "
+    "recorded bytes at all; a blob that differs means they were rewritten on the way in, "
+    "which is how bb, bn, wb, wn and wr went wrong in 0.4, before the -text rule applied "
+    "(docs/faze/faza-0.md, 'R9'). Then run git ls-files --eol assets/pieces/svg/; a working "
+    "tree that differs from the index means end-of-line conversion on checkout, so check "
+    "that .gitattributes still carries the -text line for these paths. Line endings are not "
+    "uniform here: five of the twelve files carry CRLF as Commons serves them."
 )
 
 # The header of the machine-read block in THIRD-PARTY.txt. Compared as a whole line,

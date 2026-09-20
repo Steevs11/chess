@@ -1966,6 +1966,10 @@ sa LF. `.gitattributes` dakle radi tačno onako kako ADR-039 kaže. Pad ne dolaz
 konverzije prelazaka reda pri kloniranju: **zapisane vrednosti su pogrešne za pet
 fajlova.**
 
+> **Poslednju rečenicu obara merenje iz R9** (20. 9. 2026, preuzimanje sa Commons-a).
+> Zapisane vrednosti su tačni otisci **preuzetih** bajtova; pogrešni su bili blobovi.
+> Ostatak nalaza stoji. Zapis: odeljak „R9 — pet sha1 vrednosti" u ovom fajlu.
+
 **2. Radno stablo nosi pet fajlova koji se razlikuju od svojih blobova, a `git status`
 ćuti.** U radnom stablu su `bb`, `bn`, `wb`, `wn`, `wr` u CRLF obliku, blobovi su LF, i
 `git status --porcelain` je prazan. Uzrok je izmeren, ne pretpostavljen: unos u indeksu
@@ -2004,8 +2008,10 @@ Code-om izvršava doslovno, jer je Bash alat Git Bash (T3 — ali samo za ovu se
 „ljuska projekta" kao propis ostaje R1). MEMORY folder je i dalje prazan (T4 — merenje
 važi za ovaj trenutak, ne za ceo period od `b8a35dc`, pa ADR-047 tačka 2 nije potvrđena,
 samo nije oborena). `pip install -e ".[dev]"` u praznom venv-u na Windows-u prolazi (T5).
-Upit po dozvolama tražile su `git clone`, `python -m venv` i `pip install` — sve tri
-predviđene u T6, nijedna nije bila STOP.
+Upit po dozvolama tražile su `git clone`, `python -m venv` i `pip install`, a uz njih i
+**pozivi punom putanjom iz klona** (`…/.venv/Scripts/python.exe -m unittest`, `ruff`) —
+sve četiri predviđene u T6, nijedna nije bila STOP. Sadašnja rečenica je imenovala samo
+tri komande; četvrta kategorija se ovde dopisuje.
 
 **6. `ruff format --check .` ne dokazuje ništa o ovom tasku.** `extend-exclude =
 ["docs"]` (ADR-035) izbacuje ceo domen izmene. Kapija se pokreće jer je CONVENTIONS §9
@@ -2076,3 +2082,132 @@ Ovaj oblik ne troši ništa, jer sve kapije stoje zelene — i to zeleno se svak
 potpisuje kao dokaz. Kvar živi tačno onoliko dugo koliko niko ne klonira repo, a kad se
 pojavi, pojavi se na tuđoj mašini, gde dijagnoza više nije tvoja — a ovde je uz to bila i
 pogrešna, jer je `CAUSE` sve vreme pokazivao na `autocrlf`.
+
+---
+
+## R9 — pet sha1 vrednosti
+
+Checkpoint faze 0 je ostavio `main` u stanju u kom ne prolazi sopstveni uslov: pet
+subtestova `test_every_svg_matches_its_recorded_sha1` pada na svežem klonu. Ovaj task to
+popravlja. Checkpoint je merio i zapisivao; ovde se prvi put dira proizvod.
+
+### Merenja
+
+Sva su izvedena 20. 9. 2026, Windows 11, git 2.54.0.windows.1, Python 3.11.9,
+`core.autocrlf=true`, nad `b716eb4`.
+
+| Merenje | Uslovi | Ishod |
+|---|---|---|
+| M1 — tri otiska po fajlu | radno stablo, samo čitanje; `sha1sum` nad diskom, `git cat-file blob HEAD:…`, vrednost iz `LICENSE.txt` | za `bb`, `bn`, `wb`, `wn`, `wr`: disk == zapisano, blob != zapisano; za ostalih sedam sve tri jednake. Veličine diska 1282/1620/1282/1325/1198, blobova 1270/1598/1270/1306/1173 |
+| M2 — priroda razlike | isto | `sha1` bloba propuštenog kroz `sed 's/$/\r/'` jednak je `sha1`-u diska za svih pet; `tr -d '\r\n'` daje isti `sha1` za blob i disk. Razlika je **isključivo** u prelascima reda |
+| M3 — šta Commons prijavljuje | Commons API, `prop=imageinfo&iiprop=sha1\|size`, tekuća revizija fajla; čitano kroz alat koji stranicu pretvara u markdown, ne preuzimanjem bajtova | prijavljeni `sha1` jednak zapisanom za svih pet; prijavljena veličina jednaka veličini **CRLF** fajla (1325/1282/1198/1620/1282). Kontrolni `wp`: `sha1` zapisan, veličina 766 na obe strane |
+| **Korak 2 — preuzimanje** | `curl.exe -sS -L` sa `https://commons.wikimedia.org/wiki/Special:FilePath/<ime>`, binarno, u scratchpad; pet spornih + `wp` kao kontrola | **preuzeto == zapisano** za svih pet, i **preuzeto != blob**. Kontrolni `wp`: preuzeto == zapisano == blob |
+| broj CR i LF bajtova | nad preuzetim, blobom i radnim stablom | preuzeto i radno stablo: CR=LF za svih pet (19/12/25/22/12); blob: CR=0. `wp`: CR=0 svuda |
+| preuzeto naspram radnog stabla | `cmp` | bajt u bajt jednako za svih pet |
+| posle `git add`-a | `git cat-file blob :<putanja>` | svih **12** blobova u indeksu jednako zapisanom u `LICENSE.txt`; `git ls-files --eol` daje `i/crlf w/crlf attr/-text` za tih pet, `i/lf w/lf attr/-text` za ostalih sedam |
+| suite i ruff, radno stablo | isto okruženje | `Ran 58 tests` → `OK`; `All checks passed!`; `22 files already formatted` |
+| **kapija taska — svež klon** | klon ovog commita pre dopune ova dva pasusa, iz lokalnog repoa u scratchpad, nov venv, `pip install -e ".[dev]"`, pozivi punom putanjom; Windows 11, Python 3.11.9, pip 24.0, git 2.54.0.windows.1, `core.autocrlf=true` | `git ls-files --eol` u klonu: `i/crlf w/crlf attr/-text` za tih pet, `i/lf w/lf attr/-text` za ostalih sedam — dakle `-text` radi **u oba smera**. `Ran 58 tests` → `OK`; `All checks passed!`; `22 files already formatted` |
+
+**Dva preuzimanja od šest vratila su Wikimedia stranicu greške** (`bb` 1964 B, `wp` 2172 B
+umesto 1282 i 766). Ponovljeno sa `--retry 3` i opisnim `User-Agent`-om → `http=200` i
+tačne veličine. To nije bio S2: adresa je bila ispravna, odgovor privremen. Razlika u
+veličini je ono što je kvar pokazalo, pre nego ijedan `sha1`.
+
+### Presuda: grana A
+
+Preuzeti bajtovi nose CRLF i njihov `sha1` je tačno ono što `LICENSE.txt` zapisuje. Dakle
+**zapisane vrednosti su bile tačne sve vreme**; ono što u repozitorijumu nisu bili preuzeti
+bajtovi jesu **blobovi**. To potvrđuje nalaz 2 iz „Checkpoint faze 0" (normalizacija pri
+`git add`-u u 0.4, pre nego što je `-text` počeo da važi) i obara poslednju rečenicu
+nalaza 1.
+
+Ispravka je zato **vraćanje originalnih bajtova**, ne prepisivanje vrednosti. Grana B
+(prepisati pet `sha1` vrednosti na otiske blobova) je odbijena merenjem, ne ukusom — ona
+bi u `LICENSE.txt` upisala otiske bajtova koje Commons nikad nije isporučio, i time
+oborila i uvodni red („compared against the sha1 Commons reports") i red 182 („byte for
+byte as downloaded"). Uz to bi tražila svoj ADR, jer je blizu alternative koju je ADR-039
+izričito odbio, i vraćanje radnog stabla na LF, jer test čita disk.
+
+### Šta je izmenjeno
+
+- `assets/pieces/svg/` — pet fajlova vraćeno na preuzete bajtove. **Nijedna `sha1`
+  vrednost u `LICENSE.txt` nije dirana.**
+- `assets/pieces/LICENSE.txt`, pasus iznad tabele — imenuje stvarni kvar i mešavinu
+  prelazaka reda; više ne tvrdi „every sha1 below would differ", što je izmereno kao
+  netačno na dva načina (checkout uz `autocrlf=true` daje LF za svih 12, a razlikovalo se
+  pet).
+- `tests/test_assets.py` — `CAUSE` i docstring modula. **Provera se ne menja**: domen,
+  broj subtestova i tvrdnja su isti; menja se samo rečenica koju kapija ispisuje. Obe sada
+  imenuju **oba** uzroka i kažu šta da se izmeri (`git cat-file blob`, `git ls-files --eol`).
+
+### Šta je zatvoreno od neizmerenog
+
+- **T3 iz plana** („zašto je pet od dvanaest bilo CRLF na disku") — plan ga je proglasio
+  verovatno nerekonstruisanim. Zatvoren: takvi su **na Commons-u**. Alat preuzimanja i
+  dalje nije poznat, ali više nije potreban da bi se objasnilo pet CRLF fajlova.
+- **T2** („da li Commons isporučuje bajt u bajt isti fajl") — zatvoren za 20. 9. 2026:
+  isporučuje. Ne tvrdi se ništa o drugim datumima.
+- **N4 iz plana** — treća tvrdnja `LICENSE.txt`-a („matches the value Commons reports")
+  izmerena je prvi put, kroz M3 i korak 2. Stoji.
+
+### Šta ostaje neizmereno
+
+- **T1 iz plana.** Permalinkovi u `LICENSE.txt` su oblika `index.php?…&oldid=…` — to je
+  permalink **stranice opisa**, ne fajla, i vraća HTML. `LICENSE.txt` to kaže tačno („the
+  exact revision whose license block and author line were read"), ali `oldid` ne zakucava
+  reviziju binarnog fajla. Bajtovi su zato uzeti sa `Special:FilePath/`, koji uvek daje
+  **tekuću** reviziju. Da Commons sutra zameni fajl, zapisan `sha1` bi to prijavio, ali
+  permalink ne bi vratio stari bajt. Nije rešeno ovde.
+- Da li ijedan drugi alat u lancu (editor, arhiva, veb klijent iz faze 4) dira prelaske
+  reda u `assets/pieces/svg/`. Nije mereno.
+
+### Redosled kapije i commita
+
+Kapija svežeg klona vidi samo **commitovano** stanje, a CONVENTIONS §9 commit stavlja
+poslednji. Zato je commit napravljen prvi, pa je klon meren nad njim, pa je ishod klona
+dopisan u ovaj fajl i u `ROADMAP.md` i commit je izmenjen sa `--amend` — dozvoljeno, jer
+istorija do `push`-a stoji samo lokalno (CONVENTIONS §8). **Šta to znači za dokaz:** klon
+je meren nad stablom koje se od konačnog razlikuje samo u dva pasusa u `docs/`, koje ne
+čita nijedan test. Ista razlika nad `src/`, `tests/` ili `assets/` tražila bi ponovljeno
+merenje.
+
+### Pitanja (ADR-021, korak 4)
+
+**1. Grana B bi prepisala pet `sha1` vrednosti na otiske blobova i test bi na svežem klonu
+prošao. Zašto to ipak nije ispravka, nego zamena jednog kvara drugim — i koju tvrdnju iz
+`LICENSE.txt` bi oborila, a da je test nikad ne bi prijavio?**
+
+Znao. Test proverava samo **prvu** od tri tvrdnje — poredi disk sa zapisanim brojem. Grana
+B bi prvu učinila tačnom tako što bi drugu („računat iz preuzetih bajtova") i treću
+(„poklapa se sa onim što Commons prijavljuje") učinila netačnim, uz red 182 („byte for
+byte as downloaded"), i nijedna kapija to ne bi prijavila, jer nijedna ne ide do Commons-a.
+To je isti oblik kvara koji R9 popravlja, prebačen sa bajtova na tvrdnje: zeleno koje ne
+znači ono što čitalac misli da znači. Preko pitanja: `LICENSE.txt` nije naš dokument — u
+njemu smemo da zapišemo šta smo preuzeli, ne da izmislimo otisak koji izvor ne bi
+potvrdio.
+
+**2. `git add` je u koraku 3 morao ponovo da pročita sadržaj tih pet fajlova, iako se
+nijedan bajt na disku nije promenio. Zašto to nije bilo sigurno unapred, i šta bi se
+videlo u kapiji 3.4 da se nije desilo?**
+
+Znao, i preko onoga što je pitano. `git add` prvo poredi stat iz indeksa sa statom fajla —
+veličinu i `mtime` — i ako se poklope, sadržaj ne čita. Ovde je **veličina bila jednaka na
+obe strane**, jer je indeks od 0.4 nosio CRLF veličinu, pa je jedini razlog da pročita
+bajtove bio nov `mtime` od `cp`-a. Da je `cp` sačuvao vreme (`-p`), **ili da je
+granularnost `mtime`-a progutala razliku**, `add` bi bio no-op: kapija 3.4 bi za tih pet i
+dalje vraćala stare LF otiske — `56444929…` umesto `126b7779…` za `wr` — i to bi bio S3.
+Zato kapija stoji nad `git cat-file blob :<putanja>`, dakle nad **indeksom**: disk je bio
+tačan i pre `add`-a i ništa ne bi dokazao.
+
+**3. Nova `CAUSE` poruka imenuje dva uzroka i dve komande umesto jednog uzroka i jedne
+provere. Zašto je poruka koja nudi merenje bolja od poruke koja nudi zaključak — iako je
+stara bila kraća i, za slučaj koji opisuje, tačna?**
+
+Znao. Stara poruka je bila tačna za jedan slučaj, a čitalac je ne dobija kad zna koji je
+slučaj — dobija je kad ne zna. Tvrdila je uzrok umesto da ga imenuje kao jedan od mogućih,
+pa je svakog ko je naleteo na pravi kvar slala da proverava `.gitattributes`, koji je sve
+vreme bio ispravan. **Kratka poruka koja pogađa devedeset posto slučajeva u preostalih
+deset radi gore nego nikakva**, jer nosi autoritet i skreće sa traga. Nova imenuje oba
+kraja na kojima git može da prepiše bajtove i uz svaki daje komandu čiji ishod razdvaja
+jedan od drugog. Isto pravilo po kom projekat piše sve ostalo: tvrdnja bez merenja iza
+sebe je pretpostavka, i kad stoji u poruci o grešci.
