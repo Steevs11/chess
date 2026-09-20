@@ -21,6 +21,11 @@ Otvoreno:  git status ne vidi razliku između indeksa i radnog stabla kad se sta
            opisa, ne fajla: oldid zakucava licencni blok i autora, ali ne i
            reviziju bajtova (izmereno u R9, T1) — bajtovi se uzimaju sa
            Special:FilePath/, koji uvek daje tekuću reviziju
+           CONVENTIONS §8 i §10 ne kažu kojim interpreterom se pokreću alati iz
+           tools/: u R9 je K2 pokrenut kao python tools/check_commit_trailers.py,
+           iz PATH-a, a ne iz venv-a. Ovde bez posledica, jer alat koristi samo
+           standardnu biblioteku. Isti razred kao R1 — ljuska nije proglašena.
+           Bez roka
            REZ R1: provera iz §8 u Python, po uzoru na K2, uz ADR i sužen red o
            ljusci (CHESS_SLOW_TESTS=1 … iz §5 ostaje); rok najkasnije 1.8.
            Izmereno 20. 9. 2026: oblik iz §8 se pod Claude Code-om izvršava

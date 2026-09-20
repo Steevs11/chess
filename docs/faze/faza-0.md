@@ -2107,6 +2107,7 @@ Sva su izvedena 20. 9. 2026, Windows 11, git 2.54.0.windows.1, Python 3.11.9,
 | posle `git add`-a | `git cat-file blob :<putanja>` | svih **12** blobova u indeksu jednako zapisanom u `LICENSE.txt`; `git ls-files --eol` daje `i/crlf w/crlf attr/-text` za tih pet, `i/lf w/lf attr/-text` za ostalih sedam |
 | suite i ruff, radno stablo | isto okruženje | `Ran 58 tests` → `OK`; `All checks passed!`; `22 files already formatted` |
 | **kapija taska — svež klon** | klon ovog commita pre dopune ova dva pasusa, iz lokalnog repoa u scratchpad, nov venv, `pip install -e ".[dev]"`, pozivi punom putanjom; Windows 11, Python 3.11.9, pip 24.0, git 2.54.0.windows.1, `core.autocrlf=true` | `git ls-files --eol` u klonu: `i/crlf w/crlf attr/-text` za tih pet, `i/lf w/lf attr/-text` za ostalih sedam — dakle `-text` radi **u oba smera**. `Ran 58 tests` → `OK`; `All checks passed!`; `22 files already formatted` |
+| **kapija taska — klon sa GitHub-a** | klon `8f39d6e` sa `github.com/Steevs11/chess`, nov venv, `pip install -e ".[dev]"`, pozivi punom putanjom; Windows 11, Python 3.11.9, git 2.54.0.windows.1, `core.autocrlf=true`, 20. 9. 2026 | `Ran 58 tests` → `OK`; `All checks passed!`; `22 files already formatted` |
 
 **Dva preuzimanja od šest vratila su Wikimedia stranicu greške** (`bb` 1964 B, `wp` 2172 B
 umesto 1282 i 766). Ponovljeno sa `--retry 3` i opisnim `User-Agent`-om → `http=200` i
@@ -2169,7 +2170,8 @@ dopisan u ovaj fajl i u `ROADMAP.md` i commit je izmenjen sa `--amend` — dozvo
 istorija do `push`-a stoji samo lokalno (CONVENTIONS §8). **Šta to znači za dokaz:** klon
 je meren nad stablom koje se od konačnog razlikuje samo u dva pasusa u `docs/`, koje ne
 čita nijedan test. Ista razlika nad `src/`, `tests/` ili `assets/` tražila bi ponovljeno
-merenje.
+merenje. **Ta ograda više ne važi:** isti red checkpointa izmeren je i nad konačnim
+stablom, klonom sa GitHub-a (red u tabeli iznad).
 
 ### Pitanja (ADR-021, korak 4)
 
