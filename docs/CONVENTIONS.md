@@ -329,7 +329,8 @@ tests/
 ├── test_check_commit_trailers.py
 │                         čista funkcija iz tools/check_commit_trailers.py, bez git-a
 ├── test_encoding_bytes.py
-│                         bez BOM-a u assets/, src/ i docs/, nad bajtovima (§7)
+│                         bez BOM-a u assets/**/*.json, src/**/*.py i
+│                         docs/**/*.md, nad bajtovima (§7)
 └── test_layers.py        poziva tools/layer_check.py
 ```
 
@@ -400,6 +401,11 @@ Test koji ne daje isti rezultat pri svakom pokretanju je pokvaren test.
   sudbinu sa kvarom od kog štiti (ADR-042).
 - test **ne otvara socket** — server se testira kroz `Player` interfejs sa
   lažnom implementacijom, ne kroz mrežu
+- test **ne poziva spoljni program** — ni ljusku, ni `git`, ni drugi interpreter; obavezuje
+  sve pod `tests/`. Pokrenut proces uvodi `PATH`, ljusku i interpreter koji nisu deo
+  tvrdnje, pa bi test merio mašinu na kojoj je pokrenut umesto proizvoda. Alat iz `tools/`
+  se zato proverava kroz svoju čistu funkciju, učitanu po putanji, a provera kojoj proces
+  stvarno treba stoji van suite-a i pokreće se ručno (§8).
 - test ne zavisi od drugog testa ni od redosleda izvršavanja
 
 ### Provera i njen domen

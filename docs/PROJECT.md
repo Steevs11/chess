@@ -368,7 +368,9 @@ vraća. To je jedini mehanizam koji stvarno rešava odbranu — sve ostalo je in
 
 ## 9. Faze i checkpointovi
 
-Checkpoint je **objektivan uslov**, ne osećaj. Ne prelazi se dalje dok ne prođe.
+Checkpoint je **objektivan uslov**, ne osećaj. Ne prelazi se dalje dok ne prođe. Meri se na
+**svežem klonu, u novom venv-u** — zeleno u radnom stablu nije dokaz o proizvodu nego o
+jednom disku; zapis merenja je `docs/faze/faza-0.md`, „Checkpoint faze 0" i „R9".
 
 | Faza | Sadržaj | Checkpoint |
 |---|---|---|

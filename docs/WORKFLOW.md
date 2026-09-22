@@ -25,6 +25,28 @@ arhitekti tako da se prenosi bez ijedne izmene. Jedan odgovor traži od arhitekt
 najviše jednu radnju: radnje se izvršavaju redom, a druga se izgubi dok prva traje.
 Obavezuje odgovore sa claude.ai; Claude Code ne sastavlja predaju.
 
+Razgovor sa arhitektom vodi se na srpskom, na obe površine. Jezik koda, komentara i
+commit poruka je zaseban zahtev i stoji u CONVENTIONS:9–10.
+
+Fajl iz repoa planski chat učitava sam, umesto da traži da mu se zalepi; lepi se samo ono
+čiji izvor nije u gitu. Oblik reference — zakucavanje na commit SHA — stoji u
+CONVENTIONS §8 „Referenciranje za pregled"; ovde je novo samo ko učitava.
+
+Kod donet na pregled prvo se objašnjava, pa se tek onda prepravlja. Ko šta radi stoji u
+PROJECT §8 i u tabeli iznad; novo je samo redosled — prepravka pre objašnjenja traži
+odobrenje za ono što nije pročitano.
+
+Nacrt odgovora na pitanja iz koraka 4 sastavlja planski chat; arhitekta ga čita, proverava
+i predaje. Korak 5 ADR-021 time ostaje netaknut: odgovara arhitekta, a nacrt koji ne
+prepoznaje kao svoj vraća umesto da ga preda.
+
+Odgovor je konkretan i kratak, a kratko pitanje dobija kratak odgovor. Dužina koja ne nosi
+odluku troši vreme koje ritam po tasku traži za korak 4.
+
+Kad se od arhitekte traži da bira, traženo i opcije staju u dve do tri rečenice. Ako je u
+diffu problem, umesto opcije ide STOP: izbor između dve mogućnosti od kojih nijedna ne
+valja nije odluka nego prenošenje tereta.
+
 ---
 
 ## 2. Anatomija jedne sesije

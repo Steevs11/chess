@@ -1649,6 +1649,12 @@ koja nose teret: spisak odlučenog, za prvi STOP, i spisak neizmerenog, za četv
 
 ## ADR-047: Kriterijum ADR-044 važi za svaki korpus van gita
 
+> ⚠️ **Četvrti korpus nije bio pod kriterijumom.** Tačka 1 nabraja korpuse i među njima
+> nema instrukcija Projekta na claude.ai — teksta koji se čita kao uputstvo za rad jednako
+> kao i ostala četiri. Od REZ-a (22. 9. 2026) i on je pod kriterijumom iz tačke 2, a šest
+> normi iz njega je dobilo dom u `WORKFLOW.md` §1. Oznaka po ADR-045; zapis merenja i
+> presuda: `docs/faze/faza-0.md`, odeljak „REZ". Telo ispod ostaje kako je zapisano.
+
 **Kontekst.** ADR-044 je kriterijum primenio na `.claude/`, a 0.8 na `CLAUDE.md`. `MEMORY.md` i
 njegov folder ADR-044 imenuje kao peti slučaj klase, sa rečenicom „imenuje se, ne rešava".
 Pored njih postoji i memorija planskog chata na claude.ai, koju Claude Code ne vidi. Nijedan

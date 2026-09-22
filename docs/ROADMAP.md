@@ -34,12 +34,6 @@ Otvoreno:  git status ne vidi razliku između indeksa i radnog stabla kad se sta
            postoji van repoa, u memoriji planskog chata, i briše se commitom
            koji R1 zatvara. Ljuska projekta i dalje nije proglašena, pa merenje
            važi za sesiju, ne kao propis
-           REZ R2: „test ne poziva spoljni program" nema dom — ide u §5
-           „Izolacija"
-           REZ R3: raspored u §5 opisuje K1 šire od njegovog domena
-           REZ R4: šest normi iz instrukcija Projekta nema dom (među njima i ko
-           sastavlja odgovore na korak 4) — WORKFLOW §1, uz ⚠️ na ADR-047
-           (četvrti korpus nije bio pod kriterijumom)
            REZ R5: budžet u redovima — presuda da li ostaje kao alat
            REZ R6: ADR-021 korak 4 nema klauzulu opsega („o upravo napisanom
            kodu"), a 0.7–0.9 ga tako ne rade — presuda

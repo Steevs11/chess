@@ -1380,6 +1380,13 @@ ovom commitu, ili što se briše bez seljenja.
 | šahovska notacija se ne prevodi | §7:497 |
 | logovi bez dijakritika — Windows konzola nije UTF-8 | §7 „Logovanje" (ADR-010) |
 
+> ⚠️ **Red „razgovor sa korisnikom → srpski" je od REZ-a norma sa domom.** 0.8 ga je po
+> kriterijumu ADR-044 ostavio van gita: nijedna izmena u `docs/` ne može ga učiniti
+> netačnim. Test razlikovanja iz ADR-047 (tačka 3) vodi ga drugačije — kad se prestane
+> poštovati, rečenica je **prekršena**, ne netačna, pa je normativna i dom joj je `docs/`.
+> Dom je `WORKFLOW.md` §1, „Predaja teksta između površina"; zapis: odeljak „REZ" u ovom
+> fajlu. Telo tabele iznad ostaje kako je zapisano (CONVENTIONS §1).
+
 **Arhitektura** — 5 rečenica, sve uklonjene
 
 | Tvrdnja | Kuda |
@@ -2213,3 +2220,147 @@ deset radi gore nego nikakva**, jer nosi autoritet i skreće sa traga. Nova imen
 kraja na kojima git može da prepiše bajtove i uz svaki daje komandu čiji ishod razdvaja
 jedan od drugog. Isto pravilo po kom projekat piše sve ostalo: tvrdnja bez merenja iza
 sebe je pretpostavka, i kad stoji u poruci o grešci.
+
+---
+
+## REZ — osam stavki iz „Otvoreno"
+
+Checkpoint faze 0 je ostavio osam stavki (R1–R8) u `ROADMAP.md`, „Otvoreno": tri imenuju
+normu bez doma ili opis širi od domena, pet traže presudu. REZ ih zatvara u **dva commita,
+bez ijedne linije koda** — menja se samo `docs/`. R1 ne ide sada; rok mu je najkasnije 1.8
+i red u „Otvoreno" ostaje nepromenjen.
+
+### Šta je dobilo dom (commit 1)
+
+| Norma ili pravilo | Odakle | Dom |
+|---|---|---|
+| test ne poziva spoljni program (R2) | nigde — nalaz iz 0.9 | CONVENTIONS §5 „Izolacija" |
+| raspored opisuje K1 šire od domena (R3) | CONVENTIONS §5 „Raspored" | isti red, sužen na `assets/**/*.json`, `src/**/*.py`, `docs/**/*.md` |
+| razgovor sa arhitektom → srpski | instrukcije Projekta; 0.8 ga ostavio van gita | WORKFLOW §1 „Predaja teksta" |
+| planski chat sam učitava fajl iz repoa | instrukcije Projekta | WORKFLOW §1; zakucavanje na SHA ostaje u CONVENTIONS §8 |
+| kod se prvo objašnjava, pa prepravlja | instrukcije Projekta | WORKFLOW §1; podela poslova ostaje u PROJECT §8 |
+| nacrt odgovora na korak 4 sastavlja planski chat | instrukcije Projekta | WORKFLOW §1 |
+| konkretno i kratko | instrukcije Projekta | WORKFLOW §1 |
+| izbor opcije u dve-tri rečenice; problem u diffu = STOP | instrukcije Projekta | WORKFLOW §1 |
+| checkpoint se meri na svežem klonu (R9) | presuda iz „Checkpoint faze 0" | PROJECT §9 |
+
+Sedma rečenica iz instrukcija Projekta — šta planski chat vidi — **ne seli se**: keširana
+činjenica po testu razlikovanja (ADR-047, tačka 3). Instrukcije Projekta su **četvrti
+korpus** i do ovog commita nisu bile pod kriterijumom ADR-044; ADR-047 zato dobija ⚠️ po
+ADR-045.
+
+### Merenje: da li ijedan test poziva spoljni program (R2)
+
+Uslovi: radno stablo nad `4b087ee`, čisto; Windows 11, Git Bash, GNU grep 3.0, git
+2.54.0.windows.1, Python 3.11.9, `core.autocrlf=true`, 21. 9. 2026. Mereno **pre** ijedne
+izmene ovog commita.
+
+```
+grep -rnE "subprocess|os\.system|os\.popen|popen|Popen|shutil\.which|os\.exec|os\.spawn" tests/
+git ls-files "tests/*.py"
+```
+
+| Šta je brojano | Kako | Broj |
+|---|---|---|
+| praćeni `.py` fajlovi u `tests/` | `git ls-files "tests/*.py"` | **11** |
+| test moduli među njima | isto, bez `__init__.py` | **6** |
+| pogodaka grepa | izlaz `1`, nijedan red ispisan | **0** |
+
+Šest modula: `client/test_i18n`, `test_assets`, `test_check_commit_trailers`,
+`test_encoding_bytes`, `test_layers`, `test_package`; ostalih pet su `__init__.py`. **Go
+broj bez definicije šta je brojano nije merenje** — zato stoje oba broja i pravilo po kom
+su dobijena.
+
+**Referentno merenje** (planski chat, Linux klon `4b087ee`): isti brojevi — 11 praćenih
+`.py`, 6 test modula, 0 pogodaka. Oba merenja stoje jedno pored drugog, svako sa svojim
+uslovima (CONVENTIONS §1). Poklapaju se, pa ovde nema pokretnog dela koji bi se imenovao.
+
+Prvi unapred imenovan STOP iz plana — „grep nađe test koji poziva spoljni program" — **nije
+se okinuo**.
+
+### Nalaz: pokazivač koji je pokazivao na prazno
+
+`tests/test_check_commit_trailers.py:3–4` od 0.9 citira „CONVENTIONS 5, 'Izolacija'" kao
+razlog zašto `tests/` nema zavisnost od spoljnog programa — a to pravilo tamo do ovog
+commita **nije stajalo**. R2 dakle ne uvodi novo pravilo nego zatvara pokazivač na
+nepostojeći tekst. Isti razred kao tvrdnje bez doma iz 0.7 i 0.8, samo u suprotnom smeru:
+ovde je kod pokazao na `docs/`, a ne `docs/` na kod. Nijedna kapija to ne hvata; uhvatio ga
+je grep za R2.
+
+### Šest grepova (R4)
+
+Isti uslovi i isti trenutak kao merenje iznad. Svaki obrazac nosi bar dve formulacije pojma
+(CONVENTIONS §5, „odsustvo se meri"). Domen je `docs/`, uključujući tabele u §0.8 i §0.9
+ovog fajla, koje su pregledane posebno. **Upisani su broj pogodaka i mesta, nikad pogođeni
+red.** Oba smera: iz norme u `docs/` obrascem, pa iz svakog pogotka nazad u normu — pogodak
+koji nije pročitan ne razlikuje dom od šuma.
+
+| # | Norma | Obrazac | Pogodaka | Mesta koja nisu šum | Presuda |
+|---|---|---|---|---|---|
+| 1 | razgovor sa arhitektom → srpski | `srpsk\|razgovor` | 18 | CONVENTIONS:10; faza-0 §0.8:1345 i :1377 | **nema dom**: :10 pokriva dokumentaciju i interfejs, ne jezik razgovora; :1377 je vodi kao „ostaje van gita" |
+| 2 | planski chat sam učitava fajl, zakucan na SHA | `SHA\|zakuca\|lepi\|lepljen\|raw\.githubusercontent` | 15 | CONVENTIONS §8:710 i :714; DECISIONS:346 (ADR-020, Posledice) | **dom za zakucavanje postoji** → pokazivač; ko učitava nema dom, jer ADR-020 nudi mogućnost, ne zahtev |
+| 3 | kod se prvo objašnjava, pa prepravlja | `prepravl\|prepravi\|pregled diff\|objasni.*pa` | 14 | PROJECT §8:356 | **dom za podelu poslova postoji** → pokazivač; redosled nema dom |
+| 4 | nacrt odgovora na korak 4 sastavlja planski chat | `korak 4\|koraka 4\|nacrt\|sastavlja` | 27 | WORKFLOW:23 i :26; ADR-021 korak 5 | **nema dom**: :23 govori o tekstu koji se predaje Claude Code-u, ne o odgovorima na korak 4 |
+| 5 | konkretno i kratko | `kratk\|konkretn\|sažet\|sazet` | 14 | — | **nema dom**; svi pogoci su o drugim predmetima |
+| 6 | izbor opcije u dve-tri rečenice | `opcij\|bira između\|biraš\|izbor između` | 1 | — | **nema dom**; jedini pogodak (CONVENTIONS:96) je o pisanju ADR-a |
+
+Dva pogotka za normu 4 u `ROADMAP`-u (:41, :44) su redovi REZ R4 i R6, koje ovaj commit
+briše, odnosno commit 2 rešava. Ni jedan ni drugi nisu dom — to je opis zadatka, ne pravilo.
+
+### Presuda: tabela u WORKFLOW §1 se ne dira
+
+Tabela odgovara na pitanje **koja površina radi koju radnju**. Nijedna od šest normi na to
+pitanje ne odgovara: pet ih propisuje kako se radi unutar površine ili kako se tekst
+predaje, a šesta (kod se prvo objašnjava) je redosled unutar radnje koju tabela već nosi
+(„Objašnjenja, 'ne razumem ovaj kod'"). Red bi zato bio duplikat, ne rutiranje. Red
+„Provera da si razumeo (ti pričaš, Claude ispituje)" se **ne dira**: to je provera na kraju
+faze, isti oblik kao WORKFLOW §8, korak 1, i nijedna nova rečenica je ne dodiruje.
+
+### Pitanja (ADR-021, korak 4) — commit 1
+
+**1. R2 je napisan kao zahtev sa opsegom, a ne kao mašinski proverivo „nijedan test ne
+uvozi `subprocess`". Zašto je izabrana formulacija koju nijedna kapija ne hvata?**
+
+Znao. Proveriva formulacija bi propisala **mehanizam**, a mehanizama za pokretanje procesa
+ima koliko i imena funkcija — `subprocess`, `os.system`, `os.popen`, `shutil.which`,
+`os.exec*`, `os.spawn*`, pa i `importlib` nad skriptom koja sama zove ljusku. Kapija nad
+spiskom imena hvata tačno taj spisak; prvi test koji proces pokrene sedmim imenom prolazi
+kroz nju zelen, pa pravilo pada **tiho** — isti razred kvara kao provera koja ćuti kad nema
+ulaz. Zahtev sa opsegom ne stari sa spiskom: kaže šta ne sme i gde važi, pa i nov način
+pokretanja procesa pada pod njega bez izmene pravila.
+
+> Cena je poznata i prihvaćena: norma nema kapiju i oslanja se na pregled diffa. Zato
+> spisak imena stoji **u zapisu, kao domen merenja**, a ne u pravilu.
+
+**2. R3 je sužio red u §5, a test nije diran — provera je i pre i posle identična i 58
+testova prolazi oba puta. U čemu je onda bio kvar, i šta bi se pokvarilo da smo umesto reda
+proširili test na ceo `assets/`, `src/` i `docs/`?**
+
+Znao, i preko onoga zbog čega je pitanje postavljeno. **Kvar je bio u čitaocu, ne u kodu.**
+Red je tvrdio da K1 pokriva `assets/`, `src/` i `docs/` cele, a `PATTERNS` pokriva samo
+`*.json`, `*.py` i `*.md` u njima. Ko doda `.svg` u `assets/` ili `.txt` u `docs/` i
+pročita taj red, veruje da ga kapija čuva — a ne čuva ga. Razred je „zeleno kod autora nije
+dokaz": provera je zelena zato što je **uža nego što dokument tvrdi**, i ćuti tamo gde
+čitalac očekuje da progovori.
+
+Širenje testa bi pokvarilo dva mesta. **Prvo**, test bi čitao i binarne fajlove — pet
+SVG-ova sa CRLF-om, TTF font, PNG-ove — pa bi ili padao na njima ili dobio izuzetke po
+tipu, čime bi **opet** postao uži od tvrdnje, samo skriveno u kodu umesto u dokumentu.
+**Drugo**, menjali bismo kapiju da bismo popravili rečenicu: domen K1 je regresioni,
+izabran po mestima gde je kvar iz 0.5 stvarno udario, i njegovo širenje je odluka koja
+traži merenje da BOM tamo može da promeni ishod — a to merenje ne postoji. Jeftinije je i
+poštenije da dokument kaže istinu o proveri nego da se provera rasteže da bi dokument
+ostao tačan.
+
+**3. Tri od šest normi nose pokazivač umesto ponovljenog pravila, iako bi ponovljena
+rečenica bila čitljivija na mestu gde stoji. Zašto je pokazivač uslov da norma preživi, a
+ne samo šteda u redovima?**
+
+Znao. **Kopija ima svoj životni vek.** Ponovljena rečenica je tačna na dan upisa i počinje
+da truli čim se original promeni — a niko ne zna da mora da je menja, jer propagacija prati
+ADR, ne njegove prepise. Projekat to već ima izmereno: pravilo u korpusu van gita nabrajalo
+je **tri** uslovna STOP-a, a ADR-046 ih ima **četiri**; kopija je bila čitljiva i pogrešna
+(0.9, „Devet pravila, ne sedam"). Pokazivač ne može da zastari na taj način: ako se
+CONVENTIONS §8 promeni, WORKFLOW i dalje upućuje na tačan tekst. Gubi se jedan skok
+pogledom; dobija se to da dokument ne može da zaostane a da to niko ne primeti — a to je
+tačno kvar koji ADR-044 zove gorim od dokumenta koji ne postoji.
