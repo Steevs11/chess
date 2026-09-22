@@ -103,6 +103,9 @@ valja nije odluka nego prenošenje tereta.
 Dva uokvirena koraka su tvoja i ne preskaču se. Između njih brzo ide sve osim
 pitanja iz koraka 4, koja traže tvoje vreme i takođe se ne preskaču (ADR-021).
 
+Kad task ne piše kod — svođenje dokumenata, merenje, presuda — pitanja iz koraka 4 su o
+onome što je task uradio. Korak se ne preskače zato što koda nema.
+
 Kad se jedan fajl menja na više mesta, **sve izmene tog fajla pokazuju se pre prve**:
 mesto i šta se menja. Posle toga se primenjuju onako kako alat ide. Izmena
 odobrena bez uvida u ostale izgleda kao ceo plan za taj fajl.

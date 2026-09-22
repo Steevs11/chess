@@ -2364,3 +2364,132 @@ je **tri** uslovna STOP-a, a ADR-046 ih ima **četiri**; kopija je bila čitljiv
 CONVENTIONS §8 promeni, WORKFLOW i dalje upućuje na tačan tekst. Gubi se jedan skok
 pogledom; dobija se to da dokument ne može da zaostane a da to niko ne primeti — a to je
 tačno kvar koji ADR-044 zove gorim od dokumenta koji ne postoji.
+
+### Presude (commit 2)
+
+**R5 — budžet u redovima ostaje merenje, ne postaje norma.** Budžet iz §0.9 odradio je
+svoje u tasku u kom je postavljen. Norma bi tražila sledećeg potrošača, a njega nema:
+korpusi van gita su svedeni, faza 1 je kod, a broj redova u `docs/` o kodu ne tvrdi ništa.
+Ostaje zapisan tamo gde je i izmeren.
+
+**R6 — u ADR-021 se ne menja ništa.** Korak 4 kaže „o upravo napisanom kodu", a 0.7–0.9,
+checkpoint, R9 i REZ kod ne pišu. To nije sukob nego **praznina**: ADR je pisan iz taska
+koji piše kod i drugi slučaj nije predvideo. Telo se ne dira i ⚠️ ne dobija — ADR-045
+pokriva merenje koje obara tvrdnju, a ovde ništa nije oboreno. Praznina se popunjava jednom
+rečenicom u WORKFLOW §2, uz mesto gde se korak 4 izvodi.
+
+**R7 — `settings.json` sme biti stroži od CONVENTIONS §8.** Dve liste odgovaraju na
+različita pitanja: §8 kaže šta je **projektu** zabranjeno, `settings.json` šta izvršilac
+sme **bez pitanja** (ADR-044, tri odredišta). Zabrana šira od §8 — `push --force` nad
+svakom granom, a ne samo nad `main`-om — zato nije neslaganje nego uža kapija, a dozvola za
+`git show` i `git switch`, koje §8 ne pominje, nije rupa. Sukob bi postojao samo u jednom
+smeru: da `settings.json` pusti bez pitanja ono što §8 zabranjuje. Ni §8 ni `settings.json`
+se u ovoj sesiji ne diraju.
+
+**R8, prva polovina — razlog granice K1 stoji ovde, ne u docstringu testa.** Domen
+`assets/**/*.json`, `src/**/*.py` i `docs/**/*.md` nije izveden iz načela nego iz mesta
+gde je kvar iz 0.5 udario: provera je **regresiona**. `tests/` i `tools/` ostaju van dok se
+ne izmeri da BOM tamo može da promeni ishod — dok tog merenja nema, širenje domena bi bilo
+pretpostavka sa zelenom kapijom. Docstring nosi tvrdnju koju test proverava; razlog izbora
+domena nije tvrdnja o bajtovima i tamo bi bio treća verzija iste rečenice, koju nijedna
+kapija ne drži u skladu sa ostale dve (§0.9, „Ostale presude u toku taska").
+
+**R8, druga polovina — `WORKFLOW.md` je van ranga, sa klauzulom sudara.** Ne ulazi u
+hijerarhiju iz CONVENTIONS §1 jer ne propisuje proizvod nego tok rada, ali ne sme da
+protivreči nijednom dokumentu sa liste; kad se sudare, pobeđuje dokument sa liste.
+Propagacija ga je i pre ovog commita obavezivala — §1, „Pravilo propagacije (ADR-030)",
+pasus „Proširenje" — pa red ne uvodi obavezu nego imenuje ko pobeđuje kad obaveza zakaže.
+
+**„canonical" u `assets/pieces/LICENSE.txt` — ostaje otvoreno, bez roka.** Nalaz iz 0.6:
+taj fajl svoje odricanje naziva kanonskim, a kanonski SPDX oblik glasi drugačije. Tuđi je
+dokument, nijedan test ga po toj reči ne čita, i ne stoji ni na jednom putu do partije. Red
+u „Otvoreno" ostaje; rok se ne postavlja, jer rok bez posledice je obećanje, ne obaveza.
+
+### Šta je ostalo van REZ-a
+
+**R1** — provera iz §8 prepisana u Python, po uzoru na K2. Ne ide sada; rok je najkasnije
+1.8 i red u „Otvoreno" je nepromenjen, zajedno sa klauzulom da radna zamena za PowerShell
+živi van repoa dok R1 ne uđe. Razlog odlaganja: R1 piše alat i test, a REZ je seča pravila
+— to su dva taska, ne jedan.
+
+Svaki nalaz koji je REZ otvorio ušao je u „Otvoreno", nijedan nije rešen u istoj sesiji.
+
+### Pitanja (ADR-021, korak 4) — commit 2
+
+**1. R6 je popunjen jednom rečenicom u WORKFLOW §2, a ADR-021 nije dirao — ni telo, ni ⚠️.
+Zašto oznaka ne ide, iako korak 4 pet taskova zaredom nije izveden onako kako ADR kaže?**
+
+Znao, i imenovao cenu koju pitanje nije tražilo. ⚠️ po ADR-045 nosi **merenje koje obara
+tvrdnju**, a ovde ništa nije oboreno. ADR-021 tvrdi da se korak 4 ne preskače i da pitanja
+idu o „zašto"; obe tvrdnje su u 0.7–0.9, checkpointu, R9 i REZ-u ispunjene — pitanja su
+postavljena i odgovorena svaki put. Ono što ADR nije rekao jeste **šta su pitanja kad koda
+nema**: praznina u opsegu, ne pogrešna tvrdnja.
+
+> Oznaka koja kaže „ovo je oboreno" tamo gde ništa nije oboreno **sama je netačna**, a ⚠️
+> koji se stavlja preventivno gubi vrednost koju mu je dao slučaj iz R9 — čitalac prestane
+> da ga čita kao alarm. Praznina se zato popunjava tamo gde se korak izvodi, a ADR ostaje
+> ono što jeste: odluka zašto pitanja uopšte postoje.
+
+**2. R7 ostavlja dve liste koje se ne poklapaju takvima kakve jesu. Šta bi moralo da se
+desi da isto neslaganje postane kvar — i zašto se to ne vidi ni iz jedne liste ponaosob?**
+
+Znao. Kvar nastaje **samo u jednom smeru**: da `settings.json` pusti bez pitanja ono što §8
+zabranjuje — da se u dozvole doda `git reset --hard`, `rebase`, `clean -fd` ili
+`push --force` nad `main`-om, ili da se neka od tih zabrana iz §8 ukloni dok dozvola
+ostane. Tada zabrana i dalje piše u dokumentu, a izvršilac je krši bez ijednog upita, pa
+pravilo postoji samo na papiru.
+
+Iz jedne liste se to ne vidi zato što **nijedna ne tvrdi ništa o drugoj**: §8 govori šta je
+projektu zabranjeno, `settings.json` šta izvršilac sme bez pitanja. Svaka je iznutra
+dosledna i izgleda isto u oba slučaja — i kad je kapija uža i kad je šira. Razlika se vidi
+tek kad se čitaju jedna uz drugu, a to ne radi nijedan test: `settings.json` nije u gitu i
+nijedna kapija ga ne dohvata. Zato ovo i jeste presuda, a ne pravilo sa kapijom.
+
+**3. Ovaj commit svodi blok „Ritam po tasku" na pokazivač, a red o tome da CONVENTIONS §1
+prepričava ADR-030 i ADR-032 ostavlja u „Otvoreno" — isti kvar, ista sesija, dve sudbine.
+Zašto to nije nedoslednost?**
+
+Znao, sa dva razloga. **Prvi je mesto, ne kvar.** `ROADMAP` je plan i stanje; ritam po tasku
+tu nije potreban da bi se plan čitao, pa je prepričavanje čist višak i uklanja se bez
+ijedne posledice. `CONVENTIONS` §1 je vrh hijerarhije i propisuje propagaciju — ono što
+tamo piše o ADR-030 i ADR-032 nosi pravilo koje se primenjuje na licu mesta, pa zamena
+pokazivačem znači odlučiti **koliko teksta sme da ode a da odeljak i dalje bude izvršiv**.
+To je presuda o dokumentu koji rangira sve ostale i traži svoj task.
+
+**Drugi je obim.** REZ je imenovao osam stavki i za svaku postoji zapis zašto ulazi.
+Rešavanje devetog nalaza usput je tačno ono što je plan zabranio. Red u „Otvoreno" znači da
+je nalaz **imenovan, ne zaboravljen** — a to je i cela svrha tog bloka.
+
+### Merenje: red checkpointa nad commitom 2
+
+Klon commita `f818e0d` iz **lokalnog** repoa u scratchpad, van radnog stabla; nov venv,
+`pip install -e ".[dev]"`, pa pozivi punom putanjom iz klona. Windows 11, Python 3.11.9,
+pip 24.0, ruff 0.16.8, pygame 2.6.1, git 2.54.0.windows.1, `core.autocrlf=true`,
+22. 9. 2026.
+
+| Korak | Ishod |
+|---|---|
+| `git clone` | `HEAD` = `f818e0d`, `git status --porcelain` prazan, `core.autocrlf=true` |
+| `pip install -e ".[dev]"` | `Successfully installed chess-0.1.0 pygame-2.6.1 ruff-0.16.8` |
+| `…/.venv/Scripts/python.exe -m unittest discover -s tests` | `Ran 58 tests` → `OK` |
+| `…/.venv/Scripts/ruff.exe check .` | `All checks passed!` |
+| `…/.venv/Scripts/ruff.exe format --check .` | `22 files already formatted` |
+
+Ovo je **treće** merenje reda checkpointa. Prva dva — `b8a35dc` sa pet padova i, posle R9,
+zeleno — ostaju u `ROADMAP`-u i u „Checkpoint faze 0" (CONVENTIONS §1). Četvrti unapred
+imenovan STOP iz plana, „klon nije zelen", **nije se okinuo**. REZ nije dirao `src/`,
+`tests/` ni `assets/`, pa se zeleno odnosi na isti proizvod kao merenje posle R9.
+
+**Ograda, i gde je uža nego u R9.** Klon je meren nad `f818e0d`, a konačan commit se od
+njega razlikuje za redove dopisane u ovaj fajl i u `ROADMAP.md`. Od 58 testova te redove
+čita **jedan** — `tests/test_encoding_bytes.py`, koji nad `docs/**/*.md` traži bajtove
+`EF BB BF` **bilo gde** u fajlu. `ruff` ih ne čita uopšte (`extend-exclude = ["docs"]`), a
+nijedan drugi test ne dodiruje `docs/`. Presuda te jedine kapije nad konačnim tekstom
+izmerena je u radnom stablu neposredno pre `--amend`-a, a `git status` je posle amend-a
+prazan, pa commit nosi iste bajtove. **Klon sam nije ponovljen: regres se imenuje, ne
+zatvara.**
+
+> Ista formulacija u R9 — „klon je meren nad stablom koje se od konačnog razlikuje samo u
+> dva pasusa u `docs/`, koje **ne čita nijedan test**" — netačna je iz istog razloga: K1 ih
+> čita. Nalaz je zaveden u `ROADMAP` „Otvoreno"; telo R9 ostaje kako je zapisano
+> (CONVENTIONS §1, ADR-045).

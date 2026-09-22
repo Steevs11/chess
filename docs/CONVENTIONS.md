@@ -44,6 +44,9 @@ DECISIONS.md > PROTOCOL.md > CONVENTIONS.md > PROJECT.md > ROADMAP.md > POJMOVNI
   Protokol je ugovor sa spoljnim svetom; konvencije su unutrašnja stvar.
 - **`POJMOVNIK.md`** nema autoritet. On objašnjava, ne propisuje. Ako se ne
   slaže sa bilo čim iznad sebe, POJMOVNIK je taj koji se ispravlja.
+- **`WORKFLOW.md` nije u rangu** — ne propisuje proizvod nego tok rada. Ali ne sme da
+  protivreči nijednom dokumentu sa liste; kad se sudare, pobeđuje dokument sa liste.
+  Propagacija ga već obavezuje: „Pravilo propagacije (ADR-030)", pasus „Proširenje".
 
 ### Odeljak koji čita alat nosi rečenicu koja to kaže
 

@@ -12,8 +12,8 @@ Ovaj fajl je i plan i trenutno stanje. Claude Code ga ažurira na kraju svakog t
 ## TRENUTNO
 
 ```
-Radimo:    REZ
-Sledeće:   1.1 — core/types.py
+Radimo:    1.1 — core/types.py
+Sledeće:   1.2 — core/board.py
 Otvoreno:  git status ne vidi razliku između indeksa i radnog stabla kad se stat
            poklopi (izmereno u R9) — u radnom stablu to ne hvata nijedna kapija;
            jedina koja hvata je suite na svežem klonu
@@ -34,13 +34,6 @@ Otvoreno:  git status ne vidi razliku između indeksa i radnog stabla kad se sta
            postoji van repoa, u memoriji planskog chata, i briše se commitom
            koji R1 zatvara. Ljuska projekta i dalje nije proglašena, pa merenje
            važi za sesiju, ne kao propis
-           REZ R5: budžet u redovima — presuda da li ostaje kao alat
-           REZ R6: ADR-021 korak 4 nema klauzulu opsega („o upravo napisanom
-           kodu"), a 0.7–0.9 ga tako ne rade — presuda
-           REZ R7: settings.json naspram §8 — git show/switch nisu u §8,
-           push --force je širi nego §8; usaglašavanje dve liste, ne svođenje
-           (ADR-047) — presuda
-           REZ R8: razlog granice K1 i WORKFLOW.md van hijerarhije u §1
            .claude/rules/ traži restart posle ažuriranja — potvrđeno na v2.1.259,
            i dalje tvrdnja o tuđem sistemu, pa ostaje otvoreno
            korpus 3 (memorija planskog chata) svodi planski chat posle commita 0.9;
@@ -55,7 +48,13 @@ Otvoreno:  git status ne vidi razliku između indeksa i radnog stabla kad se sta
            CONVENTIONS §2 nema red za client/__main__.py, ni komandu za pokretanje
            klijenta — obe čekaju task u kom se ta ulazna tačka napiše (3.1)
            CONVENTIONS §1 prepričava ADR-030 i ADR-032 umesto da pokazuje na njih
-           blok „Ritam po tasku" u ovom fajlu prepričava ADR-021 — isti oblik
+           ograda uz R9 („klon je meren nad stablom koje se od konačnog razlikuje
+           samo u dva pasusa u docs/, koje ne čita nijedan test") je netačna:
+           tests/test_encoding_bytes.py čita docs/**/*.md i traži EF BB BF bilo
+           gde u fajlu. Nalaz iz REZ-a; telo R9 ostaje kako je zapisano. Bez roka
+           Legenda u ovom fajlu prepričava PROJECT §9 („Checkpoint je objektivan
+           uslov") — isti oblik kao blok „Ritam po tasku", koji je REZ sveo na
+           pokazivač; bez roka
            .claude/skills/layer-check/SKILL.md:16–17 opisuje ponašanje alata
            (ADR-044: briše se); perft/SKILL.md:26–28 ponavlja „Kad se broj ne
            poklopi" iz faze 1 — van obima 0.9, koji je sveo korpus 2
@@ -63,7 +62,7 @@ Otvoreno:  git status ne vidi razliku između indeksa i radnog stabla kad se sta
            (v2.1.274, 17. 9. 2026, faza-0 §0.9); predloženo merenje: obrisati
            fajl, pa upis u nepostojeći
            assets/pieces/LICENSE.txt svoje odricanje zove „canonical" a nije (iz 0.6)
-Grana:     main
+Grana:     faza-1
 ```
 
 ---
@@ -74,9 +73,8 @@ Grana:     main
 - Svaka podfaza = jedan task = jedna sesija = jedan commit
 - **Checkpoint** je objektivan uslov. Ne prelazi se dalje dok ne prođe.
 
-**Ritam po tasku (ADR-021):** plan mod → implementacija → objašnjenje u
-3–5 rečenica → **2–3 pitanja korisniku o napisanom kodu** → odgovori → commit.
-Korak sa pitanjima se ne preskače.
+**Ritam po tasku** stoji u ADR-021, a njegov tok kroz jednu sesiju u `WORKFLOW.md` §2.
+Ovde se ne prepisuje: kopija zastari, a nijedna propagacija je ne dohvata (ADR-044).
 
 ---
 
@@ -97,6 +95,13 @@ prolazi (uključujući `test_layers.py`), `ruff check .` i `ruff format --check 
 > 2.54.0.windows.1, `core.autocrlf=true`, 20. 9. 2026): `Ran 58 tests` → `OK`,
 > `All checks passed!`, `22 files already formatted`. Zapis i uslovi:
 > `docs/faze/faza-0.md`, „R9 — pet sha1 vrednosti".
+
+> **Izmereno posle REZ-a: i dalje prolazi na svežem klonu.** Oba merenja iznad ostaju
+> (CONVENTIONS §1). REZ nije dirao ni `src/`, ni `tests/`, ni `assets/` — samo `docs/`.
+> Klon commita `f818e0d` iz lokalnog repoa, van radnog stabla, u novom venv-u (Windows 11,
+> Python 3.11.9, pip 24.0, ruff 0.16.8, pygame 2.6.1, git 2.54.0.windows.1,
+> `core.autocrlf=true`, 22. 9. 2026): `Ran 58 tests` → `OK`, `All checks passed!`,
+> `22 files already formatted`. Zapis, uslovi i ograda: `docs/faze/faza-0.md`, odeljak „REZ".
 
 - [x] 0.1 Struktura foldera, `src/chess/` sa `__init__.py`, `tests/`, `docs/`, `assets/`, `tools/`
 - [x] 0.2 `pyproject.toml` sa **`pygame` kao zavisnošću**, `ruff` (`line-length = 100`),
