@@ -139,8 +139,9 @@ transpozicionoj tabeli bota.
 ## ADR-022 — `Move` nosi `kind`
 
 **Odluka.** `MoveKind`: `NORMAL`, `CAPTURE`, `DOUBLE_PAWN_PUSH`, `EN_PASSANT`, `CASTLE`,
-`PROMOTION`; generator ga popunjava. `from_uci()` ne može da odredi `kind` bez table, pa
-se potez spolja uvek traži u listi legalnih poteza, nikad ne izvršava direktno.
+`PROMOTION`; generator ga popunjava. Identitet poteza je (from, to, promotion); `kind` je
+izveden i ne ulazi u `__eq__`/`__hash__`, pa se potez sa žice nalazi sa `legal_moves.index()`
+i izvršava generisani primerak.
 **Zašto.** `make`/`unmake` postaju grananje po vrsti; `legal_moves` može da izrazi četiri
 promocije; klijent zna kad da otvori dijalog bez ijednog pravila.
 **Cena.** Jedan enum.

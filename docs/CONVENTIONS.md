@@ -170,7 +170,9 @@ class ProtocolError(Exception): ...       # protocol/codec.py
 ```
 
 - `core` baca samo `ChessError` potomke; `protocol` baca `ProtocolError`; server ih
-  pretvara u `ERROR` sa kodom iz `PROTOCOL.md`.
+  pretvara u `ERROR` sa kodom iz `PROTOCOL.md`. Pogrešan poziv (loš argument) je običan
+  `ValueError`/`TypeError`, kao kod `t()` (ADR-040) — granica proverava ulaz pre poziva u
+  `core`.
 - Nikad goli `except:`; `except Exception` samo na granici procesa (glavna petlja servera),
   uz log, pa nastavak ili ponovno bacanje.
 - Poruka izuzetka je engleska i konkretna — `f"no piece on {to_algebraic(sq)}"`, ne

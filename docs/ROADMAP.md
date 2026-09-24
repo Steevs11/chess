@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.1 — core/types.py
-Sledeće:   1.2 — core/board.py
+Radimo:    1.2 — core/board.py
+Sledeće:   1.3 — core/movegen.py
 Otvoreno:  —
 ```
 
@@ -31,7 +31,7 @@ svežem klonu u novom venv-u i ne prelazi se dalje dok ne prođe.
 **Checkpoint:** podrazumevani perft skup iz ADR-026 se poklapa; spori skup prolazi
 sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
 
-- [ ] 1.1 `core/types.py` — `Color`, `PieceType`, `Piece`, `Move`, `MoveKind`,
+- [x] 1.1 `core/types.py` — `Color`, `PieceType`, `Piece`, `Move`, `MoveKind`,
       `CastlingRights`, `Square = int` (0–63, a1 = 0, h8 = 63; ADR-013) sa `file_of()`,
       `rank_of()`, `to_algebraic()`, `from_algebraic()`.
       `Move` je `frozen=True, slots=True` i nosi `kind` (ADR-022):
@@ -39,7 +39,6 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
       plus `from_uci()` i `to_uci()` — `from_uci()` ne može da odredi `kind` bez table, pa se
       potez spolja uvek traži u listi legalnih poteza.
       `ChessError` hijerarhija: `IllegalMoveError`, `InvalidFenError`, `InvalidSanError`.
-      Nov modul = nov red u CONVENTIONS §2 tabeli, u istom commitu.
 - [ ] 1.2 `core/board.py` — raspored, **make/unmake**, `UndoRecord`, **Zobrist heš**; `core/fen.py`.
       `Board` je mutabilan (ADR-006). `UndoRecord` nosi pojedenu figuru **i njeno polje**,
       prethodna prava na rokadu, prethodno ep polje, prethodni brojač polupoteza, prethodni
