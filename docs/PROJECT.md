@@ -1,24 +1,19 @@
 # PROJEKAT — šahovska aplikacija
 
-Ovaj dokument je kompletan opis projekta. Čita se jednom, na početku.
+Kompletan opis projekta. Čita se jednom, na početku.
 
 | Dokument | Sadržaj |
 |---|---|
-| `CLAUDE.md` | pokazivači na `docs/`, van gita (ADR-044) |
-| `docs/CONVENTIONS.md` | konvencije projekta — obavezuju kod |
-| `docs/WORKFLOW.md` | tok rada, kada nova sesija |
-| `docs/ROADMAP.md` | lista taskova i trenutno stanje |
+| `docs/PROJECT.md` | šta pravimo, šahovska pravila, arhitektura |
 | `docs/PROTOCOL.md` | ugovor između servera i klijenta |
-| `docs/DECISIONS.md` | sve odluke sa obrazloženjem (ADR) |
-| `docs/POJMOVNIK.md` | objašnjenja termina — FEN, Zobrist, perft |
+| `docs/CONVENTIONS.md` | kako se piše kod |
+| `docs/DECISIONS.md` | zašto je odlučeno baš tako (ADR) |
+| `docs/ROADMAP.md` | lista taskova i trenutno stanje |
+| `docs/WORKFLOW.md` | kako izgleda jedna sesija |
 
-**Hijerarhija kad se dokumenti ne slažu** stoji u `CONVENTIONS.md` §1
-(ADR-032). Ovaj dokument joj je podređen.
-
-ADR koji obori nešto napisano u ovom dokumentu ispravlja ga u **istom commitu**.
+**Obim:** faze 0–3, do zahteva mentora. Faze 4–7 su pravac, ne posao.
 
 ---
-
 ## 1. Šta pravimo
 
 Šahovsku aplikaciju za dva igrača preko mreže. Cela šahovska logika pisana od nule.
@@ -102,13 +97,8 @@ Veb klijent → baza i nalozi → bot → deploy.
 **Pokretanje: `pip install -e ".[dev]"`** — jedna komanda, instalira paket u
 editable režimu i povlači `pygame` i `ruff` iz `pyproject.toml`. To je sve.
 
-> `src/` raspored znači da Python ne vidi paket bez instalacije. Zato `-e .`,
-> a ne samo `pip install pygame` (ADR-029).
->
-> `[dev]` nije opcion iako se zove `optional-dependencies`: bez njega nema
-> `ruff`-a, a checkpoint svake faze traži `ruff check .` i
-> `ruff format --check .` (ADR-036). Navodnici su deo komande — i `bash` i
-> PowerShell drugačije čitaju gole uglaste zagrade.
+> Bez `-e` Python ne vidi paket (`src/` raspored); bez `[dev]` nema `ruff`-a, pa checkpoint
+> ne prolazi. Navodnici su deo komande (ADR-029).
 
 ### Svesno odbijeno
 
@@ -160,7 +150,7 @@ chess/
 ├── README.md                    (srpski)
 ├── src/chess/
 │   ├── core/
-│   │   ├── types.py             Color, PieceType, Square, Move, MoveKind, CastlingRights
+│   │   ├── types.py             Color, PieceType, Piece, Square, Move, MoveKind, CastlingRights
 │   │   ├── board.py             raspored, make/unmake
 │   │   ├── movegen.py           generisanje poteza
 │   │   ├── attacks.py           is_square_attacked, is_in_check
@@ -202,12 +192,14 @@ chess/
 │   │   └── PROVENANCE.txt       naš — verzija, izvor, sha256 (ADR-039)
 │   └── i18n/sr.json
 ├── tools/
-│   ├── perft.py                 perft + perft_divide (u gitu, ADR-028)
+│   ├── check.py                 sve kapije jednom komandom (CONVENTIONS §9)
+│   ├── perft.py                 perft + perft_divide (ADR-007)
 │   ├── cli_client.py            CLI klijent za testiranje servera (ADR-017)
 │   ├── layer_check.py           provera uvoza iz CONVENTIONS §2 (ADR-033)
+│   ├── check_commit_trailers.py trajleri u porukama commita (ADR-047)
 │   └── rasterize_pieces.py      SVG → PNG, dve veličine (ADR-038)
 ├── docs/
-│   └── faze/                    faza-N.md, nastaje po ADR-021
+│   └── faze/                    faza-N.md, jedan kratak fajl po fazi
 └── tests/
 ```
 
@@ -351,189 +343,48 @@ Dama 9 · top 5 · lovac 3 · skakač 3 · pešak 1. Prikazuje se razlika u mate
 
 | | Radi |
 |---|---|
-| **Korisnik** (student, arhitekta) | donosi odluke · čita svaki diff pre commita · objašnjava kod nazad na kraju faze · pušta testove · upravlja sesijama |
-| **Claude Code** | piše kod po odobrenom planu · pita kad je dvosmisleno · objašnjava posle izmene · ne menja testove da prođu · vodi `ROADMAP.md` i `DECISIONS.md` |
-| **Claude.ai (browser)** | arhitektura · objašnjenja · pregled diffova · provera razumevanja · debug razgovori |
+| **Student** (arhitekta) | donosi odluke · čita ceo diff pre commita · objašnjava kod svojim rečima na kraju faze |
+| **Claude Code** | piše testove i kod po odobrenom planu · pušta `tools/check.py` · ne menja testove da prođu · vodi `ROADMAP.md` i `DECISIONS.md` · piše `faza-N.md` na kraju faze |
+| **Claude.ai** (planski chat) | arhitektura · objašnjenja · pregled diffova · debug razgovori |
 
-Claude je vodeći inženjer po načinu rada: predlaže, ima mišljenje, ne čeka pitanje,
-kaže kad je nešto pogrešno. Ali **odluke ostaju kod korisnika**, jer on brani
-projekat i jer je učenje deklarisani cilj.
+Claude je vodeći inženjer: predlaže, ima mišljenje, kaže kad je nešto pogrešno. Odluke
+ostaju kod studenta, jer on brani projekat i jer je razumevanje deklarisani cilj.
 
-### Obrnuti pregled
-
-Na kraju svake faze korisnik objašnjava kod **svojim rečima**. Gde zapne, tu se
-vraća. To je jedini mehanizam koji stvarno rešava odbranu — sve ostalo je inženjerstvo.
+**Obrnuti pregled.** Na kraju faze (ili na kraju projekta) student objašnjava kod svojim
+rečima, chat ispituje; gde zapne, tu se vraća na kod. To je mehanizam odbrane. Ne zapisuje
+se.
 
 ---
 
 ## 9. Faze i checkpointovi
 
-Checkpoint je **objektivan uslov**, ne osećaj. Ne prelazi se dalje dok ne prođe. Meri se na
-**svežem klonu, u novom venv-u** — zeleno u radnom stablu nije dokaz o proizvodu nego o
-jednom disku; zapis merenja je `docs/faze/faza-0.md`, „Checkpoint faze 0" i „R9".
+Checkpoint je objektivan uslov; meri se na svežem klonu u novom venv-u i ne prelazi se
+dalje dok ne prođe.
 
 | Faza | Sadržaj | Checkpoint |
 |---|---|---|
-| 0 | Skelet, git, ruff | `unittest` prolazi, `ruff` čist |
-| 1 | **Engine** — cela šahovska logika | **perft se poklapa na skupu iz ADR-026** |
-| 2 | Protokol + server (TCP) | dva `tools/cli_client.py` terminala odigraju partiju |
-| 3 | **Pygame klijent** | **dva prozora igraju → video za mentora** |
-| 4 | Veb klijent (WebSocket + vanilla JS) | dva browser taba igraju |
-| 5 | SQLite, nalozi, lobby, istorija | partija preživi restart servera |
-| 6 | Bot | 100 partija bez ilegalnog poteza |
-| 7 | Deploy (opciono) | |
+| 0 | skelet, git, ruff, kapije | `python tools/check.py` zelen — **prošao** |
+| 1 | **engine** — cela šahovska logika | perft se poklapa na skupu iz ADR-026 |
+| 2 | protokol + server (TCP) | dva `tools/cli_client.py` terminala odigraju partiju sa rokadom i matom |
+| 3 | **pygame klijent** | dva prozora igraju do mata → **video za mentora** |
 
-Faze 0–3 su pred mentora. Faze 4–7 posle predaje.
+Posle predaje, nije u obimu: veb klijent (4), SQLite i nalozi (5), bot (6), deploy (7).
+Arhitektura ih ne isključuje: nov klijent je nov adapter, bot je treća implementacija
+`Player`, baza ide iza `GameRepository` interfejsa (ADR-002, ADR-009).
 
-Detaljna lista taskova: `docs/ROADMAP.md`.
+Lista taskova: `docs/ROADMAP.md`.
 
 ---
 
-## 10. Baza — kada i zašto
+## 10. Licence
 
-**Faze 0–4: bez baze.** Partije žive u memoriji servera.
+- **Figure** — Cburnett set sa Wikimedia Commons, BSD-3 (autor nudi izbor; ne copyleft).
+  SVG originali su u repou kao izvor, PNG-ovi u dve veličine su artefakt iz
+  `tools/rasterize_pieces.py` (ADR-038). `assets/pieces/LICENSE.txt` nosi `sha1` svakog SVG-a.
+- **Font** — DejaVu Sans 2.37, sopstvena licenca (Bitstream + Arev); `assets/fonts/LICENSE.txt`
+  je kopija iz arhive bajt u bajt, naši podaci o poreklu su u `PROVENANCE.txt`.
+- **Naš kod** — BSD-3-Clause u `LICENSE`; `THIRD-PARTY.txt` kaže šta taj fajl ne pokriva;
+  ista oznaka je u `pyproject.toml` (ADR-042, ADR-043).
 
-**Faza 5:** SQLite (`sqlite3`, stdlib). Razlog nije "lepo je imati" nego što
-refresh stranice bez perzistencije gubi partiju.
-
-```sql
-players(id, username, password_hash, rating, created_at)
-games(id, white_id, black_id, result, termination,
-      time_control, pgn, started_at, ended_at)
-```
-
-Partije **u toku** ostaju u memoriji. U bazu se upisuje **gotova partija kao PGN**.
-
-### Dve stvari koje se rade od početka faze 5
-
-**Repository pattern** — server nikad ne piše SQL:
-
-```python
-class GameRepository(Protocol):
-    def save_game(self, game: FinishedGame) -> GameId: ...
-    def get_game(self, game_id: GameId) -> FinishedGame | None: ...
-    def list_for_player(self, player_id: PlayerId) -> list[GameSummary]: ...
-```
-
-`SqliteGameRepository`, kasnije `PostgresGameRepository`, i odmah
-`InMemoryGameRepository` za testove — testovi ne diraju disk.
-
-**Migracije bez alata** — tabela `schema_version` + `migrations/` sa numerisanim
-SQL fajlovima. Server primeni što nedostaje pri startu. ~40 linija, bez Alembic-a.
-
-### Zašto SQLite a ne SQL Server / Postgres
-
-Prethodni projekat korisnika je pukao kod druge osobe iz četiri razloga:
-SQL Server nije bio instaliran · kredencijali su bili u `.env` koji nije u gitu ·
-šema nije postojala · ODBC drajver nije bio instaliran.
-
-Princip: **sve što je projektu potrebno mora biti ili u repozitorijumu, ili
-instalirano jednim `pip`, ili napravljeno automatski pri prvom pokretanju.**
-
-SQLite obara sva četiri uzroka. Konfiguracija ide preko promenljive okruženja
-sa razumnim podrazumevanim:
-
-```python
-DB_PATH = Path(os.environ.get("CHESS_DB_PATH", "chess.db"))
-```
-
-Isti kod radi lokalno i na VPS-u. `chess.db` je u `.gitignore` — isporučuje se
-šema, ne podaci.
-
-Postgres tek ako zatreba više servera nad istom bazom, replikacija, ili hosting
-bez trajnog diska. Repository pattern čini tu migraciju jednodnevnom.
-
----
-
-## 11. Put ka vebu i botu
-
-### Veb (faza 4)
-
-1. WebSocket adapter pored TCP-a; server sluša oba: `--tcp 5000 --ws 8000`
-2. Serviranje statike
-3. `net.js` i `state.js` — **prevod** iz Pythona, ne novi dizajn
-4. `board.js` + CSS Grid; iste SVG figure, isti `sr.json`
-
-Procena preživljavanja koda: `core` 100% · `protocol` 100% · `server` ~85% ·
-klijentska logika prevod 1:1 · samo sloj crtanja se piše iznova.
-
-### Bot (faza 6)
-
-`BotPlayer` implementira isti `Player` interfejs kao `RemotePlayer`. Session sloj
-ne zna razliku — bot vs čovek, bot vs bot i čovek vs čovek rade bez izmena servera.
-
-Zato je make/unmake obavezno već u fazi 1: bot poziva generator miliona puta
-u sekundi tokom pretrage.
-
-Cilj kasnije: **UCI** interfejs, da bot može da igra protiv Stockfish-a.
-
-Avatar bota se crta u klijentu koji je aktivan. SVG/PNG materijal se koristi u oba.
-
----
-
-## 12. Licence
-
-Dva `LICENSE.txt` fajla, ne jedan — figure i font nemaju istu licencu ni istog
-nosioca prava.
-
-### Figure — `assets/pieces/LICENSE.txt`
-
-Cburnett set sa Wikimedia Commons, kategorija „SVG chess pieces/Standard
-transparent". **SVG originali ostaju u repozitorijumu**, a PNG-ovi se iz njih
-generišu u dve veličine (80 px za tablu, 32 px za pojedene figure iz 3.7) alatom
-`tools/rasterize_pieces.py`. SVG je izvor, PNG je artefakt; PNG bez izvora je isto
-što i commitovan `.exe`, a fazi 4 trebaju isti SVG-ovi za veb klijenta (§11.4).
-
-Rasterizuje se unapred jer nanosvg iz SDL_image-a crta SVG u razmeri koju fajl
-deklariše i **ne skalira ga na traženo platno** — izmereno u 0.4, ne pretpostavljeno
-(ADR-038).
-
-Autor nudi **tri** licence — GFDL, 3-clause BSD i GPL, uz „You may select the
-license of your choice"; CC BY-SA 3.0 nije autorova, nego je dodata migracijom
-GFDL licenci iz 2009. **Biramo BSD-3**: obična atribucija, bez copyleft obaveze.
-Treći uslov BSD-3 zabranjuje korišćenje autorovog imena za promociju — atribucija
-da, reklamiranje ne.
-
-### Font — `assets/fonts/LICENSE.txt`
-
-DejaVu Sans 2.37 (`DejaVuSans.ttf` i `DejaVuSans-Bold.ttf`), sa zvanične GitHub
-releases stranice projekta. Mora da podržava č ć š ž đ; ne oslanjati se na
-podrazumevani pygame font bez provere.
-
-DejaVu **nije jedna licenca i nije BSD**: osnovni fontovi su © Bitstream, DejaVu
-izmene su u javnom domenu, glifovi iz Arev fontova su © Tavmjong Bah. Licenca traži
-da obaveštenje o autorskim pravima, žigu i sama dozvola idu uz **svaku** kopiju —
-zato drugi `LICENSE.txt` mora da postoji. Kopiran je iz arhive bajt u bajt i ne
-prepisuje se ručno.
-
-Zato verzija, izvorna arhiva i `sha256` vrednosti ne stoje u njemu nego u
-`assets/fonts/PROVENANCE.txt`, pored njega. `LICENSE.txt` je **tuđi** dokument;
-naša tvrdnja umetnuta u njega putovala bi dalje kao deo licence kod svakoga ko ga
-prekopira. `PROVENANCE.txt` je naš, i na jednoj rečenici objašnjava zašto se ta dva
-fajla različito tretiraju (ADR-039).
-
-### Naš kod — `LICENSE` i `THIRD-PARTY.txt` u korenu
-
-Sve iznad govori o **tuđem** materijalu. Za naš kod je do 0.6 važilo podrazumevano
-„sva prava zadržana", što na javnom repozitorijumu nije odluka nego propust.
-
-`LICENSE` u korenu je **BSD-3-Clause**, isti tekst pod kojim uzimamo figure — tako su
-uslovi isti kroz celo stablo i razlikuje se samo nosilac prava. Copyleft bi
-protivrečio tome što smo za te iste figure svesno odbili ponuđeni GPL. Telo je
-kanonski SPDX tekst, preuzet a ne prekucan, neizmenjen osim reda o autorskim pravima;
-klauzula 3 ostaje kanonska, bez umetanja imena.
-
-`LICENSE` nosi **uslove i ništa drugo**. Obim — šta taj fajl ne pokriva i gde onda
-stoje uslovi — nosi `THIRD-PARTY.txt` pored njega. Isti odnos kao `LICENSE.txt` naspram
-`PROVENANCE.txt` kod fonta, iz istog razloga: naša rečenica umetnuta u standardni tekst
-licence putovala bi dalje kao deo uslova.
-
-Razlog zbog kog obim uopšte mora da se izriče: `LICENSE` imenuje jednog nosioca i jedne
-uslove, a prva klauzula BSD-3 traži da se zadrži **baš to** obaveštenje koje je uz
-materijal došlo, dok treća zabranjuje promociju imenom nosioca. Isti tekst uz dva
-nosioca obavezuje dvaput, prema dve različite strane.
-
-`THIRD-PARTY.txt` sadrži blok koji se **čita mašinski**: `tests/test_assets.py` poredi
-spisak putanja u njemu sa direktorijumima na disku koji nose svoj `LICENSE.txt`, u oba
-smera. Kriterijum je taj fajl, pa `assets/i18n` ispada sam od sebe. Ista licenca stoji i
-u `pyproject.toml` kao SPDX izraz, i test veže to dvoje da ne odlutaju (ADR-042, ADR-043).
+Tuđi materijal se čuva bajt u bajt: `.gitattributes` isključuje pretvaranje prelazaka reda,
+a `tests/test_assets.py` proverava heševe, `.gitattributes` i lanac licenci (ADR-039).

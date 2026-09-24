@@ -1,1714 +1,296 @@
 # ODLUKE (ADR)
 
-*Architecture Decision Records.* Svaka odluka sa kontekstom i posledicama.
-Dopunjava se kad god se donese arhitektonska odluka. Append-only — stare odluke
-se ne brišu, nego se nadograđuju novim ADR-om koji ih menja.
+Odluke o proizvodu, svaka sa razlogom i cenom. Oblik: **Odluka · Zašto · Cena**.
+Promenjena odluka se ispravlja na mestu, uz jednu rečenicu šta je bilo i kad je promenjeno.
 
-Format: **Kontekst** (zašto je pitanje uopšte postavljeno) → **Odluka** →
-**Posledice** (šta smo dobili, šta smo izgubili).
-
----
-
-## ADR-001: Server je autoritet nad pravilima
-
-**Kontekst.** Mentor traži da se proveravaju dozvoljeni potezi. Logika može da
-živi u klijentu ili u serveru.
-
-**Odluka.** Sva šahovska pravila su na serveru. Klijent šalje nameru, server
-validira i emituje stanje. Klijent ne sadrži nijedno šahovsko pravilo.
-
-**Posledice.** Svaki budući klijent (veb, mobilni) je trivijalan jer ne mora da
-implementira pravila. Klijent ne može da vara. Cena: jedno mrežno kruženje po
-potezu, što je na `localhost` nemerljivo.
+Brojevi koji nedostaju su odluke o procesu rada, spojene u proizvodne (019→007, 031→013,
+036→029, 037→033) ili ukinute (012, 020, 021, 028, 030, 032, 044, 045, 046) REZ-om 2
+(ADR-048). Pun tekst svih 47 stoji u istoriji gita do commita `4770159`.
 
 ---
 
-## ADR-002: Ports and adapters
+## ADR-001 — Server je autoritet nad pravilima
 
-**Kontekst.** Projekat treba da preraste iz desktop aplikacije u sajt, i kasnije
-da dobije bota. Ne sme se pisati dvaput.
+**Odluka.** Sva šahovska pravila su na serveru. Klijent šalje nameru, server validira i
+emituje stanje; klijent ne sadrži nijedno pravilo.
+**Zašto.** Mentor traži proveru dozvoljenih poteza; klijent ne može da vara; svaki budući
+klijent je trivijalan.
+**Cena.** Jedno mrežno kruženje po potezu — na `localhost` nemerljivo.
 
-**Odluka.** `core` i session sloj ne znaju ko ih poziva. Transport je adapter.
-Smer zavisnosti: `client → protocol → core`, nikad obrnuto.
+## ADR-002 — Ports and adapters
 
-**Posledice.** Veb klijent, bot i eventualni mobilni klijent su adapteri, ne
-prepisivanja. Procena preživljavanja koda pri prelasku na veb: `core` 100%,
-`protocol` 100%, `server` ~85%. Cena: nešto više fajlova nego kod monolita.
+**Odluka.** `core` i session sloj ne znaju ko ih zove; transport je adapter. Smer uvoza
+`client/server → protocol → core → stdlib`, nikad obrnuto.
+**Zašto.** Veb klijent, bot i drugi transport su adapteri, ne prepisivanje.
+**Cena.** Više fajlova nego kod monolita.
 
----
+## ADR-003 — Sirovi `socket`, bez framework-a
 
-## ADR-003: Sirovi `socket` umesto framework-a
+**Odluka.** `socket` iz standardne biblioteke, JSON razdvojen sa `\n`. FastAPI, Flask,
+uvicorn, Pydantic odbijeni. Model konkurentnosti je u ADR-016 (ranije `threading`).
+**Zašto.** Mentor je tražio socket-e; cilj je razumeti granicu sistema, pa se validacija
+poruka piše sama (~80 linija).
+**Cena.** Ono što bi Pydantic dao besplatno pišemo ručno.
 
-> ⚠️ **Delimično zamenjeno ADR-om 016.** Izbor `socket`-a važi. Model
-> konkurentnosti ne — umesto `threading` koristi se jednonitni `selectors`
-> event loop.
+## ADR-004 — pygame klijent prvi, veb kasnije
 
-**Kontekst.** Mentor je tražio socket-e. Kandidati: `socket` + `threading`,
-FastAPI, Flask, `websockets`.
+**Odluka.** Faza 3 je pygame. `net.py` i `state.py` se pišu bez pygame-a da bi se, ako
+ikad dođe veb klijent (vanilla JS, bez build koraka), preveli 1:1.
+**Zašto.** Zahtev mentora se ispunjava u jednom jeziku sa jednom zavisnošću.
+**Cena.** Sloj crtanja bi se za veb pisao drugi put.
 
-**Odluka.** `socket` + `threading` iz standardne biblioteke, JSON razdvojen
-znakom `\n`. FastAPI, uvicorn i Pydantic svesno odbijeni — korisnik ih već zna
-i traži jednostavnije tehnologije.
+## ADR-005 — `unittest`, ne `pytest`
 
-**Posledice.** Nula zavisnosti za mrežni sloj. Zahtev mentora ispunjen doslovno.
-Validaciju poruka pišemo sami (~80 linija) umesto da je dobijemo od Pydantic-a —
-što je i namera, jer korisnik treba da razume granicu sistema.
+**Odluka.** Standardna biblioteka; tabele kroz `subTest()`.
+**Zašto.** Nula zavisnosti za testove; `pytest` može da ih pokrene kad zatreba.
+**Cena.** Verboznije.
 
----
+## ADR-006 — make/unmake umesto kopiranja table
 
-## ADR-004: pygame klijent prvi, veb kasnije
+**Odluka.** Potez se odigra na istoj tabli i vrati. `Board` je mutabilan; `UndoRecord`
+čuva šta je promenjeno.
+**Zašto.** Perft dubine 5 traje minute umesto desetina minuta; bot bi sa kopiranjem bio
+neupotrebljiv.
+**Cena.** `unmake` mora tačno da vrati rokadu, en passant i brojač polupoteza — perft to hvata.
 
-**Kontekst.** Krajnji cilj je sajt. Ali kratkoročni prioritet je zahtev mentora,
-a korisnik je tražio malo tehnologija i sve u Pythonu.
+## ADR-007 — Perft kao dokaz ispravnosti, alat od 1.3
 
-**Odluka.** Faza 3 je pygame klijent. Faza 4 je veb klijent u vanilla JS
-(bez React-a, bez Node-a, bez build koraka).
+**Odluka.** Ispravnost generatora se dokazuje perft brojevima sa Chess Programming Wiki.
+`tools/perft.py` sa `perft_divide` postoji od taska 1.3 i pokreće se posle svake izmene
+generatora; 1.8 je formalni checkpoint. Skup i dubine: ADR-026.
+**Zašto.** Bag se hvata u tasku u kom nastane i lokalizuje po korenskom potezu.
+**Cena.** Perft mora biti brz (ADR-006).
 
-**Posledice.** Klijentski sloj se piše dvaput — ukupno oko nedelju dana više nego
-da se odmah išlo na veb. Zauzvrat: faze 0–3 su u jednom jeziku, sa jednom
-zavisnošću, i mentorov zahtev je ispunjen najdirektnije mogućim putem.
-`net.py` i `state.py` pišu se **bez pygame-a** baš zato da bi se kasnije preveli
-1:1 u JavaScript.
+## ADR-008 — `RuleSet` sa profilima `online` i `fide`
 
----
+**Odluka.** Pravila remija su konfiguracija. `online` (podrazumevan): trostruko ponavljanje
+i 50 poteza automatski; 75/petostruko se ne implementiraju. `fide`: striktno po FIDE.
+**Zašto.** Online platforme se namerno razlikuju od FIDE; ponašanje je eksplicitno.
+**Cena.** Jedan sloj konfiguracije.
 
-## ADR-005: `unittest` umesto `pytest`
+## ADR-009 — SQLite kroz `GameRepository` (faza 5, posle predaje)
 
-**Kontekst.** `pytest` je industrijski standard, ali je dodatna zavisnost.
+**Odluka.** `sqlite3` iz stdlib-a; server ne piše SQL nego zove `GameRepository`, sa
+`InMemoryGameRepository` za testove; migracije kao numerisani SQL fajlovi; putanja iz
+`CHESS_DB_PATH`.
+**Zašto.** Sve što projektu treba mora biti u repou, jednom `pip` komandom ili napravljeno
+pri prvom pokretanju — prethodni projekat je pukao kod druge osobe na SQL Server + ODBC + `.env`.
+**Cena.** Interfejs sa jednom implementacijom.
 
-**Odluka.** `unittest` iz standardne biblioteke. Perft tabele kroz `subTest()`.
+## ADR-010 — Tekst interfejsa u `sr.json`
 
-**Posledice.** Nula zavisnosti za testove, `python -m unittest discover` radi bez
-instalacije. Verboznije nego `pytest`. `pytest` može da pokrene `unittest` testove,
-pa nijedna vrata nisu zatvorena.
+**Odluka.** Nijedan tekst vidljiv korisniku nije u kodu; ključevi u `assets/i18n/sr.json`.
+Logovi na engleskom bez dijakritika. Font DejaVu Sans.
+**Zašto.** Isti fajl bi čitao i veb klijent; Windows konzola puca na č ć š ž đ.
+**Cena.** Jedan skok kroz `t()` po tekstu.
 
----
+## ADR-011 — Lobby poruke od faze 2
 
-## ADR-006: make/unmake umesto kopiranja table
+**Odluka.** `LOBBY_JOIN`, `LOBBY_STATE`, `MATCH_FOUND` postoje od faze 2; server samo
+spari prva dva u redu.
+**Zašto.** Kasnije dodavanje bi lomilo klijente.
+**Cena.** ~20 linija.
 
-**Kontekst.** Pri generisanju legalnih poteza treba proveriti da li potez ostavlja
-kralja u šahu. Najjednostavnije je kopirati tablu, odigrati, proveriti.
+## ADR-013 — `Square` je `int`, bez type checkera
 
-**Odluka.** Potez se odigra na istoj tabli i vrati (`make` / `unmake`).
+**Odluka.** `Square = int` (0–63, a1 = 0, h8 = 63) — običan alias, ne `NewType` ni
+dataclass; imenovane konstante i `file_of()`, `rank_of()`, `to_algebraic()`,
+`from_algebraic()`. `Move` ostaje `frozen=True, slots=True`. mypy se ne koristi; hintovi
+su dokumentacija.
+**Zašto.** Perft dubine 5 obilazi 4,8 miliona čvorova — desetine miliona `Square` objekata
+su preskupe; bez type checkera `NewType` ne daje ništa osim imena.
+**Cena.** Funkcija koja prima `Square` to kaže u potpisu i docstringu. Pakovanje poteza u
+`int` tek ako merenje pokaže potrebu.
 
-**Posledice.** Perft na dubini 5 traje minut-dva umesto desetak minuta. Bot u
-fazi 6 poziva generator miliona puta u sekundi — sa kopiranjem bi bio neupotrebljiv.
-Cena: `unmake` mora tačno da vrati prava na rokadu, en passant polje i brojač
-polupoteza, što je izvor bagova ako se ne testira. Perft to pokriva.
+## ADR-014 — `UndoRecord` (task 1.2)
 
----
+**Odluka.** Nosi pojedenu figuru **i njeno polje** (kod en passanta pešak nije na
+odredištu), prethodna prava na rokadu, prethodno ep polje, prethodni brojač polupoteza,
+prethodni Zobrist ključ.
+**Zašto.** `unmake` je tačan po konstrukciji, ne zaključivanjem.
+**Cena.** Svaki nov tip poteza dopunjava zapis — perft hvata ako se zaboravi.
 
-## ADR-007: Perft kao dokaz ispravnosti
+## ADR-015 — Zobrist heš od 1.2, inkrementalno
 
-> ⚠️ **Delimično zamenjeno ADR-om 019.** Princip važi. Ali perft postoji kao
-> alat od taska 1.3, ne tek na 1.8; podrazumevani checkpoint je dubina 4, a
-> dubina 5 ide iza `CHESS_SLOW_TESTS=1`.
+**Odluka.** Ključ se održava XOR-om u `make`/`unmake`, ne računa iznova.
+**Zašto.** Ponavljanje pozicije (1.9) postaje brojanje ključeva u istoriji; isti heš služi
+transpozicionoj tabeli bota.
+**Cena.** Jedan koncept više u fazi 1.
 
-**Kontekst.** Kako dokazati da generator poteza radi ispravno u svim slučajevima,
-uključujući rokadu, en passant, vezane figure i otkrivene šahove.
+## ADR-016 — Server je jednonitni `selectors` event loop
 
-**Odluka.** Perft — brojanje čvorova do dubine N i poređenje sa objavljenim
-referentnim vrednostima. Checkpoint faze 1: dubina 5 iz početne pozicije i
-dubina 4 iz Kiwipete pozicije.
+**Odluka.** Jedna nit, `selectors`, `select(timeout=vreme_do_najbliže_zastavice)`.
+**Zašto.** Pad zastavice okida sam i kad niko ništa ne šalje; nema `Lock`-ova ni trka.
+**Cena.** Kod organizovan oko event loop-a, manje intuitivno od niti.
 
-**Posledice.** Ispravnost je dokazana, ne pretpostavljena. Bag se lokalizuje
-poređenjem po prvom potezu umesto ručnim traženjem. Cena: perft mora biti brz,
-što povezuje ovu odluku sa ADR-006.
+## ADR-017 — `tools/cli_client.py` umesto `nc`
 
----
+**Odluka.** CLI klijent u stdlib-u (task 2.0), prima UCI unos, ispisuje odgovore.
+**Zašto.** `nc` ne postoji na Windows-u; dobija se trajan debug alat.
+**Cena.** Pola sata.
 
-## ADR-008: `RuleSet` sa profilima `online` i `fide`
+## ADR-018 — Potez na žici strukturiran, UCI u `core`
 
-**Kontekst.** FIDE razlikuje remi na zahtev (trostruko ponavljanje, 50 poteza) od
-automatskog (petostruko, 75 poteza). Online platforme se namerno ponašaju drugačije.
+**Odluka.** Na žici `{"from": "e2", "to": "e4", "promotion": "queen"}`; u `core`
+`Move.from_uci()` i `to_uci()` za CLI klijent, testove i bota.
+**Zašto.** Idiomatski JSON, čitljiv u debug-u.
+**Cena.** Dvadesetak linija konverzije.
 
-**Odluka.** Pravila su konfiguracija, ne `if` u kodu. Podrazumevan profil `online`:
-trostruko ponavljanje i 50 poteza primenjuju se automatski. Profil `fide` je striktan.
+## ADR-022 — `Move` nosi `kind`
 
-**Posledice.** Ponašanje je eksplicitno i dokumentovano umesto slučajno. Lako se
-dodaje treći profil. Cena: jedan sloj konfiguracije više.
+**Odluka.** `MoveKind`: `NORMAL`, `CAPTURE`, `DOUBLE_PAWN_PUSH`, `EN_PASSANT`, `CASTLE`,
+`PROMOTION`; generator ga popunjava. `from_uci()` ne može da odredi `kind` bez table, pa
+se potez spolja uvek traži u listi legalnih poteza, nikad ne izvršava direktno.
+**Zašto.** `make`/`unmake` postaju grananje po vrsti; `legal_moves` može da izrazi četiri
+promocije; klijent zna kad da otvori dijalog bez ijednog pravila.
+**Cena.** Jedan enum.
 
----
+## ADR-023 — `STATE` je pun snapshot, ne delta
+
+**Odluka.** Svaka `STATE` poruka nosi sve za ceo ekran, uključujući `history` u SAN-u.
+Klijent ne akumulira ništa.
+**Zašto.** Rekonekcija je besplatna; klijent ne može da se raziđe sa serverom.
+**Cena.** Par stotina bajtova po poruci.
 
-## ADR-009: SQLite, sa repository pattern-om od početka
+## ADR-024 — Granica: čitanje pozicije naspram odlučivanja
 
-> ⚠️ **Komanda za pokretanje zamenjena ADR-om 029.** Umesto
-> `pip install pygame` ide `pip install -e .` — `src/` raspored traži
-> instalaciju paketa. Princip "radi posle kloniranja" ostaje.
+**Odluka.** Klijent sme da parsira FEN i crta; ne sme da računa kuda figura sme. Uvozi
+samo `core/types.py` i `core/fen.py`; proverava `tools/layer_check.py`.
+**Zašto.** Bez zapisane granice bi se o FEN-u u klijentu raspravljalo iznova.
+**Cena.** Nikakva.
 
-**Kontekst.** Prethodni projekat korisnika (FastAPI + SQL Server) nije radio kod
-druge osobe: baza nije bila instalirana, kredencijali nisu bili u repozitorijumu,
-šema nije postojala, ODBC drajver je nedostajao.
+## ADR-025 — Diskonekcija, ponuda remija, potez u letu
 
-**Odluka.** SQLite iz standardne biblioteke, od faze 5. Server nikad ne piše SQL
-direktno — koristi `GameRepository` interfejs. Migracije kao numerisani SQL fajlovi
-sa tabelom `schema_version`. Putanja kroz `CHESS_DB_PATH` sa podrazumevanom vrednošću.
+**Odluka.** Diskonekcija: `OPPONENT_DISCONNECTED`, sat protivnika ide, partija se završava
+padom zastavice (`timeout`). Remi: nudi se samo na potezu, pada čim protivnik odigra, jedna
+ponuda po potezu. Najviše jedna `MOVE` bez odgovora; `ERROR` vezan za potez nosi `move`.
+**Zašto.** Ništa novo se ne uvodi; poklapa se sa online platformama; ostavlja mesto za
+rekonekciju bez izmene protokola.
+**Cena.** Tri koda greške.
+
+## ADR-026 — Perft: skup pozicija i dubine
 
-**Posledice.** `git clone` + `pip install pygame` + pokretanje = radi, baza se
-napravi sama. Migracija na Postgres je jedan dan (nova implementacija interfejsa).
-`InMemoryGameRepository` čini testove brzim i determinističkim.
-Cena: interfejs koji u fazi 5 ima samo jednu implementaciju.
+**Odluka.** Podrazumevano (~300.000 čvorova): početna d4 · Kiwipete d3 · Position 3 d4 ·
+Position 4 d3. Iza `CHESS_SLOW_TESTS=1` (~9 miliona): početna d5 · Kiwipete d4 · ostale
+dublje. FEN-ovi i brojevi sa Chess Programming Wiki, nikad iz sećanja.
+**Zašto.** Četiri pozicije na maloj dubini nađu više bagova po sekundi nego dve na velikoj;
+podrazumevani suite ostaje brz, pa se stvarno pokreće.
+**Cena.** Nijedna.
 
----
-
-## ADR-010: Tekst korisničkog interfejsa u `sr.json`
-
-**Kontekst.** Interfejs je na srpskom, kod na engleskom, a kasnije dolazi veb
-klijent koji bi tražio iste tekstove.
-
-**Odluka.** Nijedan tekst vidljiv korisniku ne sme biti u kodu. Sve ide kroz
-ključeve u `assets/i18n/sr.json`. Isti fajl čitaju i pygame i JavaScript klijent.
-
-**Posledice.** Prevodi se pišu jednom. Engleska verzija je kasnije samo `en.json`.
-Logovi ostaju na engleskom bez dijakritika zbog Windows konzole. Font mora da
-podržava č ć š ž đ — pakuje se DejaVu Sans, ne oslanjamo se na podrazumevani.
-
----
-
-## ADR-011: Lobby poruke definisane od faze 2
-
-**Kontekst.** Traženje protivnika je funkcija servera, ne frontenda, i trebaće u
-fazi 5. Naknadno dodavanje bi lomilo postojeće klijente.
-
-**Odluka.** `LOBBY_JOIN`, `LOBBY_STATE` i `MATCH_FOUND` postoje u protokolu od
-faze 2. U fazi 2 server samo spari prva dva klijenta u redu.
-
-**Posledice.** Faza 5 popunjava prazno mesto umesto da menja verziju protokola.
-Cena sada: oko 20 linija koda.
-
----
-
-## ADR-012: Claude Code fajlovi izvan repozitorijuma
-
-> ⚠️ **Precizirano ADR-om 020.** Pravila projekta se izdvajaju u
-> `docs/CONVENTIONS.md` koji **ide u git**. Van gita ostaje samo `CLAUDE.md`
-> i `.claude/`.
-
-**Kontekst.** Repozitorijum je javan. U gitu se ništa ne briše — što uđe u
-commit, ostaje u istoriji zauvek.
-
-**Odluka.** `.gitignore` sa `.claude/` i `CLAUDE.md` postoji **pre prvog commita**.
-
-**Posledice.** Istorija je čista od nultog commita, nema šta da se briše kasnije.
-Cena: ti fajlovi nisu verzionisani — treba im kopija van foldera projekta.
-
----
-
-## ADR-013: `Square` je `int`, ne dataclass
-
-> ⚠️ **Precizirano ADR-om 031.** `Square` je običan alias `Square = int`, ne
-> `NewType` — bez type checkera `NewType` ne daje nikakvu garanciju.
-
-**Kontekst.** Prvobitni plan je stavljao `Square` u istu korpu sa `Move` kao
-`frozen=True` dataclass. Perft na dubini 5 obilazi 4.865.609 čvorova i alocirao
-bi desetine miliona `Square` objekata.
-
-**Odluka.** `Square` je običan `int` 0–63. Čitljivost se dobija imenovanim
-konstantama (`E4 = 28`) i funkcijama `file_of()`, `rank_of()`, `to_algebraic()`,
-`from_algebraic()`.
-
-`Move` ostaje `frozen=True` dataclass, ali sa `slots=True`. Pakovanje poteza u
-int (kako rade pravi engine-i) razmatramo **tek ako merenje pokaže da je
-potrebno** — ne optimizujemo unapred.
-
-**Posledice.** Perft je upotrebljivo brz. Cena: `Square` nije tip-siguran, pa
-funkcije koje ga primaju moraju to jasno da imenuju u potpisu i docstringu.
-
----
-
-## ADR-014: Undo zapis se definiše u tasku 1.2
-
-> ⚠️ **Dopunjeno ADR-om 022.** Nedostajalo je **polje pojedene figure** — kod
-> en passanta pojedeni pešak nije na odredišnom polju. Zapis nosi **i polje**
-> pojedene figure; `Move.kind` iz ADR-022 dodatno uklanja svako zaključivanje.
-
-**Kontekst.** `unmake` ne može da vrati stanje ako se ne zapamti šta je potez
-promenio. Prvobitni ROADMAP to nije naveo, pa bi se propust otkrio tek na
-perft checkpointu — kad je najskuplje.
-
-**Odluka.** `UndoRecord` se definiše zajedno sa `make/unmake` i sadrži:
-
-| Polje | Zašto |
-|---|---|
-| pojedena figura **i njeno polje** | kod en passanta pojedeni pešak nije na odredišnom polju |
-| prethodna prava na rokadu | pomeranje topa ili kralja ih gasi nepovratno |
-| prethodno en passant polje | pravo traje tačno jedan potez |
-| prethodni brojač polupoteza | pravilo 50 poteza |
-| prethodni Zobrist ključ | jeftinije od ponovnog računanja |
-
-**Posledice.** `unmake` je tačan po konstrukciji. Cena: svaki novi tip poteza
-mora da dopuni undo zapis — što perft odmah uhvati ako se zaboravi.
-
----
-
-## ADR-015: Zobrist heš u tasku 1.2, ne u 1.9
-
-**Kontekst.** Trostruko ponavljanje traži poređenje pozicija po četiri stvari:
-raspored, ko je na potezu, prava na rokadu, en passant polje. Plan je to stavljao
-u 1.9, što bi značilo povratak u `board.py` posle checkpointa.
-
-**Odluka.** Zobrist heš se uvodi u 1.2 i održava **inkrementalno** u
-`make/unmake` — XOR ulaz i izlaz umesto ponovnog računanja cele pozicije.
-
-**Posledice.** Ponavljanje u 1.9 je tada samo brojanje ključeva u istoriji.
-Isti heš služi transpozicionoj tabeli bota u fazi 6 — plaća se jednom,
-koristi dvaput. Cena: jedan koncept više u fazi 1.
-
----
-
-## ADR-016: Server je jednonitni `selectors` event loop
-
-**Kontekst.** Prvobitni plan: nit po klijentu sa `Lock` oko stanja. Uz to je
-stajalo da server računa vreme "pri svakom događaju" — što znači da pad
-zastavice **nikad ne bi bio detektovan** ako igrač prestane da šalje poruke.
-Partija bi visila zauvek.
-
-**Odluka.** Jedna nit, `selectors`, sa `select(timeout=vreme_do_najbliže_zastavice)`.
-
-**Posledice.** Tri problema rešena jednom odlukom: pad zastavice okida sam,
-nema `Lock`-ova, nema race condition-a. Cena: kod je organizovan oko event
-loop-a, što je manje intuitivno od niti dok se ne navikneš.
-
----
-
-## ADR-017: `tools/cli_client.py` umesto `nc`
-
-**Kontekst.** Checkpoint faze 2 je bio "dva `nc localhost 5000` terminala
-odigraju partiju". `nc` ne postoji na Windows-u, pa checkpoint nije bio
-sprovodiv u razvojnom okruženju.
-
-**Odluka.** Mali CLI klijent od tridesetak linija u standardnoj biblioteci,
-task 2.0. Prima poteze u UCI formatu (`e2e4`), prevodi ih u protokol poruke,
-ispisuje odgovore.
-
-**Posledice.** Checkpoint radi na Windows-u. Dobijamo trajan debug alat, i
-kasnije osnovu za pokretanje bota kao spoljnog klijenta. Cena: pola sata rada.
-
----
-
-## ADR-018: Format poteza — strukturiran na žici, UCI u `core`
-
-**Kontekst.** Predlog je bio da se potezi na žici šalju kao UCI stringovi
-(`e2e4`, `e7e8q`) umesto strukturirano.
-
-**Odluka.** Na žici ostaje strukturirano: `{"from": "e2", "to": "e4",
-"promotion": "queen"}`. To je idiomatski JSON, čitljivije pri debug-u, i lakše
-za JavaScript klijent u fazi 4.
-
-Ali `core` dobija `Move.from_uci()` i `Move.to_uci()`, jer trebaju za CLI
-klijent, za testove i za UCI interfejs bota u 6.8.
-
-**Posledice.** Oba formata postoje, svaki tamo gde je bolji. Cena: dvadesetak
-linija konverzije.
-
----
-
-## ADR-019: Perft je alat od 1.3, ne checkpoint na 1.8
-
-> ⚠️ **Podela dubina zamenjena ADR-om 026.** Kiwipete d4 (4.085.603) i početna
-> d5 (4.865.609) su isti red veličine, pa podela nije postigla cilj. Princip
-> "perft je alat od 1.3" ostaje.
-
-**Kontekst.** Perft je bio zakazan tek za 1.8. To znači da se generisanje poteza
-piše kroz tri taska bez ijedne provere ispravnosti.
-
-**Odluka.** Perft harness sa `perft_divide` postoji od 1.3 i koristi se pri
-svakoj izmeni generatora. `perft_divide` broji čvorove **po korenskom potezu**,
-pa se odstupanje lokalizuje binarnom pretragom umesto ručnim traženjem.
-
-Perft 4 ostaje u podrazumevanom test suite-u. Perft 5 ide iza promenljive
-`CHESS_SLOW_TESTS=1`, jer minut-dva po pokretanju znači da posle nedelju dana
-prestaneš da puštaš testove.
-
-**Posledice.** Greška se hvata u tasku u kom je napravljena. 1.8 ostaje kao
-formalni checkpoint, ali bez iznenađenja.
-
----
-
-## ADR-020: Konvencije u git, Claude fajlovi van gita
-
-**Kontekst.** `CLAUDE.md` je bio u `.gitignore`, što je u prividnom sukobu sa
-principom iz ADR-009 — sve što je projektu potrebno mora biti u repozitorijumu.
-
-**Odluka.** Razdvajaju se dve stvari koje su bile spojene u jedan fajl:
-
-| Fajl | Sadržaj | Git |
-|---|---|---|
-| `docs/CONVENTIONS.md` | pravila projekta: slojevi, imenovanje, testovi, git tok | **da** |
-| `CLAUDE.md` | uputstvo asistentu; upućuje na `CONVENTIONS.md` | ne |
-
-Princip iz ADR-009 se odnosi na ono što je potrebno da se projekat **pokrene**.
-`CLAUDE.md` tome ne pripada. Konvencije pripadaju — i pripadale bi svakom
-projektu, sa asistentom ili bez njega.
-
-**Posledice.** Konvencije su normalna inženjerska dokumentacija i njihovo
-prisustvo poboljšava repozitorijum. Bilo koji chat ili alat sa pristupom
-GitHub-u može ih sam učitati, bez lepljenja. Cena: dva fajla umesto jednog,
-i `CLAUDE.md` i dalje nije verzionisan pa mu treba kopija van projekta.
-
----
-
-## ADR-021: Razumevanje se proverava pitanjima, ne autorstvom
-
-**Kontekst.** Cilj projekta je da korisnik nauči i razume šta je napravljeno.
-U pregledu je predloženo da korisnik fazu 1 piše rukom, uz obrazloženje da
-"čitanje diffa daje osećaj razumevanja bez razumevanja".
-
-Prva rečenica je tačna. Zaključak nije bio.
-
-Odbrana traje 15 minuta i sastoji se od prezentacije i dokumentacije. Kod se ne
-pokazuje i o njemu se ne ispituje. Ručno kucanje engine-a bi produžilo fazu 1 za
-nedelju dana da bi rešilo problem koji ne postoji.
-
-Uz to, kucanje nije ono što stvara razumevanje — **odgovaranje na pitanja jeste.**
-Aktivno prisećanje je efikasnije od prepisivanja i traje minute umesto dana.
-
-**Odluka.** Claude Code piše sav kod. Razumevanje se obezbeđuje ritmom po tasku:
-
-1. Plan mod — korisnik čita plan pre nego što kod postoji
-2. Claude Code implementira
-3. Claude Code objašnjava u tri do pet rečenica: šta je urađeno, zašto tako,
-   koja alternativa je odbačena i zbog čega
-4. **Claude Code postavlja korisniku dva do tri pitanja o upravo napisanom kodu**
-5. Korisnik odgovara. Ako ne zna — Claude Code objašnjava drugačije, pa opet.
-6. Na kraju faze korisnik prepričava celu fazu svojim rečima; Claude Code od
-   toga piše `docs/faze/faza-N.md`
-
-Korak 4 je obavezan i ne preskače se. Pitanja moraju biti o **zašto**, ne o
-**šta**: "zašto filtriramo legalnost posle generisanja umesto tokom" je dobro
-pitanje, "šta radi ova funkcija" nije.
-
-**Pitanja i odgovori se zapisuju.** Posle svakog taska Claude Code dodaje dva
-reda u `docs/faze/faza-N.md`: postavljeno pitanje i da li je korisnik znao
-odgovor. Bez toga "gde zapneš, tu se vraćaš" nema gde da zapamti gde si zapeo —
-sve nestaje sa `/clear`.
-
-**Posledice.** Faza 1 ne traje duže nego u prvobitnom planu. Razumevanje se meri
-odgovorom, ne osećajem. Dokumentacija po fazama nastaje kao nusprodukt umesto
-kao poseban posao na kraju. Cena: dva do tri minuta po tasku.
-
----
-
-## ADR-022: `Move` nosi `kind`
-
-**Kontekst.** Tri odvojena problema pokazala su se kao isti problem:
-
-1. `UndoRecord` ne može ispravno da vrati en passant — pojedeni pešak nije na
-   odredišnom polju nego iza njega, pa bi `unmake` morao to da **zaključuje**
-2. `legal_moves` u protokolu ne može da izrazi promociju — pešak na `e7` ima
-   četiri legalna poteza na `e8`, a mapa `from → [to]` ih spaja u jedan
-3. `make` i `unmake` bi bili gomila `if`-ova koji rekonstruišu šta je potez bio
-
-**Odluka.** `Move` dobija polje `kind`: `NORMAL`, `CAPTURE`, `DOUBLE_PAWN_PUSH`,
-`EN_PASSANT`, `CASTLE`, `PROMOTION`. Uvodi se u tasku 1.1.
-
-Generator poteza zna koju vrstu pravi, pa je popunjavanje besplatno.
-
-**Posledice.**
-
-- `make`/`unmake` postaju grananje po vrsti umesto zaključivanja
-- `UndoRecord` ne izvodi ništa — vrsta mu je data
-- Protokol može da nosi `{"to": "e8", "promotion": true}`, pa klijent zna kad da
-  otvori dijalog **bez ijednog šahovskog pravila**
-- `Move.from_uci()` **ne može da odredi `kind` bez table** — i to je dobro.
-  Tera na ispravan obrazac: potez iz spoljnog sveta se **traži u listi
-  generisanih legalnih poteza**, nikad se ne izvršava direktno. Isto je i
-  bezbednosno ispravno.
-
-Cena: jedan enum više u fazi 1.
-
----
-
-## ADR-023: `STATE` je pun snapshot, ne delta
-
-**Kontekst.** `STATE` je nosio samo `last_move`, pa je klijent akumulirao
-istoriju poteza za prikaz iz taska 3.7. To radi dok klijent ne propusti nijednu
-poruku — a onda dolazi rekonekcija iz 5.7 i klijent koji se vratio nema ništa.
-
-**Odluka.** Svaka `STATE` poruka sadrži sve što treba da se nacrta ceo ekran od
-nule, uključujući `history` kao listu SAN poteza. Klijent ne akumulira ništa.
-
-**Posledice.** Rekonekcija postaje besplatna — dobiješ poslednji `STATE` i
-nastaviš. Klijent nema akumulirano stanje koje bi moglo da se raziđe sa serverom.
-Cena: partija od 80 poteza nosi par stotina bajtova više po poruci, što je na
-`localhost` i na vebu nemerljivo.
-
----
-
-## ADR-024: Granica između čitanja pozicije i odlučivanja
-
-> ⚠️ **Način provere zamenjen ADR-om 033.** Granica se proverava
-> `tools/layer_check.py` alatom u gitu, pokrenutim kao test — ne skillom.
-> Sama granica ostaje neizmenjena.
-
-**Kontekst.** Pravilo "nula šahovske logike u klijentu" je nejasno u jednom
-slučaju: klijent mora da parsira FEN da bi nacrtao tablu. Da li je to kršenje?
-
-Bez zapisane granice, o ovome bi se raspravljalo za mesec dana.
-
-**Odluka.** Granica je između **čitanja pozicije** i **odlučivanja o legalnosti**.
-
-| | Klijent |
-|---|---|
-| parsiranje FEN-a, crtanje table | ✅ |
-| računanje kuda figura sme | ❌ |
-
-Konkretno: pygame klijent sme da uvozi **samo** `core/types.py` i `core/fen.py`.
-Nikad `movegen`, `attacks`, `rules` ni `game`.
-
-**Posledice.** Pravilo je proverivo automatski (vidi ADR-033).
-Veb klijent u fazi 4 reimplementira parsiranje FEN-a u JavaScriptu, što je
-takođe dozvoljeno po istoj logici. Cena: nikakva.
-
----
-
-## ADR-025: Nedefinisano ponašanje — diskonekcija, remi, potez u letu
-
-**Kontekst.** Tri situacije koje task 2.7 traži, a nigde nisu bile zapisane.
-
-**Odluka.**
-
-**Diskonekcija.** Server šalje `OPPONENT_DISCONNECTED`. **Sat protivnika
-nastavlja da ide**, partija se završava padom zastavice sa `termination:
-"timeout"`. Ne uvodi se nijedan nov mehanizam, poklapa se sa ponašanjem online
-platformi, i ostavlja mesto za rekonekciju u fazi 5 bez izmene protokola.
-
-**Ponuda remija.** Nudi se samo kad si na potezu. Pada čim protivnik odigra
-potez (FIDE). Jedna ponuda po potezu — druga vraća `DRAW_ALREADY_OFFERED`.
-
-**Potez u letu.** Najviše jedna `MOVE` poruka bez odgovora. Uz to `ERROR`
-vezan za potez **nosi polje `move`**, pa klijent zna koju figuru da vrati posle
-neuspelog drag & drop-a. Pojas i tregeri — pravilo je zapisano, ali klijent ne
-zavisi od toga da ga server poštuje.
-
-**Posledice.** Task 2.7 ima šta da implementira. Cena: tri nova koda greške.
-
----
-
-## ADR-026: Perft — skup pozicija i podela dubina
-
-**Kontekst.** ADR-019 je delio perft na "brz default" i "spor iza
-`CHESS_SLOW_TESTS`", ali aritmetika ne podržava tu podelu: Kiwipete dubina 4 je
-4.085.603 čvora, a početna pozicija dubina 5 je 4.865.609. Isti red veličine —
-podrazumevani suite je već bio spor.
-
-Uz to, dve pozicije ne pokrivaju dovoljno. Standardni skup sa Chess Programming
-Wiki ima šest, i svaka gađa drugu klasu bagova.
-
-**Odluka.**
-
-| | Pozicije | Približno čvorova |
-|---|---|---|
-| Podrazumevano | početna d4 · Kiwipete d3 · Position 3 d4 · Position 4 d3 | ~300.000 |
-| `CHESS_SLOW_TESTS=1` | početna d5 · Kiwipete d4 · ostale dublje | ~9.000.000 |
-
-Position 3 lovi en passant, Position 4 promociju i vezane figure, Position 5
-rokadu u neobičnim pozicijama.
-
-> **FEN-ove i referentne brojeve prepisati sa Chess Programming Wiki.**
-> Nikad iz sećanja — ni čovekovog ni modelovog. Ako referenca nije potvrđena,
-> reci to umesto da pretpostaviš.
-
-**Posledice.** Četiri pozicije na maloj dubini nalaze više bagova po sekundi
-nego dve na velikoj. Podrazumevani suite ostaje brz, pa se stvarno pokreće.
-
----
-
-## ADR-027: Zobrist — fiksan seed, en passant uslovno
-
-**Kontekst.** Dve zamke koje prave suptilne bagove.
-
-**Odluka.**
-
-**Fiksan seed.** Tabela nasumičnih brojeva generiše se sa zadatim seed-om.
-Bez toga su ključevi različiti pri svakom pokretanju i testovi nisu
-deterministički — što krši pravilo determinizma iz `docs/CONVENTIONS.md` §5.
-
-**En passant uslovno.** Ep polje ulazi u ključ **samo kad je en passant
-uzimanje stvarno moguće** (postoji protivnički pešak koji sme da uzme).
-Ako se XOR-uje uvek, pozicija posle `e2-e4` nikad neće biti jednaka istoj
-poziciji dobijenoj drugim redosledom poteza, i trostruko ponavljanje neće
-okinuti kad treba.
-
-**Posledice.** Ponavljanje radi tačno. Testovi su ponovljivi. Cena: jedna
-provera više pri ažuriranju ključa.
-
----
-
-## ADR-028: `tools/perft.py` u git, skill samo poziva
-
-**Kontekst.** Logika iz ADR-020 nije bila primenjena dosledno. Perft runner je
-živeo u `.claude/skills/perft/`, što je van gita — a perft runner je **alat
-projekta**, ne uputstvo asistentu.
-
-**Odluka.** Perft harness ide u `tools/perft.py`, u git. `.claude/skills/perft/SKILL.md`
-se svodi na nekoliko redova koji taj alat pozivaju i objašnjavaju kad.
-
-Isto pravilo važi unapred: **ako nešto radi i bez asistenta, ide u git.**
-
-**Posledice.** Perft se može pokrenuti ručno, iz CI-ja, ili od strane bilo koga
-ko klonira repozitorijum. Skill ostaje tanak. Cena: nikakva.
-
----
-
-## ADR-029: `pip install -e .` kao jedina komanda za pokretanje
-
-> ⚠️ **Komanda precizirana ADR-om 036.** Glasi `pip install -e ".[dev]"` —
-> bez `[dev]` se `ruff` ne instalira, pa checkpoint faze 0 ne može da prođe.
-> Suština ovog ADR-a (editable install zbog `src/` rasporeda, jedna komanda)
-> ostaje na snazi.
-
-**Kontekst.** Sa `src/chess/` rasporedom, `python -m unittest discover -s tests`
-**ne nalazi paket**, jer `src/` nije na `sys.path`. Checkpoint faze 0 ne bi
-prošao prvog dana.
-
-Uz to, rečenica iz `PROJECT.md` — *"Pokretanje: `pip install pygame`. To je sve."* —
-postaje netačna.
-
-**Odluka.** `pygame` je deklarisan kao zavisnost u `pyproject.toml`, a uputstvo
-za pokretanje postaje:
-
-```bash
-pip install -e .
-```
-
-Jedna komanda, koja instalira i paket u editable režimu i sve zavisnosti.
-
-**Posledice.** `src/` raspored ostaje (sprečava da testovi slučajno uvezu fajlove
-iz radnog direktorijuma umesto instalirani paket). Obećanje "jedna komanda" i
-dalje stoji. `PROJECT.md` §4 mora biti ispravljen.
-
----
-
-## ADR-030: ADR koji obara tekst ispravlja ga u istom commitu
-
-**Kontekst.** Posle prvog kruga pregleda, `PROTOCOL.md` §7 je i dalje opisivao
-model sata koji je ADR-016 proglasio neispravnim, a §8 je i dalje pominjao `nc`
-koji je ADR-017 zamenio. `PROJECT.md` je zaostajao za tri odluke.
-
-`DECISIONS.md` je append-only i to je ispravno. Ali nigde nije pisalo da odluka
-mora biti **propagirana** u dokumente koje obara.
-
-**Odluka.** Kad ADR obori nešto napisano u `PROJECT.md`, `PROTOCOL.md`,
-`ROADMAP.md` ili `CONVENTIONS.md`, ispravka tih dokumenata ide u **istom commitu**
-kao i ADR. Bez izuzetka.
-
-Hijerarhija kad se dokumenti ne slažu:
-
-```
-DECISIONS.md  >  PROTOCOL.md  >  PROJECT.md  >  ROADMAP.md
-```
-
-**Posledice.** Dokument koji zaostaje za odlukama je gori od dokumenta koji ne
-postoji, jer mu se veruje. Ovo pravilo ide i u `docs/CONVENTIONS.md` §1.
-Cena: nekoliko minuta po ADR-u.
-
----
-
-## ADR-031: Bez type checkera za sada
-
-**Kontekst.** `ruff` ne proverava tipove. Bez mypy-ja, `Square = NewType("Square", int)`
-iz ADR-013 ne daje nikakvu garanciju — ostaje `int` sa lepim imenom.
-
-**Odluka.** Ne uvodimo mypy. `Square` je običan alias `Square = int`, bez
-pretvaranja da je proveren. Type hints se i dalje pišu svuda — služe čitljivosti
-i IDE-u.
-
-Revidira se u fazi 4, kad `core` bude stabilan i kad dodavanje alata ne usporava.
-
-**Posledice.** Manje alata za konfigurisanje i manje trenja u fazi u kojoj se
-najviše menja. Cena: greške u tipovima se hvataju testovima, ne alatom.
-Perft to uglavnom pokriva za `core`.
-
----
-
-## ADR-032: Hijerarhija dokumenata i obavezna oznaka na oborenom ADR-u
-
-**Kontekst.** ADR-030 je nabrojao četiri dokumenta u pravilu propagacije, jer
-`POJMOVNIK.md` i `WORKFLOW.md` tada nisu postojali. Uz to, ADR-030 nije rekao
-šta se dešava kad **novi ADR obori stariji ADR** — pa je ADR-029 oborio ADR-009
-bez ijedne oznake, i propust je primećen tek u trećem krugu pregleda.
-
-Drugim rečima: pravilo propagacije je prekršeno u istom dokumentu koji ga uvodi.
-
-**Odluka.**
-
-**Puna hijerarhija:**
-
-```
-DECISIONS.md > PROTOCOL.md > CONVENTIONS.md > PROJECT.md > ROADMAP.md > POJMOVNIK.md
-```
-
-`CONVENTIONS.md` obavezuje kod, ali ne sme da protivreči protokolu — protokol je
-ugovor sa spoljnim svetom, konvencije su unutrašnja stvar. `POJMOVNIK.md` nema
-autoritet: objašnjava, ne propisuje, i uvek je on taj koji se ispravlja.
-
-**Propagacija važi za svaki fajl u `docs/`**, ne samo za četiri iz ADR-030.
-
-**Novi ADR koji obara stariji obavezno stavlja ⚠️ oznaku na vrh starijeg**, sa
-pokazivačem na novi. Stari ADR se ne briše — fajl je append-only i istorija
-odluka se čuva cela.
-
-**Posledice.** Čitalac koji naiđe na stari ADR odmah zna da nastavi dalje.
-Bez toga bi neko implementirao `threading` po ADR-003 ili `pip install pygame`
-po ADR-009. Cena: jedan blok teksta po oborenom ADR-u.
-
----
-
-## ADR-033: `tools/layer_check.py` kao alat i test, ne skill
-
-**Kontekst.** ADR-024 je rekao da se granica slojeva proverava `layer-check`
-skillom. To protivreči ADR-028: *ako nešto radi i bez asistenta, ide u git.*
-
-Provera uvoza radi bez asistenta — to je lint pravilo, ne uputstvo. Uz to,
-skill se okida kad ga model prepozna kao relevantan, a to nije garancija.
-
-**Odluka.** `tools/layer_check.py` ide u git. Parsira `import` naredbe kroz
-`ast` i prijavljuje svaki uvoz koji tabela iz `CONVENTIONS.md` §2 ne dozvoljava.
-
-Pokreće se **i kao test** (`tests/test_layers.py`), pa checkpoint faze 0 pada
-ako se pravilo prekrši. `.claude/skills/layer-check/` se svodi na nekoliko redova
-koji pozivaju alat.
-
-**Posledice.** Kršenje granice hvata test suite, ne asistent koji se seti da
-pozove skill. Pravilo postaje izvršivo za bilo koga ko klonira repozitorijum.
-Cena: pedesetak linija koda u fazi 0.
-
----
-
-## ADR-034: `capture` je uvek serverski podatak
-
-**Kontekst.** Polje `capture` u `legal_moves` pojavljivalo se samo u primeru za
-promociju, bez ijedne rečenice da li stoji na svakom potezu koji uzima.
-
-Klijent bi mogao da ga izvede sam — „ima li figure na odredišnom polju".
-Ali **kod en passanta odredišno polje je prazno**, pa bi takav klijent nacrtao
-pogrešno. A klijent koji to ispravno izvede upravo je implementirao šahovsko
-pravilo, što krši ADR-001.
-
-**Odluka.** `capture: true` server šalje na **svakom** potezu koji uzima figuru,
-uključujući en passant. Klijent ga nikad ne izvodi.
-
-Isto važi za `promotion`. Promocija je uvek u jednu od četiri figure —
-`queen`, `rook`, `bishop`, `knight` — i to je zapisano u `PROTOCOL.md` da ne bi
-bilo neizrečena pretpostavka u klijentu.
-
-**Posledice.** Klijent crta prsten uzimanja i otvara dijalog za promociju bez
-ijednog šahovskog pravila. Cena: jedan bool po potezu u `STATE` poruci.
-
----
-
-## ADR-035: `ruff` ne dira `docs/`
-
-**Kontekst.** `ruff format --check .` je od prvog dana padao — ne na kodu, nego
-na dokumentaciji. Od `ruff` 0.16 formatter ulazi i u Python blokove unutar
-Markdown fajlova. U `CONVENTIONS.md` §7 stoji namerno zbijen primer:
-
-```
-with path.open(encoding="utf-8") as f: ...
-```
-
-`ruff` ga hoće razlomljenog na dva reda. Primer koji pokazuje *šta ruff radi*
-bio je i sam prepravljen, pa je izjednačio „napisano" i „ruff hoće" — sam sebe
-je pojeo.
-
-Time je stavka iz CONVENTIONS §9 (`ruff format --check .` čist) bila nedostižna,
-a jedina alternativa bila je prepravljanje dokumentacije da bi alat ćutao.
-
-**Odluka.** `pyproject.toml` dobija `extend-exclude = ["docs"]` u `[tool.ruff]`.
-Dokumentacija nije kod; formatter je nikad ne dodiruje.
-
-Odbačena su tri druga puta:
-
-- **prepraviti primer** — dokumentacija se ne krivi zbog alata
-- **suziti komandu** na `ruff format --check src/ tests/` — gate glasi sa tačkom;
-  komanda koja se sužava dok ne prođe više ništa ne dokazuje
-- **`extend-exclude = ["*.md"]`** — izmereno: ne radi. Obrazac bez kose crte
-  `ruff` 0.16.5 ne primeni; `"**/*.md"` je čak uvukao fajlove koje `.gitignore`
-  isključuje. Prošli su `"docs"`, `"docs/*.md"` i `"docs/**/*.md"`; izabran je
-  `"docs"` jer posle njega `ruff` vidi tačno `.py` fajlove projekta i ništa više.
-
-**Posledice.** `ruff format --check .` je od sada upotrebljiv kao gate — prolazi
-ili pada na kodu, i ni na čemu drugom. Isto važi za `ruff check .`, mada on
-Markdown ionako nikad nije ni čitao.
-
-**Šta smo izgubili:** Python blokovi u `docs/` više nemaju nikakvu mašinsku
-proveru. Primer sa sintaksnom greškom u dokumentaciji proći će nezapaženo dok ga
-neko ne prekopira i ne pokrene. Ako to jednom zaboli, rešenje nije vraćanje
-formattera nego zaseban test koji blokove samo parsira, bez prepravljanja.
-
----
-
-## ADR-036: `pip install -e ".[dev]"` — `[dev]` nije opcion
-
-**Kontekst.** ADR-029 je uveo `pip install -e .` kao jedinu komandu za
-pokretanje, a `PROJECT.md` §4 je tvrdio „To je sve." Ali `ruff` stoji u
-`[project.optional-dependencies] dev`, pa ga ta komanda **ne instalira**.
-
-Posledica je da onaj ko odradi tačno ono što dokumentacija kaže nema `ruff`, a
-checkpoint faze 0 i CONVENTIONS §9 od njega traže `ruff check .` i
-`ruff format --check .`. Obećanje „jedna komanda i sve radi" bilo je netačno od
-prvog dana; primetilo se tek kad je gate stvarno pokrenut.
-
-**Odluka.** Uputstvo za pokretanje glasi:
-
-```bash
-pip install -e ".[dev]"
-```
-
-Navodnici su deo komande: i `bash` i PowerShell drugačije čitaju gole uglaste
-zagrade.
-
-`ruff` **ostaje** u `dev` extra, ne seli se u `dependencies`. Igraču šaha linter
-ne treba, a `PROJECT.md` §4 i CONVENTIONS §10 ga izričito vode kao `dev-only`.
-
-**Posledice.** Obećanje „jedna komanda" i dalje stoji — komanda je i dalje jedna,
-samo je tačna. ADR-029 nije oboren, nego preciziran, i nosi ⚠️ oznaku koja
-pokazuje ovamo (CONVENTIONS §1, ADR-032).
-
-**Šta smo izgubili:** komanda više nije ona koju čovek napiše iz navike, pa je
-lakše zaboraviti `[dev]`. Ništa to ne hvata automatski — `tests/test_package.py`
-proverava da je paket instaliran, ne da je instaliran **sa** `dev` skupom.
-Izostavljen `[dev]` i dalje se otkriva tek kad `ruff` ne postoji.
-
----
-
-## ADR-037: Tabela slojeva postaje izvršiva
-
-**Kontekst.** ADR-033 je tražio alat koji sprovodi tabelu iz `CONVENTIONS.md` §2.
-Pisanje tog alata otvorilo je tri pitanja na koja tabela — pisana za čoveka — nije
-imala odgovor: kako pravilo dolazi do koda a da ne nastane drugi izvor istine, šta
-alat radi sa fajlom koji nijedan red ne opisuje, i šta sme `__init__.py`, koji se
-u tabeli nije pominjao.
-
-Tri odluke izlaze iz istog konteksta, ali se traže odvojeno. Svaka nosi svoj
-podnaslov i citira se zasebno: **ADR-037.1**, **ADR-037.2**, **ADR-037.3**.
-
-### ADR-037.1 — Tabela se prepisuje u kod, test veže imena redova
-
-**Kontekst.** Pravila prepisana u Python su drugi izvor istine — tačno onaj problem
-koji je u tasku 0.2 nađen u `.claude/`, gde je 80% sadržaja bilo prepričavanje
-dokumenata koje nijedan ADR nije mogao da ispravi.
-
-Obrnuto rešenje — da alat parsira tabelu iz `CONVENTIONS.md` — daje jedan izvor
-istine doslovno, ali traži da ćelije budu gramatika. Nisu: „sve gore + `pygame`"
-zavisi od redosleda redova i ne kaže da li je „gore" ceo skup redova iznad ili samo
-`client` redovi, a „sve" i „—" su proza. Tabela bi morala da se prepiše u strogi
-oblik — dokument bi tada služio alatu, a čita ga čovek.
-
-**Odluka.** `RULES` u `tools/layer_check.py` je **prepis** tabele, ne njen izvor.
-`tests/test_layers.py` parsira pipe-tabelu iz §2 i tvrdi da je skup imena redova
-identičan skupu ključeva; uz to tvrdi da je parser našao više od nula redova, jer bi
-parser koji ćutke ne uhvati ništa napravio test koji uvek prolazi. Tabela stoji
-doslovno prepisana i u docstringu iznad `RULES`, da se u `git diff`-u vide jedno
-pored drugog.
-
-Prepisivanje je zahtevalo da se dvosmislena ćelija pročita do kraja. „Sve gore"
-sada u §2 znači: sve što smeju `client` redovi iznad, plus ti moduli sami, uz smer
-uvoza unutar `client/` koji ide samo naniže (`i18n` ← `state` ← `render` ←
-`scenes`). Ta rečenica je dopisana u §2 **istim commitom** — pravilo ne živi u kodu.
-
-**Posledice.** Razilaženje alata i tabele je glasno, a ne tiho: dodat red bez pravila
-(ili obrnuto) obara test suite. U sukobu je tabela u pravu, kako §1 već propisuje.
-
-**Šta smo izgubili:** vezana su **imena redova, ne semantika ćelije**. Ako §2 kaže da
-`client/state.py` sme `core.fen`, a alat to zaboravi, nijedan test ne puca. Ta greška
-se hvata samo čitanjem diffa — zato tabela i stoji u docstringu tik iznad pravila.
-
-### ADR-037.2 — Fajl koji tabela ne pokriva je nalaz
-
-**Kontekst.** Alat obilazi stablo i nailazi na `.py` fajlove koje nijedan red ne
-opisuje — danas ni jedan, sutra `client/__main__.py` ili `core/eval.py`. Tri
-mogućnosti: preskočiti ga, pasti sa `traceback`-om, ili ga prijaviti.
-
-**Odluka.** Prijavljuje se kao nalaz, sa izlaznim kodom 1, uz poruku koja traži nov
-red u tabeli.
-
-Preskakanje znači da nov paket dobija **nula** provere i da to niko ne vidi — isti
-oblik kvara kao obrisan `tests/core/__init__.py`, koji `unittest discover` ćutke
-preskoči (faza 0, pitanje 2). `traceback` bi izgledao kao pokvaren alat, a alat koji
-izgleda pokvareno prestaje da se pokreće.
-
-Uz to je u §2 zapisan redosled biranja reda: tačan red → `*/__init__.py` → najduži
-prefiks. Bez zapisanog redosleda `tests/core/__init__.py` potpada pod dva reda
-odjednom.
-
-**Posledice.** Pravilo propagacije iz §1 sada važi i za kod: nov modul ne može da
-uđe u projekat bez reda u tabeli, u istom commitu.
-
-**Šta smo izgubili:** trenje. Svaki nov modul traži i izmenu `CONVENTIONS.md` — što
-je namera, ali usporava. U fazi 3.1 `client/__main__.py` neće proći dok mu se ne
-doda red.
-
-### ADR-037.3 — `__init__.py` ne uvozi ništa iz projekta
-
-**Kontekst.** Sedam `__init__.py` fajlova u `src/chess/` tabela nije pominjala, pa bi
-po ADR-037.2 svi odmah bili nalaz. Dve mogućnosti: da svaki nasledi pravilo svog
-paketa — čime je dozvoljena fasada `from .types import Piece` — ili da ne uvozi
-ništa iz projekta.
-
-**Odluka.** Nov red `*/__init__.py`: **samo stdlib**. Važi svuda u repozitorijumu,
-uključujući `tests/`, i pobeđuje nad redom `tests/*` po redosledu iz ADR-037.2.
-
-U ovom projektu je `__init__.py` marker paketa i ništa više — tako je postavljeno u
-0.1 („samo `__init__.py` fajlovi, nijedan prazan modul"). Fasada bi napravila ivicu
-u grafu zavisnosti koju nijedan red tabele ne opisuje, i otvorila vrata cikličnim
-uvozima između paketa.
-
-**Posledice.** Graf zavisnosti je onakav kakav tabela kaže da jeste; uvoz uvek
-pokazuje na modul u kom stvar zaista stoji, pa se `grep` po imenu klase završava na
-jednom mestu.
-
-**Šta smo izgubili:** nema `from chess.core import Piece`. Uvoz je uvek pun put,
-`from chess.core.types import Piece` — duže i, za onoga ko dolazi iz paketa koji
-imaju bogat `__init__.py`, neobično. Ako se fasada ikad poželi, to je izmena tabele
-u §2, a ne izuzetak u alatu.
-
----
-
-## ADR-038: `cairosvg` odbijen; rasterizacija kroz pygame, alat nije zavisnost
-
-**Kontekst.** Task 0.4 traži 12 SVG figura pretvorenih u PNG u dve veličine
-(80 px za tablu, 32 px za pojedene figure iz 3.7). Rasterizacija se izvršava
-**jednom**; rezultat ide u git i ništa u vreme izvršavanja ne dodiruje SVG.
-
-`cairosvg` je očigledan izbor i daje bolji izlaz od nanosvg-a u opštem slučaju.
-Druga mogućnost je pygame, koji je već deklarisan u `pyproject.toml` i kroz
-SDL_image nosi nanosvg. Treća je preuzimanje gotovih PNG thumbnailova sa
-Wikimedia servisa, koje rasterizuje librsvg.
-
-**Odluka.** `cairosvg` je **odbijen**. Rasterizuje se alatom
-`tools/rasterize_pieces.py`, kroz pygame — bez ijedne nove zavisnosti.
-
-Dva razloga, po težini:
-
-1. Na Windows-u `cairosvg` vuče native cairo DLL-ove izvan `pip`-a. To je tačno
-   onaj režim otkaza iz konteksta ADR-009 — prethodni projekat korisnika nije radio
-   kod druge osobe jer ODBC drajver nije bio instaliran. Princip „sve što je
-   projektu potrebno mora biti u repozitorijumu ili instalirano jednim `pip`"
-   važi i ovde.
-2. **Alat koji jednom generiše resurs nije zavisnost projekta.** Zavisnost je ono
-   bez čega program ne radi kod korisnika. Igraču šaha rasterizator SVG-a ne treba
-   — njemu trebaju PNG-ovi, a oni su u gitu.
-
-**Posledice.**
-
-`pyproject.toml` se ne menja. Lista zavisnosti ostaje `pygame` + `ruff`. Ko klonira
-repozitorijum dobija gotove PNG-ove; ko hoće da ih regeneriše, pokreće alat i za to
-mu ne treba ništa novo. Ista logika je zapisana u CONVENTIONS §10.
-
-**Šta smo izgubili — prvo, izmereno, ne pretpostavljeno.**
-
-Prva verzija ovog ADR-a tvrdila je „izgubili smo kvalitet u odnosu na librsvg".
-Provereno je poređenjem sa Wikimedia thumbnailom, koji rasterizuje librsvg, na
-120 px (jedina standardna veličina blizu naše — thumbnailer odbija 80 px):
-
-| | ukupno piksela | različitih | prosek \|Δ\| | max \|Δ\| |
-|---|---|---|---|---|
-| bela dama | 14 400 | 1 554 (10.8%) | 1.3 / 255 | 52 |
-| beli skakač | 14 400 | 803 (5.6%) | 0.6 / 255 | 121 |
-
-Oba broja stoje namerno. Procenat sam navodi na pogrešan zaključak — 10.8% izgleda
-mnogo — a prosek pokazuje da je razlika ispod praga vidljivosti i da se nalazi
-isključivo na ivičnim pikselima, dakle u antialiasingu. Na 1:1 i na 4× uvećanju
-razlika se ne vidi; jedina uočena razlika ide **u našu korist** (librsvg ostavlja
-sivkastu mrlju na spoju kuglice i kraka krune, nanosvg ne).
-
-**Šta smo stvarno izgubili.**
-
-1. **nanosvg ne skalira crtež na traženo platno.** Root `width`/`height` određuju
-   veličinu platna, ali crtež ostaje u razmeri koju fajl deklariše — i `viewBox` to
-   ne menja. Prva verzija alata je zato dala figure u razmeri 45 na platnu 80×80,
-   a na 32×32 odsečene. Alat mora sam da skalira geometriju kroz
-   `<g transform="scale(...)">`. Ta cena nije hipotetička — naplatila se u ovom
-   tasku, i to tiho: dve od tri provere su kvar propustile, jer je izlaz imao tačnu
-   dimenziju i neprazne piksele. Zbog toga alat sada poredi udeo neprovidnih piksela
-   **kroz veličine**: ono što crtež pokriva ne sme da zavisi od platna.
-2. **Merenje važi za ovaj materijal.** Cburnett set je čist crtež sa konturama, bez
-   gradijenata, filtera i teksta — a to je upravo ono što nanosvg podržava slabo ili
-   nikako. SVG koji bi ih koristio nije proveren i zaključak se na njega ne prenosi.
-
-Rezervni put, ako bi ikad zatrebao: PNG thumbnailovi sa Wikimedia servisa. Takođe
-nula zavisnosti, ali traži mrežu pri generisanju i nudi samo standardne veličine.
-
----
-
-## ADR-039: Tuđi materijal se čuva bajt u bajt — `.gitattributes` i provera
-
-> ⚠️ **Ispravljeno u R9; merenje ispod je bilo pogrešno pripisano.** Preuzimanje sa
-> Commons-a (20. 9. 2026, Windows 11, git 2.54.0.windows.1, Python 3.11.9) pokazuje da su
-> za `bb`, `bn`, `wb`, `wn` i `wr` zapisane vrednosti tačni otisci **preuzetih** bajtova, a
-> ne otisci zatečenog radnog stabla: Commons te fajlove isporučuje sa CRLF-om. Pogrešni su
-> bili **blobovi** — `git add` ih je u 0.4 normalizovao u LF pre nego što je `-text` počeo
-> da važi. Ispravka je vratila originalne bajtove; nijedna `sha1` vrednost nije menjana, i
-> od tada svih 12 blobova odgovara zapisanom. Time i rečenica iz „Posledica" ponovo stoji
-> za svih 12. Blok ispod ostaje čitljiv kao merenje sa svojim uslovima (CONVENTIONS §1);
-> zapis: `docs/faze/faza-0.md`, „R9 — pet sha1 vrednosti".
-
-> ⚠️ **Merenje obara drugu polovinu „Posledica".** Rečenica „sha1 iz `LICENSE.txt` važi
-> na svakoj platformi, i proverava se običnim `sha1sum`-om nad fajlom koji je pred očima"
-> ne stoji za pet od dvanaest fajlova: za `bb`, `bn`, `wb`, `wn` i `wr` zapisana vrednost
-> je otisak **CRLF oblika iz radnog stabla**, a commitovani bajtovi su LF. Izmereno
-> 20. 9. 2026 na svežem klonu (Windows 11, git 2.54.0.windows.1, Python 3.11.9) i u
-> radnom stablu; zapis: `docs/faze/faza-0.md`, „Checkpoint faze 0". Prva polovina —
-> pravilo „bajt u bajt" i sva četiri reda u `.gitattributes` — **ostaje na snazi**: isti
-> klon je uz `core.autocrlf=true` dobio LF na disku, dakle `-text` radi kako je opisano.
-> Ispravka zapisanih vrednosti je zaseban task, pre 1.1 (ROADMAP „Otvoreno", R9). Telo
-> ispod ostaje kako je zapisano (ADR-045).
-
-> ⚠️ **Dopunjeno ADR-om 042.** Pravilo „tuđi materijal se čuva bajt u bajt" i sva
-> četiri reda u `.gitattributes` ostaju na snazi. ADR-042 dodaje suprotan slučaj:
-> `LICENSE` i `THIRD-PARTY.txt` su **naši** fajlovi, nose ne-ASCII bajtove, a reda u
-> `.gitattributes` nemaju — jer nijedna tvrdnja ne zavisi od njihovih **prelazaka
-> reda**. Kriterijum je isti onaj po kom reda nemaju `PROVENANCE.txt` i `sr.json`.
-
-**Kontekst.** `assets/pieces/LICENSE.txt` navodi sha1 za svaki od 12 SVG originala,
-a `assets/fonts/LICENSE.txt` je kopija `LICENSE` fajla iz DejaVu arhive, bajt u
-bajt. Obe tvrdnje su **proverljive** — neko ih može izračunati i uporediti.
-
-`git add` je u 0.4 prijavio:
-
-```
-warning: in the working copy of 'assets/pieces/svg/wp.svg',
-         LF will be replaced by CRLF the next time Git touches it
-```
-
-`core.autocrlf=true` je uobičajena postavka na Windows-u. Blob u repozitorijumu
-ostaje LF i njegov sha1 se poklapa — ali fajl **na disku posle kloniranja** dobija
-CRLF, i tada se sha1 iz `LICENSE.txt` više ne poklapa ni sa čim što se vidi.
-
-Kvar se kod autora ne pojavljuje nikad. Nastaje kod druge osobe, posle `git clone`.
-
-**Odluka.** `.gitattributes` u korenu repozitorijuma:
-
-```
-assets/pieces/svg/*.svg    -text
-assets/fonts/LICENSE.txt   -text
-*.png   binary
-*.ttf   binary
-```
-
-`-text` znači da git **ne prepisuje prelaske reda**, ni pri commitu ni pri
-checkoutu. To je i sve što radi: ne isključuje filtere sadržaja (`ident`,
-`clean`/`smudge`), koji bi bajtove promenili jednako uspešno. Nijedan nije
-konfigurisan, i za ove putanje se ne sme konfigurisati.
-
-`-text` nije `binary` — SVG i tekstualna licenca ostaju čitljivi u diffu.
-
-PNG i TTF nemaju prelaske reda koje bi trebalo pretvarati i git to sam zaključuje,
-ali njuškanjem prvih bajtova fajla — heuristikom, ne garancijom. Zato izričito.
-
-Odbačena je druga mogućnost: **ostaviti konverziju i preformulisati `LICENSE.txt`**
-da kaže kako sha1 važi za preuzete bajtove i za blob, a ne za fajl na disku.
-Tvrdnja bi bila tačna, ali bi je proveravao samo onaj ko zna za `autocrlf` i ume
-da izvuče blob kroz `git cat-file`. Proverljiva tvrdnja koju niko ne može lako da
-proveri je za korak od tvrdnje kojoj se samo veruje.
-
-Pravilo se izriče šire nego što je slučaj tražio, jer će se ponoviti: **tuđi
-materijal u ovom repozitorijumu čuva se bajt u bajt.** Faza 4 donosi veb resurse.
-
-> **Ispravka primera, task 0.5.** Ova rečenica je kao sledeći slučaj pravila najavljivala
-> `assets/i18n/sr.json`. To je pogrešan primer, ne promena odluke: `sr.json` je **naš**
-> fajl, nastao u ovom repozitorijumu, nema zapisan heš i ne nosi nijednu tvrdnju o
-> poreklu. Zato **nema red u `.gitattributes`** — po istom kriterijumu po kom ga nema ni
-> `assets/fonts/PROVENANCE.txt`: red postoji tamo gde **tačni bajtovi nose tvrdnju**.
->
-> Izmereno u 0.5, da ne ostane pretpostavka: uz `core.autocrlf=true` `git checkout --`
-> vrati `sr.json` na disk sa CRLF-om (697 bajtova umesto 686), blob ostaje LF, `git diff`
-> je prazan i svih 44 testa prolazi. Konverzija mu ne može ništa jer nijedna tvrdnja ne
-> zavisi od njegovih bajtova — što je upravo razlog da reda nema.
-
-**Posledice.**
-
-sha1 iz `LICENSE.txt` važi na svakoj platformi, i proverava se običnim
-`sha1sum`-om nad fajlom koji je pred očima.
-
-**Lanac se proverava mašinski, u `tests/test_assets.py`.** ADR beleži odluku; on
-je ne sprovodi. Test tvrdi četiri stvari: da se svih 12 sha1 iz `LICENSE.txt`
-poklapa sa fajlovima na disku, da je svaki SVG sa diska naveden u `LICENSE.txt`,
-da ih je tačno 12, i da `.gitattributes` postoji sa redom za
-`assets/pieces/svg/*.svg`.
-
-Četvrta tvrdnja postoji zato što bez nje test hvata posledicu a ne uzrok. Poruka
-„sha1 se ne poklapa" nekoga ko je tek klonirao repozitorijum ne vodi nikuda; uz
-proveru `.gitattributes`-a poruka može da kaže šta se dogodilo i šta da uradi.
-
-Provera je **test, a ne alat u `tools/`** — suprotno od ADR-038, i iz istog
-razloga. Kvar iz ADR-038 nastaje dok alat generiše PNG, pa ga alat i hvata. Ovaj
-kvar nastaje pri `git clone` na drugoj mašini, gde se pokreće `pip install -e
-".[dev]"` pa testovi, a rasterizator se ne pokreće nikad. Provera mora da stoji
-tamo gde se izvršava u trenutku kad kvar nastaje.
-
-Test ne uvozi `pygame` — `hashlib`, `pathlib` i `re` su dovoljni.
-
-`CONVENTIONS.md` §5 je istim commitom precizirana: pravilo je glasilo „test ne dira
-disk izvan `tempfile`", a `tests/test_layers.py` od 0.2b obilazi celo stablo sa
-diska. Pravilo je htelo da zabrani **pisanje**, ne čitanje.
-
-Rečenicu o tome **od čega tvrdnja zavisi** dobijaju `assets/pieces/LICENSE.txt` i
-nov fajl `assets/fonts/PROVENANCE.txt` — **ne** `assets/fonts/LICENSE.txt`.
-
-Razlika je u tome čiji je dokument. `assets/pieces/LICENSE.txt` je **naš** tekst
-koji citira tuđu licencu, pa napomena o našem repozitorijumu tu pripada.
-`assets/fonts/LICENSE.txt` su napisali Bitstream i Tavmjong Bah i kopiran je bajt u
-bajt; umetnuta rečenica napravila bi dokument koji izgleda kao licenca a sadrži i
-nešto što nije, pa bi je onaj ko ga sutra prekopira u svoj projekat poneo kao deo
-uslova. Isto važi za sha256 vrednosti. Zato one, i napomena, idu u `PROVENANCE.txt`
-pored njega — koji na jednoj rečenici objašnjava i zašto su ta dva fajla različito
-tretirana, da se za mesec dana ne raspravlja ponovo.
-
-`PROVENANCE.txt` **nema** svoj red u `.gitattributes`, namerno. Red postoji tamo
-gde tačni bajtovi nose tvrdnju; `PROVENANCE.txt` je naš, niko mu ne računa heš i
-nije kopija ničega. Red koji ne štiti nijednu tvrdnju učinio bi komentar u
-`.gitattributes` netačnim za sebe, a spisak obaveza koji sadrži i ukrase prestaje
-da se čita kao spisak obaveza. Iz istog razloga reda nema ni
-`assets/pieces/LICENSE.txt`.
-
-**Šta smo izgubili:** `.gitattributes` je od sada fajl koji se ne sme brisati ni
-skraćivati bez čitanja dva `LICENSE.txt` fajla — a to niko ne pogađa iz njegovog
-imena. Veza je jednosmerna i nevidljiva: ništa u `.gitattributes` ne pokazuje ko
-na njega računa. Test tu vezu sada čuva, ali je i sam deo iste petlje — ko obriše
-i njega, obrisao je i jedino mesto koje bi prijavilo.
-
----
-
-## ADR-040: Ugovor `t()` — šta se odbija glasno, a šta se vidi na ekranu
-
-**Kontekst.** Task 0.5 uvodi `assets/i18n/sr.json` i `src/chess/client/i18n.py`. Funkcija
-`t()` se u tasku 4.7 prevodi **1:1 u JavaScript**, pa svaki izbor u njoj mora da važi i za
-jezik koji nema `**kwargs`, `str.format` ni Pythonov `str()`.
-
-Otvoreno pitanje nije bilo kako izgleda potpis, nego **šta `t()` radi kad nešto nije u
-redu**. Ako baca, jedan prevod koji fali obara ceo ekran usred partije. Ako ćuti, greška se
-ne primeti nikad — ni na ekranu ni u logu.
-
-**Odluka.**
-
-Ugovor se ne zove „`t()` ne baca". Zove se: **`t()` ne baca na loš podatak.**
-
-- **Loš podatak** je sadržaj `sr.json`-a i ono što stigne sa mreže.
-- **Pogrešan poziv** je greška u našem kodu, na pozivnom mestu.
-
-Bez tog razlikovanja dva izuzetka ispod izgledaju kao rupa u pravilu, umesto kao njegova
-granica.
-
-| Slučaj | Šta `t()` radi | WARNING |
-|---|---|---|
-| ključ ne postoji | vraća sam ključ | da, **jednom po ključu** |
-| parametar fali | `{{ime}}` ostaje vidljivo na ekranu | da |
-| višak parametra | izlaz nepromenjen | da |
-| `t()` pre `load()` | `RuntimeError` | ne |
-| parametar nije `str` | `TypeError` | ne |
-
-**WARNING je drugi kanal, pored vidljivog simptoma na ekranu — nikad jedini.** Zato prva
-tri reda imaju log, a poslednja dva nemaju: kod njih na ekranu nema šta da se vidi, pa
-izuzetak i jeste jedini način da se greška uopšte primeti.
-
-**Granica `load()` naspram `t()`.** Pravilo važi za `t()`, ne za `load()`. `load()` je
-mesto gde se loš podatak odbija **glasno** — `ValueError` na BOM, neispravan JSON i
-duplirani ključ. `t()` posle toga radi samo sa onim što je kroz `load()` prošlo, i na
-sadržaj ne baca ništa.
-
-`CONVENTIONS.md` §6 to potvrđuje sa druge strane: `ValueError` iz `load()` nosi **englesku
-poruku namenjenu programeru**, a ne tekst za korisnika — korisnički tekst ide isključivo
-kroz `message_key` i `sr.json` (ADR-010). Zato izuzetak i sme da bude rečit: niko ga ne
-prikazuje igraču.
-
-**Zamena parametara: `{{ime}}`.** Ne `str.format`, ne `string.Template`, ne `${ime}`.
-Sintaksa mora biti takva da je **nijedan jezik ne implementira sam**, jer se funkcija u 4.7
-prevodi 1:1. `str.format` nosi pristup atributima, indeksiranje, format specifikatore i
-`!r` — ništa od toga JavaScript neće imati, a sve bi se u Pythonu tiho koristilo.
-
-Obrazac je `\{\{([a-z][a-z0-9_]*)\}\}`, sa **doslovnom klasom znakova**, ne `\w`: `\w` je u
-Pythonu Unicode, a u JavaScriptu ASCII, pa bi isti obrazac na dve strane prihvatao različita
-imena. Potpis prima **rečnik**, ne `**kwargs`, iz istog razloga.
-
-**Parametri su stringovi i koriste se doslovno. `t()` ne poziva `str()` ni na čemu:**
-
-```
-Python  str(1.0)     -> "1.0"
-JS      String(1.0)  -> "1"
-```
-
-Formatiranje broja ostaje na pozivnom mestu, u svakom jeziku svojim pravilima. Zapisano je
-sa primerom, a ne samo kao pravilo, jer bi neko ko za godinu dana hoće da „olakša" `t()`
-dodavanjem `str()` inače video samo zabranu bez razloga. Kvar bi se pojavio tek u fazi 4, na
-satu iz 3.7, i to tiho.
-
-**BOM se odbija, `utf-8-sig` se ne koristi.** Obrazloženje ne zavisi od toga kako se
-ponaša `JSON.parse`: `utf-8-sig` znači **popustljivo u Pythonu** — BOM prolazi neopaženo i
-ostaje u repozitorijumu, a da li će faza 4 na njega pući zavisi od izabranog puta čitanja u
-JavaScriptu. Ne nasleđujemo taj rizik; cena strogosti je nula, jer fajl pišemo mi.
-
-Odbijanje stoji na **dva sloja**, namerno duplirano: u `load()` i u testu B6. `load()` prima
-putanju, pa u fazi 4 može da pokaže na fajl koji test ne vidi; test gleda **bajtove**, pa
-tvrdi i kad dekodiranje ne uspe. Poruka iz `json.load` („Expecting value: line 1 column 1")
-ne vodi nikuda.
-
-**Posledice.**
-
-Prevod koji fali degradira ekran umesto da ga obori, a nikad ne prolazi nezapaženo: vidi se
-i na ekranu i u logu. Greška u našem kodu — poziv pre `load()`, broj umesto stringa — pada
-odmah i glasno, tamo gde je i nastala.
-
-Skup već prijavljenih ključeva vezan je za **katalog**, ne za modul: `load()` ga prazni, pa
-ponovo učitan katalog koji i dalje nema ključ mora ponovo da se javi. Bez toga bi „jednom po
-ključu" u dugoj sesiji značilo „jednom zauvek".
-
-**Predviđeno, da u fazi 3 ne izgleda kao pokvaren test:** bela lista dozvoljenih znakova iz
-testa B11 nema `{`, `}` ni `_`. Prvi tekst sa `{{ime}}` u tasku 3.7 **oboriće B11** — dakle
-baš funkcija koju ovaj task uvodi. To je po logici bele liste ispravno: nov znak se dodaje
-svesno, kad ga prvi tekst zatraži.
-
-**Šta smo izgubili.** `t()` je manje udobna nego `str.format`: bez format specifikatora, bez
-pozicionih argumenata, sa obaveznim `str()`-om na pozivnom mestu. Poziv sa brojem, koji bi u
-Pythonu radio, sada je greška. To je cena toga da ista funkcija u dva jezika daje isti
-izlaz, i plaća se na svakom pozivnom mestu, ne jednom.
-
----
-
-## ADR-041: Zatvoren skup vrednosti iz protokola se čita mašinski
-
-**Kontekst.** `PROTOCOL.md` §5 nabraja devet `ERROR` kodova. `sr.json` treba da ima ključ za
-svaki. Ništa nije sprečavalo da se ta dva spiska raziđu: dodat kod bez ključa daje na ekranu
-`error.nesto` umesto rečenice, a suvišan ključ ostaje zauvek jer niko ne zna da ga protokol
-više ne šalje. Oba kvara su tiha.
-
-Ovo nije pravilo o greškama. `ERROR` kodovi su samo **prvi** zatvoren skup vrednosti koji
-protokol propisuje a klijent prikazuje.
-
-**Odluka.**
-
-**Kad protokol propiše zatvoren skup vrednosti koji korisnik vidi, taj skup se čita mašinski
-iz `PROTOCOL.md` i poredi sa `sr.json`.** Pravilo izvođenja:
-
-```
-message_key = "error." + kod malim slovima
-ILLEGAL_MOVE -> error.illegal_move
-```
-
-`tests/client/test_i18n.py` parsira prvu kolonu tabele iz §5 i tvrdi **oba smera**: svaki kod
-ima svoj ključ, i svaki `error.*` ključ pripada nekom kodu. Jedan smer bi ostavio obim taska
-kao obećanje umesto kao pravilo.
-
-**Poznata sledeća primena:** `termination` iz `GAME_OVER` — `checkmate`, `stalemate`,
-`resignation`, `timeout`, `draw_agreement`, `insufficient_material`, `fifty_move`,
-`threefold_repetition`. Ti ključevi nastaju u fazi 3 i biće `termination.*`, po istom
-pravilu izvođenja. Zapisano ovde da se u 3.9 ne izmišlja ponovo.
-
-**Zašto se ovde parsira, a u §2 prepisuje.** ADR-037.1 je odbio da alat parsira tabelu
-slojeva, jer bi ćelije morale da budu gramatika — „sve gore + `pygame`" i „sve" to nisu.
-Ovde je drugačije: ćelija je **identifikator**, `VERSION_MISMATCH`, i ništa drugo. Parsira se
-identifikator, ne proza.
-
-**Posledice.**
-
-Kod dodat u tabelu bez ključa u `sr.json` obara suite. Ključ bez koda takođe. Napomena o tome
-stoji u §5, ispod tabele, jer se pravilo mora videti tamo gde se tabela menja.
-
-**Cena, ista kao u ADR-037.1: oblikovanje `PROTOCOL.md` postaje noseće.** Tabela iz §5 više
-nije samo tekst za čoveka — promena zaglavlja ili prelazak na drugi oblik liste obara test.
-Zato prva rečenica napomene to izričito kaže, i zato test razlikuje „zaglavlje nije nađeno"
-od „nula kodova": prvi je kvar u oblikovanju, drugi u sadržaju.
-
-**Selidba u 2.1.** Kad `protocol/messages.py` dobije enum kodova, spona se seli sa dokumenta
-na enum, a tvrdnja postaje jača — enum je izvršiv, dokument nije. Napomena u §5 ostaje;
-menja se samo njena druga rečenica, koja imenuje test. Isti mehanizam kojim je u ROADMAP-u
-zavedeno polje `captured`.
-
-**Šta smo izgubili.** Sloboda u oblikovanju §5. Ko sutra hoće da tabelu kodova pretvori u
-listu, mora prvo da prepravi test — i to je namera, ne smetnja, ali je trenje stvarno.
-Takođe: test tvrdi da **ključ postoji**, nikad da je prevod tačan. Rečenica koja opisuje
-pogrešnu grešku prolazi kroz svih devet tvrdnji.
-
----
-
-## ADR-042: BSD-3 za naš kod; `LICENSE` nosi uslove, `THIRD-PARTY.txt` nosi obim
-
-**Kontekst.** Repozitorijum je javan i od 0.4 nosi tuđi materijal pod dve licence, a za
-**naš** kod ne izriče nijednu. Javan repo bez licence je podrazumevano „sva prava
-zadržana": onaj ko na njega naiđe zna da ne sme da ga koristi, ne zna zašto, i nema koga
-da pita.
-
-Drugo pitanje je stiglo uz prvo. `LICENSE` u korenu, po prirodi tog fajla, imenuje
-**jednog** nosioca i **jedne** uslove. Kod figura su uslovi isti tekst, ali je nosilac
-drugi (Cburnett, 2006). Kod fonta se razlikuju i nosilac i uslovi. Dakle jedan
-izostavljen nosilac i jedni izostavljeni uslovi — a ne „netačna tvrdnja".
-
-To nije formalnost. Prva klauzula BSD-3 traži da se zadrži **baš to** obaveštenje o
-autorskim pravima koje je uz materijal došlo, a treća zabranjuje korišćenje imena
-nosioca za promociju. Isti tekst uz dva nosioca obavezuje **dvaput, prema dve različite
-strane**.
-
-**Odluka.**
-
-**Naš kod ide pod BSD-3-Clause.** Repozitorijum već nosi taj tekst za figure, pa su
-uslovi isti kroz celo stablo i razlikuje se samo nosilac prava. Copyleft bi
-protivrečio tome što smo za iste te figure svesno odbili ponuđeni GPL (PROJECT §12).
-
-**Telo `LICENSE`-a je kanonski SPDX tekst**, neizmenjen osim reda o autorskim pravima,
-koji glasi `Copyright (c) 2026 Stefan Obradović` — godina iz prvog commita, jedna, bez
-raspona. Klauzula 3 ostaje kanonska (`the copyright holder nor the names of its
-contributors`), bez umetanja imena: standardni tekst licence se ne prepravlja — isto
-pravilo je već izrečeno u `assets/pieces/LICENSE.txt` za odricanje od garancije — a
-`licensee`, detektor koji GitHub koristi, poredi tekst, pa izmenjen tekst smanjuje
-poklapanje.
-
-Telo je **preuzeto**, ne prekucano:
-
-```
-https://raw.githubusercontent.com/spdx/license-list-data/main/text/BSD-3-Clause.txt
-1460 bajtova
-sha256 5a93d5831e1297ab10fe643e1a631e83be392896da14ee2951285a79012df69d
-```
-
-Kopija koja već stoji u `assets/pieces/LICENSE.txt` **nije** taj tekst i nije mogla da
-posluži kao izvor. Izmereno poređenjem reči, sve beline sažete — razlikuje se na **pet**
-mesta:
-
-| | SPDX kanonski | `assets/pieces/LICENSE.txt` |
-|---|---|---|
-| red o pravima | `Copyright (c) <year> <owner>. ` | `Copyright (c) 2006 Cburnett` |
-| oznake klauzula | `1.` `2.` `3.` | `  * ` |
-| klauzula 3 | `the copyright holder` | `Cburnett` |
-| odricanje, 1. rečenica | `THE COPYRIGHT **HOLDERS** AND CONTRIBUTORS` | `... **HOLDER** AND ...` |
-| odricanje, 2. rečenica | `THE COPYRIGHT HOLDER **OR** CONTRIBUTORS` | `... HOLDER **AND** ...` |
-
-Prva tri su znana i očekivana. **Poslednja dva nisu bila**, i ona su razlog zbog kog
-izvor mora biti SPDX: da je telo uzeto iz repoa, naš `LICENSE` bi nasledio varijantu
-odricanja koju taj fajl u sopstvenom objašnjenju naziva kanonskom, a koja to nije.
-Prekucavanje iz sećanja je kvar koji nijedan gate ne hvata (faza-0.md §0.4); uzimanje
-iz repoa je bio isti kvar u tišoj varijanti.
-
-Tekst je prelomljen na 75 kolona. To **nije** izmena teksta: spisak reči prelomljenog i
-kanonskog tela je identičan (216 naspram 216, prazna razlika, `a == b`), nijedan red se
-ne završava crticom, a `licensee` normalizuje beline pri poređenju. Uvlačenja nastavaka
-klauzula nema — nema ga ni kanonski tekst ni kopija u repou, i dva različita izgleda iste
-licence u istom repozitorijumu ne donose ništa.
-
-**Tvrdnja o obimu NE ide u `LICENSE`.** Obim nosi zaseban fajl u korenu,
-`THIRD-PARTY.txt`. Isti odnos kao `assets/fonts/LICENSE.txt` naspram `PROVENANCE.txt`:
-tuđ ili kanonski dokument se ne dopunjuje našom rečenicom, jer bi je onaj ko ga prekopira
-poneo kao deo uslova (ADR-039).
-
-**Ime nije `NOTICE.txt`.** `NOTICE` je konvencija Apache-2.0 sa pravnim značenjem po
-§4(d) te licence i uz BSD-3 navodi na pogrešan zaključak. Nije ni `COPYRIGHT.txt`:
-`licensee` boduje imena fajlova regularnim izrazima, a `COPYING_REGEX = /copy(ing|right)/i`
-daje `COPYRIGHT.txt` 0.85 — odmah iza `LICENSE` (1.00). Ušao bi u isti spisak kandidata
-za fajl licence, a nije licenca. `THIRD-PARTY.txt` ne pogađa nijedan regex iz te tabele.
-
-**Obim je materijal koji stoji u ovom repozitorijumu.** Deklarisane zavisnosti se ne
-nabrajaju: `pygame` pip donosi pri instalaciji i mi ga ne redistribuiramo. Preispituje se
-ako faza 7 („Deploy (opciono)") ikad spakuje izvršni fajl — LGPL tada traži mogućnost
-relinkovanja, jer je to uslov na **distribuciju**, ne na upotrebu.
-
-`THIRD-PARTY.txt` je na engleskom, kao `assets/pieces/LICENSE.txt` i `PROVENANCE.txt`.
-Nije ni `README.md` ni `docs/`, nego dokument uz licencu, i obraća se onome ko naiđe na
-repozitorijum.
-
-**Spisak putanja je ograničen blok koji čita test.** Red zaglavlja
-`DIRECTORIES WITH THEIR OWN LICENSE:`, jedna putanja po redu **od prve kolone**, prazan
-red kao kraj. Fajl nosi rečenicu koja imenuje test — opšti oblik koji `CONVENTIONS.md` §1
-dobija u 0.7. Kriterijum je „direktorijum ima svoj `LICENSE.txt`", pa `assets/i18n`
-ispada sam od sebe, bez izuzetka u kodu. Putanje idu od prve kolone iako parser radi
-`strip()`: oblik fajla i parser se slažu izričito, umesto da uvlačenje preživi zato što
-ga je `strip()` progutao.
-
-**Svaki čitalac `THIRD-PARTY.txt`-a dekodira pa koristi `splitlines()`.** Ne deli sirove
-bajtove po `\n` i **ne primenjuje nijedan izraz na ceo tekst sa `re.MULTILINE`**.
-
-Pravilo je namerno šire od jednog čitaoca. Prva verzija plana vezala ga je za „parser
-bloka", pa je drugi čitalac istog fajla — pronalaženje reda `SPDX-License-Identifier:` —
-prošao sa `re.MULTILINE` i sidrom `[ \t]*$`. `\r` nije ni razmak ni tab, pa bi izraz
-prestao da pogađa čim fajl na disku bude CRLF: kod nas bi prolazio, kod prve druge osobe
-padao. Uže formulisano pravilo propustilo je drugog čitaoca **pre nego što je i jedan red
-koda napisan** — zato ovde stoji šire.
-
-Zbog toga `THIRD-PARTY.txt` **nema red u `.gitattributes`**: red je obaveza koju neko mora
-da održava, a `splitlines()` je jednom napisan i ne traži ništa. Kad postoje dva načina da
-se ista stvar obezbedi, biramo onaj koji ne traži da se neko seti.
-
-`LICENSE` takođe **nema red u `.gitattributes`**, i obrazloženje je uže nego što bi se
-očekivalo: nijedna tvrdnja ne zavisi od njegovih **prelazaka reda**, a to je jedino što
-`-text` štiti. Šira formulacija („ne zavisi od njegovih bajtova") bila bi netačna — test
-iz ovog istog commita čita njegove bajtove. CRLF pretvara `\n` u `\r\n` i ne dira `C4 87`.
-
-Izmereno, ne pretpostavljeno: posle `git checkout --` uz `core.autocrlf=true` oba fajla su
-na disku CRLF (`LICENSE` 1493 B umesto 1466, `THIRD-PARTY.txt` 4326 umesto 4231), `git
-diff` je prazan, nijedan red posle `splitlines()` ne sadrži `\r`, i svih 53 testa prolazi.
-
-**Lanac čuva `tests/test_assets.py`**, kao i u ADR-039 — ADR beleži odluku, on je ne
-sprovodi. Provera znaka U+0107 je **stalna** tvrdnja, ne jednokratna provera: kvar
-(presnimavanje kroz editor u cp1252, loš merge) nastaje kasnije, a tada se izvršava suite
-a ne mi. Isti kriterijum po kom `sha1` provera iz 0.4 živi u testu a ne u alatu; uz to,
-prva klauzula BSD-3 traži da baš to obaveštenje preživi.
-
-Provera se gradi **iz kodne tačke**, `chr(0x0107)`, nikad iz doslovnog znaka u izvoru
-testa, i poruka o padu imenuje `U+0107` a ne ispisuje ga. Da test sadrži doslovan znak,
-isto što bi ga pokvarilo u `LICENSE`-u pokvarilo bi ga i u testu, pa bi se poredilo
-pokvareno sa pokvarenim. Nije teorijski: konzola je i u ovom tasku pukla na `đ`
-(`UnicodeEncodeError: 'charmap' codec can't encode character` U+0111), isto kao u 0.5.
-
-**`LICENSE` i `THIRD-PARTY.txt` time nisu ASCII fajlovi**, za razliku od `.py` fajlova gde
-smo čistotu ASCII-ja izričito tražili. Oba nose tačno dva ne-ASCII bajta, `C4 87`. Ime se
-piše kako se piše.
-
-**Posledice.**
-
-Ko naiđe na repozitorijum vidi pod čim sme da ga koristi, i vidi da to ne važi za figure i
-font. Metapodaci paketa nose istu tvrdnju (ADR-043), a test je vezuje za `THIRD-PARTY.txt`,
-pa dva mesta ne mogu tiho da odlutaju.
-
-**Šta smo izgubili.**
-
-1. **Još dva noseća oblika.** Red `SPDX-License-Identifier:` i zaglavlje bloka su od sada
-   tekst koji obara suite kad se promeni. Ista cena kao u ADR-041 za `PROTOCOL.md` §5, i
-   ista namera.
-2. **Pravilo o ASCII-ju se ne prenosi na ova dva fajla.** „Izvor je čist ASCII" važi za
-   kod; ovde ne važi i ne sme. Razliku od sada mora da zna svako ko ta dva fajla dira.
-3. **Provera ASCII-ja pokriva jedan fajl zato što fajl ima jedan.** `AsciiSourceTest` čita
-   `Path(__file__)` i ništa drugo. Ako se tvrdnje o licencama ikad razdvoje na više test
-   modula, provera se **ne prenosi sama** i pravilo tiho prestaje da važi za nov fajl.
-   Zapisano i u komentaru iznad tog testa, jer ADR niko ne čita dok deli fajl.
-4. **`THIRD-PARTY.txt` mora da se održava.** Treći direktorijum sa tuđim materijalom obara
-   `LicensedDirectoriesTest` — namerno, jer hardkodovan broj 2 traži da to bude svestan
-   događaj — ali je to obaveza koju niko ne pogađa iz imena fajla.
-5. **Lanac vezuje oznaku sa oznakom, nikad oznaku sa tekstom.** `LICENSE` nosi **tekst**
-   licence i reč `BSD-3-Clause` se u njemu ne pojavljuje; test poredi `pyproject.toml` sa
-   `THIRD-PARTY.txt`, dakle dva zapisa **iste oznake**. Nijedna tvrdnja ne kaže da je telo
-   u `LICENSE`-u zaista BSD-3-Clause a ne neka druga licenca — ko zameni telo tekstom MIT
-   licence i ostavi red o autorskim pravima, prolazi kroz svih devet tvrdnji. Poreklo tela
-   čuva `sha256` zapisan iznad, ali to je **zapis, ne provera**. Ista granica kao u
-   ADR-041: test tvrdi da ključ postoji, nikad da je prevod tačan.
-
----
-
-## ADR-043: Licenca se izriče i u metapodacima paketa; SPDX oblik traži `setuptools>=77`
-
-**Kontekst.** `LICENSE` u korenu vidi čovek. `pip`, PyPI i svaki alat koji čita `METADATA`
-vide `pyproject.toml`. Do ovog taska `[project]` nije imao nijedno polje o licenci, pa je
-wheel koji gradimo nosio **nijedan red o licenci** — izmereno, ne pretpostavljeno.
-
-**Odluka.**
-
-```toml
-license = "BSD-3-Clause"
-license-files = ["LICENSE"]
-
-[build-system]
-requires = ["setuptools>=77"]
-```
-
-SPDX izraz, ne tabela i ne klasifikator. Razlozi su **izmereni**, ne citirani:
-
-- `setuptools` 76.1.0 odbija `license` kao string tvrdo: `ValueError: invalid
-  pyproject.toml config: 'project.license'`; šema tada zna samo `{file=}` i `{text=}`.
-  Granica je stvarno 77.
-- `setuptools` 84.0.0 prijavljuje `SetuptoolsDeprecationWarning` i za `project.license`
-  kao TOML tabelu i za klasifikator `License :: OSI Approved :: BSD License`, sa rokom:
-  „By 2027-Feb-18 ... your builds will no longer be supported".
-- Klasifikator ne razlikuje dvoklauzulnu od troklauzulne BSD licence, a ceo task postoji
-  da tvrdnja bude tačna. **Ispravka premise iz plana:** `pyproject.toml` klasifikator
-  nikad nije ni imao, pa je ovo razlog da se **ne doda**, a ne da se ukloni.
-- Paket ne ide na PyPI, što izbor pojačava u istom smeru: jedini potrošač klasifikatora je
-  PyPI-jev prikaz.
-
-**Podizanje granice ne dodaje zavisnost.** `build-system.requires` opisuje okruženje u kom
-pip gradi paket, a to okruženje pip stvara sam. Lista zavisnosti projekta ostaje `pygame` i
-`ruff` (CONVENTIONS §10, dopunjena istim commitom da to kaže).
-
-Izmereno pre izmene, da granica ne bude pretpostavka: pip u izolovano build okruženje već
-povlači **najnoviji** setuptools (84.0.0), pa 84 već radi. `>=77` ne menja **šta se
-povlači**, nego **šta je dozvoljeno** — sprečava da neko sa zakucanim starijim
-setuptools-om dobije `ValueError` umesto paketa.
-
-**Wheel se gradi sa `pip wheel . --no-deps -w dist`**, i pre i posle izmene. `build` se
-**ne** instalira — nije naša zavisnost i nikad nije bio pokrenut u ovom projektu. `pip` je
-već tu i sam stvara izolovano build okruženje. `build/`, `dist/` i `*.egg-info/` su već u
-`.gitignore`, pa izgradnja ne prlja radno stablo — provereno, ne pretpostavljeno.
-
-**Posledice.**
-
-Mereno nad wheel-om, pre i posle:
-
-| | pre | posle |
-|---|---|---|
-| veličina | 5724 B | 6756 B |
-| polja o licenci u `METADATA` | **nijedno** | `License-Expression: BSD-3-Clause`, `License-File: LICENSE` |
-| `.dist-info/licenses/LICENSE` | ne postoji | postoji, sa `C4 87` netaknutim |
-| `assets/` u wheel-u | nema | nema |
-
-**`pip show` i dalje ispisuje prazno `License:`, i to je ispravno.** Po PEP 639 se
-`License` i `License-Expression` međusobno isključuju, a `pip 24.0` u `show` čita samo
-staro polje. Merilo tačnosti je `License-Expression` u `METADATA`, ne izlaz jedne stare
-komande. Zapisano izričito da neko za pola godine ne „popravi" tačnu metapodatku zato što
-`pip show` o njoj ćuti.
-
-Predviđena tačka otkaza koja se **nije** ostvarila: SPDX oblik tera `Metadata-Version:
-2.4`, a u venv-u je `pip 24.0`. Instalacija je prošla bez greške. Zabeleženo jer je bilo
-otvoreno pitanje, ne da bi izgledalo kao rizik koji smo savladali.
-
-**Šta smo izgubili.**
-
-1. **Predviđen pad, isti oblik kao B11 u ADR-040.** Zbog `[tool.setuptools.packages.find]
-   where = ["src"]` `assets/` ne ulazi u wheel, pa je tvrdnja o licenci u metapodacima
-   danas tačna za ono što se pakuje. Kad u fazi 4 ili 7 resursi budu morali u paket,
-   `license-files` **mora** da poraste, inače wheel nosi tuđi materijal bez ijedne licence.
-   **Nijedna provera iz ovog taska to ne hvata.**
-2. Donja granica `setuptools`-a je od sada broj koji neko mora da brani. Spuštanje ispod 77
-   vraća `ValueError`, i to se vidi tek pri izgradnji, ne pri čitanju fajla.
-
----
-
-## ADR-044: Fajl van gita nosi adresu i okidač, nikad tvrdnju
-
-> ⚠️ **Merenje posle 0.7 obara „uzrok nije utvrđen".** Isti test ponovljen na
-> Claude Code **v2.1.259 posle restarta**, 4. septembra 2026 — `.claude/rules/`
-> se učitava. Uzrok je **neizvršen restart** posle ažuriranja u toku 0.7, ne
-> promena između verzija. Zapis merenja: `docs/faze/faza-0.md` §0.8. Oznaka po
-> ADR-045; telo ispod ostaje kako je zapisano.
-
-**Kontekst.** ADR-012 i ADR-020 su odlučili **šta** ostaje van gita — `CLAUDE.md` i
-`.claude/` — ali ne i **šta u njima sme da piše**. U 0.2 su tri fajla protivrečila
-ADR-ovima; do 0.7 su narasla još dva. `core-purity.md` je tvrdio da `tests/core/**` sme da
-uvozi sve, što obara ADR-037.3 — stigao **jedan task posle** te ispravke; `i18n.md` da
-`t()` ne baca, a ADR-040 kaže: ne baca **na loš podatak**.
-
-Uzrok nije nemar nego struktura. `.claude/` nije u hijerarhiji dokumenata (CONVENTIONS §1)
-ni pod pravilom propagacije (ADR-030/032) — a propagacija radi kroz commit, pa fajl koji u
-commit ne ulazi ne može ni da dohvati. Uz to se učitava **sam**, pa pravilo bez autoriteta
-stiže pred oči pre onog sa autoritetom.
-
-**Izmereno** u ovom projektu, Claude Code **v2.1.258 i v2.1.259**, 3. septembra 2026 — tri
-načina učitavanja, poređana po pretpostavljenoj opasnosti:
-
-| Način | Šta se učita | Kada | Potvrđeno |
-|---|---|---|---|
-| eager | `MEMORY.md` (van stabla) i `description` svakog `SKILL.md` | od prvog tokena, uvek | **da** — izmena tri opisa se istog trena videla u listi skillova |
-| lenj po putanji | `.claude/rules/*.md` po `paths:` globu | pri dodiru fajla koji to pravilo reguliše | **v2.1.258 da, v2.1.259 ne** — vidi ispod |
-| lenj na poziv | telo `SKILL.md`-a | tek kad se skill pozove | da |
-
-Srednji red je razlog zbog kog se `rules/` obrađuje pre `skills/`, i jedini koji je meren
-**dvaput, sa različitim ishodom**:
-
-- **v2.1.258 — potvrđeno.** U ranijoj sesiji ovog istog taska, tri `Read`-a nad
-  `src/chess/` donela su tri fajla iz `.claude/rules/`, svaki sa zaglavljem
-  `Contents of ...`.
-- **v2.1.259 — nereprodukovano.** Tri `Read`-a nad tri različita globa nisu donela nijedno
-  pravilo.
-
-Alat se ažurirao **u toku taska** — terminal je javio `Update installed · Restart to
-update` — i restart nije izvršen. **Uzrok nije utvrđen** i ovde se ne istražuje. Mehanizam
-dakle nije „ne radi": prestao je da radi između dve verzije, ili traži restart posle
-ažuriranja. **Razlika između dva merenja je vredniji nalaz od bilo koje od dve pojedinačne
-tvrdnje**, jer imenuje pokretni deo — a tvrdnja o tuđem sistemu i inače važi samo za
-verziju uz koju je zapisana.
-
-Odluka se time ne menja: rečenica koja ne sme da postoji ne postaje bezopasna time što
-možda ne stiže.
-
-**Odluka.** Klasa nije `.claude/` nego **fajl van gita koji utiče na projekat**.
-**Kriterijum:** rečenica sme da ostane van gita samo ako je **nijedna izmena u `docs/` ne
-može učiniti netačnom.** Jedinica provere je **rečenica**, ne fajl. „Pravilo X — vidi §2"
-nije pokazivač nego duplikat sa citatom, i truli isto kao duplikat bez njega.
-
-**Oblik.** Pokazivač ima **adresu** (gde) i **okidač** (kada), a okidač imenuje
-**situaciju**, nikad sadržaj pravila. „Pre nego što dodirneš `core/`, pročitaj §2" je
-ispravno; „…imaj na umu da `core/` uvozi samo stdlib — vidi §2" nije: sve posle crte je §2.
-
-**Tri odredišta.** Pravilo projekta → `docs/`. Dozvola izvršiocu → `.claude/settings.json`.
-Rečenica o `docs/` → pokazivač. Opšte: **rečenica stoji tamo gde je izvor onoga o čemu
-govori, ili kao pokazivač na taj izvor, nikad kao kopija.**
-
-**Opis alata se briše.** Rečenica koja opisuje ponašanje Claude Code-a („plan mod je režim
-u kom…") nema odredište — truli **tiho**, jer se i posle promene alata čita razumno
-(presedan: `_hooks_disabled` iz 0.2, mrtav ključ kao treća vrsta laži). Naša **politika** o
-korišćenju alata („plan mod za sve veće od jedne funkcije") ima izvor kod nas i pripada
-`docs/`. Merilo: **opis truli tiho, politika pada glasno.**
-
-**Rečenica se sme ukloniti tek kad joj dom postoji.** Ako se briše tvrdnja koja u `docs/`
-nema parnjaka, dom se pravi u **istom commitu** — propagacija primenjena unazad.
-
-**Posledice.** `.claude/` bez `settings.json` pada sa **380 na 152 reda**. Dva izmerena
-neslaganja nestaju **svođenjem**, a ne pojedinačnom ispravkom — nestao im je nosač; prva
-tri su u 0.2 ispravljena pojedinačno i to ih nije sprečilo da se ponove. U istom
-commitu su `PROJECT.md` §7 i `CONVENTIONS.md` §4 dobili **devet** tvrdnji koje su do sada
-živele samo van gita: pravilo o domu primenjeno, ne izuzetak od njega.
-
-**Šta smo izgubili:**
-
-1. **Skup okidača raste sa svakim ADR-om** koji uvede pravilo suprotno podrazumevanom
-   ponašanju modela — a fajl koji ih nosi je jedini koji propagacija ne može da dohvati.
-   Napetost je nerešiva po konstrukciji: okidač mora da bude u fajlu koji se učitava sam, a
-   to je baš fajl van gita. Rešenje truli **postepeno**, umesto da pukne odjednom.
-2. **Tri tvrdnje su ostale bez doma**, svaka sa imenovanim taskom u kom ističe: socket u
-   svojoj niti (3.2), `BotScene` kao nov fajl (6.7), tabela simptom→uzrok (1.3). Krajnje
-   stanje nije „nula tvrdnji" nego tri zabeležene — i pošto je migraciona tabela u
-   `faza-0.md` §0.2 već tri puta ispala nepotpuna, **svaka nosi red i u samom fajlu**.
-3. **Pokazivač košta jedno čitanje više.** Blokovi komandi su ispali iz oba skilla, jer je
-   i komanda tvrdnja o projektu — da alat postoji, na toj putanji, pod tim imenom.
-4. **`MEMORY.md` i njegov folder su peti slučaj klase, i najjači.** Ti fajlovi nose
-   `type: feedback` i `originSessionId`, dakle nastaju **sami**, iz korisnikovih ispravki:
-   paralelan korpus pravila raste iz razgovora, van stabla, eager, i nijedan naš dokument
-   ne zna da postoji. CONVENTIONS §8 ga od sada imenuje kao granicu provere istorije, i tu
-   se staje — **imenuje se, ne rešava.**
-5. **Ne znamo više da li `.claude/rules/` iko čita.** Na v2.1.258 jeste, na v2.1.259 se ne
-   reprodukuje, uzrok nije utvrđen. Dok tako stoji, dve tvrdnje parkirane u
-   `client-boundaries.md` čekaju 3.2 i 6.7 u fajlu za koji ne znamo da se otvara — pa je
-   red u migracionoj tabeli jedini zapis koji pouzdano radi, jer je u gitu. Zavedeno u
-   ROADMAP „Otvoreno".
-6. **Ovaj task nema test.** Glavni proizvod je po konstrukciji neproverljiv suite-om:
-   `.claude/` je van gita, pa nijedan test ne sme da zavisi od njega — inače bi svež
-   `git clone` padao kod svakoga. Gate su inventar pre i posle i tabela uklonjenih rečenica
-   u `faza-0.md` §0.7, ne tvrdnja da je urađeno.
-
----
-
-## ADR-045: Merenje koje obara ADR nosi oznaku; telo ADR-a se ne menja
-
-**Kontekst.** CONVENTIONS §1 i ADR-032 pokrivaju jedan slučaj: **nov ADR obara stariji**,
-stari dobija ⚠️ oznaku i ne briše se. Slučaj u kom **merenje** obara tvrdnju iz ADR-a nije
-pokriven nigde. ADR-044 je 3. septembra 2026. zapisao da se učitavanje `.claude/rules/`
-„ne reprodukuje na v2.1.259, uzrok nije utvrđen". Isti test je posle 0.7 ponovljen nakon
-restarta alata i mehanizam je radio — uzrok je neizvršen restart. Fajl na vrhu hijerarhije
-time zaostaje za onim što je izmereno.
-
-Uz to, „stari ADR se **ne briše**" nije isto što i „telo se **ne dira**". Praksa se sledi
-od ADR-012 — deset ⚠️ blokova stoji iznad netaknutih tela — ali nigde nije zapisana, pa
-važi tačno dok je se neko seća.
-
-**Odluka.**
-
-1. **Telo ADR-a se ne menja posle commita.** Ispravka ide isključivo kao ⚠️ blok iznad
-   tela, odmah ispod naslova. Ono što je odlučeno ostaje čitljivo u obliku u kom je
-   odlučeno; iznad njega stoji šta ga je oborilo.
-2. **Merenje koje obori tvrdnju iz ADR-a stavlja ⚠️ na taj ADR**, sa pokazivačem na mesto
-   gde je merenje zapisano. Cilj pokazivača sme biti i `docs/faze/faza-N.md`, ne samo
-   drugi ADR.
-
-**Merenje ne traži svoj ADR.** §1 nabraja četiri slučaja u kojima se ADR piše i merenje
-nije nijedan od njih. Forsiran ADR bi merenju dao svojstvo odluke — „ne otvara se ponovo" —
-a merenje mora ostati oborivo sledećim pokretanjem. Zato zapis živi u `faza-N.md`, a ADR na
-njega pokazuje.
-
-**Verzija i datum su obavezni.** Tvrdnja o tuđem sistemu važi samo za verziju uz koju je
-zapisana. I ⚠️ oznaka i sam zapis nose verziju alata i datum merenja; bez toga se ne zna
-šta je tačno oboreno, ni čime.
-
-**Posledice.** ADR-044 dobija ⚠️ koji pokazuje na `faza-0.md` §0.8. Oblik ispravke je od
-sada jedan te isti, bez obzira da li obara nov ADR ili merenje.
-
-**Šta smo izgubili.** `DECISIONS.md` prestaje da bude samodovoljan: ADR sada može da zavisi
-od dokumenta **ispod sebe** u hijerarhiji za sopstvenu ispravku, pa čitanje ADR-a više ne
-staje unutar jednog fajla. Imenovano i prihvaćeno — autoritet zapisa dolazi od merenja, ne
-od ranga fajla u kom stoji. Cena je jedan skok pri čitanju; alternativa je bila prepisati
-merenje u ADR i time mu dati trajnost koju nema.
-
----
-
-## ADR-046: Uslovni STOP-ovi između koraka
-
-**Kontekst.** ADR-021 propisuje ritam po tasku: šest koraka, sa izričitom rečenicom da se
-korak 4 ne preskače. O tome **kada se staje između koraka** nema ništa. U praksi se od 0.4
-koriste četiri tačke zaustavljanja, ali one žive samo u planovima i u korpusu van gita — a
-plan se posle taska ne čuva.
-
-Prva formulacija četvrte glasila je „neuspeo upis". To imenuje poklapanje stringa u izlazu
-alata — **mehanizam, ne zahtev** — pa otkazuje tiho čim se izlaz promeni. Ista greška je u
-0.7 pustila dva pravila da budu prekršena više puta bez ijedne posledice.
-
-**Odluka.** Ritam **nema bezuslovni STOP.** Upit na svaku komandu i svaku izmenu je već
-tačka provere; dodatno stajanje bez povoda samo pomera odluku sa mesta na kom ima podatke.
-Staje se na četiri mesta:
-
-1. **Nalaz koji obara nešto što je plan proglasio odlučenim.** Odluka se ne menja u hodu.
-2. **Nepredviđen pad testa.** Neočekivana **dijagnoza** je STOP; neočekivan **broj** je
-   zapis u `faza-N.md`. Razlika je u tome da li se zna šta se gleda.
-3. **Tačka koju je plan unapred imenovao.** Zakazan sastanak, ne klasa iznenađenja — plan
-   kaže „ovde staješ i pitaš", i tu se staje i kad sve prolazi.
-4. **Zatečeno stanje drugačije od onog koje plan pretpostavlja.** Izvršna klauzula za
-   odeljak u kom plan popisuje šta nije izmerio.
-
-Na svakom STOP-u **zatečeno stanje ostaje netaknuto** dok se ne objasni. Ne popravlja se pa
-prijavljuje; prijavljuje se, pa se čeka odluka.
-
-**Posledice.** `WORKFLOW.md` dobija odeljak „Kad se staje". Plan od sada ima dva odeljka
-koja nose teret: spisak odlučenog, za prvi STOP, i spisak neizmerenog, za četvrti.
-
-**Šta smo izgubili.**
-
-1. **Treći STOP prebacuje teret na plan.** Plan koji ne imenuje nijednu tačku otkaza ga
-   razoružava — pravilo tada ne kaže ništa, a izgleda kao da štiti.
-2. **Četvrti vredi tačno onoliko koliko i spisak neizmerenog.** Plan koji ne popiše svoje
-   pretpostavke ne može njima da bude zaustavljen: nema se sa čim uporediti zatečeno stanje.
-3. Oba su **zahtev, ne mehanizam**, pa se kršenje ne vidi ni u jednom izlazu. Cena je
-   prihvaćena svesno: formulacija koja bi se mogla mašinski proveriti („stani kad grep vrati
-   nulu") pokriva uži slučaj od onog koji nas zanima.
-
----
-
-## ADR-047: Kriterijum ADR-044 važi za svaki korpus van gita
-
-> ⚠️ **Četvrti korpus nije bio pod kriterijumom.** Tačka 1 nabraja korpuse i među njima
-> nema instrukcija Projekta na claude.ai — teksta koji se čita kao uputstvo za rad jednako
-> kao i ostala četiri. Od REZ-a (22. 9. 2026) i on je pod kriterijumom iz tačke 2, a šest
-> normi iz njega je dobilo dom u `WORKFLOW.md` §1. Oznaka po ADR-045; zapis merenja i
-> presuda: `docs/faze/faza-0.md`, odeljak „REZ". Telo ispod ostaje kako je zapisano.
-
-**Kontekst.** ADR-044 je kriterijum primenio na `.claude/`, a 0.8 na `CLAUDE.md`. `MEMORY.md` i
-njegov folder ADR-044 imenuje kao peti slučaj klase, sa rečenicom „imenuje se, ne rešava".
-Pored njih postoji i memorija planskog chata na claude.ai, koju Claude Code ne vidi. Nijedan
-od ta dva korpusa nije bio pod kriterijumom.
-
-Izmereno 17. septembra 2026, pre svođenja:
-
-- U MEMORY folderu je bilo **devet** pravila, a plan je poznavao sedam. Dva su nastala iz
-  razgovora, 3. i 5. septembra; drugo **posle** commita `4c71791`, na kraju sesije. Korpus
-  raste sam, bez ijedne odluke po fajlu.
-- `conditional-stops-between-plan-steps` je nabrajao **tri** uslovna STOP-a, a ADR-046 ih ima
-  četiri. Truljenje koje ADR-044 opisuje uhvaćeno je u korpusu koji se upravo svodio.
-- Pravilo „ime nikad ni u jedan fajl" obaraju `LICENSE` po ADR-042 i autor svakog commita.
-  Kontraprimeri su bili van domena provere iz 0.8, koja je gledala samo `docs/`.
-
-**Odluka.**
-
-1. **Korpus pravila** je svaki tekst van gita koji izvršilac čita kao uputstvo za rad na
-   projektu: `CLAUDE.md`, `.claude/rules/`, `.claude/skills/`, `MEMORY.md` sa svojim folderom,
-   i memorija planskog chata. **Nije korpus** `.claude/settings.json`: on je odredište za
-   dozvole izvršiocu (ADR-044) i ne nosi rečenice nego pravila alata.
-2. **Kriterijum ADR-044 važi za svaki korpus jednako**, sa rečenicom kao jedinicom: rečenica
-   sme da ostane van gita samo ako je nijedna izmena u `docs/` ne može učiniti netačnom.
-   Dom se pravi pre brisanja, u istom commitu.
-3. **Test razlikovanja.** Pre odluke o odredištu rečenica se pita: *kad se svet promeni a
-   ona ostane ista, da li postaje **netačna** ili **prekršena**?*
-   - **Prekršena** → **normativna rečenica.** Zahtev važi i dalje, samo se ne poštuje. Dom
-     joj je `docs/`, napisan kao zahtev sa opsegom, ne kao mehanizam.
-   - **Netačna** → **keširana činjenica.** Tvrdnja o stanju projekta, alata ili osobe,
-     tačna dok se nešto ne promeni. Ne seli se. Ako je izvor u gitu, ostaje najviše adresa i
-     okidač. Ako je izvor tuđ sistem, merenje ide u `faza-N.md` sa verzijom i datumom
-     (ADR-045). Ako je lični podatak, briše se.
-   Rečenica koja nosi oboje deli se na dve, pa svaka ide svojim putem.
-4. **Domen provere je svaki korpus plus celo stablo.** Kontraprimer za pravilo iz korpusa
-   može da živi bilo gde, pa grep samo nad `docs/` nije provera.
-5. **Memoriju planskog chata svodi planski chat**, posle commita koji pravi domove. Claude
-   Code je ne vidi i ne može da je izmeni.
-
-**Posledice.** Svih devet pravila iz MEMORY foldera je pročitano rečenicu po rečenicu.
-Osam je dobilo dom u `CONVENTIONS.md` i `WORKFLOW.md`, jednom od njih samo uža polovina, a
-jedno je obrisano bez seljenja (ADR-046 ga je nadmašio). Tabela je u
-`docs/faze/faza-0.md` §0.9. Dva pravila su dobila mašinsku kapiju: provera upisa nad
-bajtovima (`tests/test_encoding_bytes.py`) i trajleri u istoriji poruka
-(`tools/check_commit_trailers.py`).
-
-**Šta smo izgubili.**
-
-1. **Korpus 3 nema nijednu proveru.** Ne dohvataju ga ni kapije iz ovog taska ni četiri
-   kapije iz CONVENTIONS §9. Njegovo svođenje stoji na reči planskog chata.
-2. **MEMORY folder se ponovo puni.** Mehanizam nastanka je tuđ i nije ispitan; ovaj ADR ga
-   ne sprečava, nego daje kriterijum za sledeće svođenje. Pravilo koje se posle svođenja
-   vrati **samo od sebe**, bez novog razgovora, obara tačku 2 ovog ADR-a.
-3. **Šira polovina pravila o atribuciji je obrisana bez doma.** „Sve što ima veze sa
-   Claude-om a nije neophodno" nema kriterijum za „neophodno". Ostala je samo polovina o
-   trajlerima, koja se može proveriti.
-4. **Test razlikovanja je pitanje, ne alat.** Primenjuje ga čitalac i može da pogreši u oba
-   smera. Kapije hvataju samo dva pravila od devet.
+## ADR-027 — Zobrist: fiksan seed, ep polje uslovno
+
+**Odluka.** Tabela se generiše sa fiksnim seed-om. Ep polje ulazi u ključ samo kad je
+en passant uzimanje stvarno moguće.
+**Zašto.** Determinizam testova; bez uslova ista pozicija dobijena drugim redosledom poteza
+ne bi bila jednaka i trostruko ponavljanje ne bi okinulo.
+**Cena.** Jedna provera pri ažuriranju ključa.
+
+## ADR-029 — `pip install -e ".[dev]"` je jedina komanda za pokretanje
+
+**Odluka.** `src/` raspored traži editable instalaciju; `[dev]` donosi `ruff`, bez kog
+checkpoint ne prolazi. `ruff` ostaje dev-only.
+**Zašto.** `python -m unittest discover` ne nalazi paket bez instalacije.
+**Cena.** Lako je zaboraviti `[dev]`; ništa to ne hvata automatski.
+
+## ADR-033 — Tabela slojeva je izvršiva
+
+**Odluka.** `tools/layer_check.py` (u gitu) parsira uvoze kroz `ast` po prepisu tabele iz
+CONVENTIONS §2; `tests/test_layers.py` ga pokreće i tvrdi da imena redova u dokumentu i
+alatu ostaju ista. Fajl bez reda u tabeli je nalaz, ne tišina. `__init__.py` uvozi samo
+stdlib; uvoz je uvek pun put (`from chess.core.types import Piece`).
+**Zašto.** Kršenje granice hvata suite, ne asistent koji se seti; fasada u `__init__.py`
+bi pravila ivicu u grafu zavisnosti koju tabela ne opisuje.
+**Cena.** Nov modul traži nov red u tabeli u istom commitu. Vezana su imena redova, ne
+semantika ćelija.
+
+## ADR-034 — `capture` i `promotion` su uvek serverski podaci
+
+**Odluka.** `capture: true` na svakom potezu koji uzima, uključujući en passant;
+`promotion: true` na svakom potezu koji traži promociju, u jednu od četiri figure.
+**Zašto.** Kod en passanta je odredišno polje prazno — klijent koji zaključuje crta
+pogrešno, a klijent koji zaključuje tačno je implementirao pravilo.
+**Cena.** Jedan bool po potezu.
+
+## ADR-035 — `ruff` ne dira `docs/`
+
+**Odluka.** `extend-exclude = ["docs"]` u `pyproject.toml`.
+**Zašto.** `ruff format` prepravlja Python blokove u Markdown-u i lomi namerno zbijene
+primere; obrazac `"*.md"` ne radi (izmereno).
+**Cena.** Python blokovi u dokumentaciji nemaju proveru.
+
+## ADR-038 — Rasterizacija kroz pygame; `cairosvg` odbijen
+
+**Odluka.** `tools/rasterize_pieces.py` pretvara 12 Cburnett SVG-ova u PNG od 80 i 32 px
+kroz pygame (nanosvg). PNG ide u git; alat nije zavisnost projekta.
+**Zašto.** `cairosvg` na Windows-u vuče native DLL-ove van `pip`-a; alat koji jednom
+generiše resurs nije zavisnost — igraču trebaju PNG-ovi, a oni su u gitu.
+**Cena.** nanosvg ne skalira crtež na platno — alat sam skalira geometriju i proverava
+udeo neprovidnih piksela kroz veličine.
+
+## ADR-039 — Tuđi materijal se čuva bajt u bajt
+
+**Odluka.** `.gitattributes`: `-text` za `assets/pieces/svg/*.svg` i
+`assets/fonts/LICENSE.txt`, `binary` za PNG i TTF. `tests/test_assets.py` proverava 12 `sha1`
+vrednosti iz `assets/pieces/LICENSE.txt` i red u `.gitattributes`. Verzija i `sha256` fonta
+stoje u našem `PROVENANCE.txt`, ne u tuđoj licenci.
+**Zašto.** `core.autocrlf=true` menja prelaske reda pri kloniranju, pa bi zapisani heševi
+bili netačni kod svakog ko klonira. Tuđ dokument se ne dopunjuje našom rečenicom.
+**Cena.** `.gitattributes` se ne dira bez čitanja oba `LICENSE.txt`.
+
+## ADR-040 — Ugovor `t()`
+
+**Odluka.** `t()` ne baca na loš podatak: nepostojeći ključ vraća ključ, parametar koji
+fali ostaje `{{ime}}`, oba uz WARNING (jednom po ključu). Baca na pogrešan poziv:
+`RuntimeError` pre `load()`, `TypeError` za parametar koji nije `str`. `load()` odbija BOM,
+loš JSON i dupli ključ sa `ValueError`. Zamena je `{{ime}}`; parametri su stringovi;
+`utf-8-sig` se ne koristi.
+**Zašto.** Prevod koji fali degradira ekran umesto da ga obori, a vidi se; greška u kodu
+pada odmah. Sintaksa mora da radi isto u JavaScript-u (`str(1.0)` ≠ `String(1.0)`).
+**Cena.** Bez format specifikatora; broj se formatira na pozivnom mestu.
+
+## ADR-041 — Zatvoren skup iz protokola se čita mašinski
+
+**Odluka.** `tests/client/test_i18n.py` parsira prvu kolonu tabele kodova iz `PROTOCOL.md`
+§5 i tvrdi oba smera prema `sr.json` (`error.` + kod malim slovima). Isto važi za
+`termination.*` u fazi 3. U 2.1 spona prelazi sa dokumenta na enum u `protocol/messages.py`.
+**Zašto.** Dodat kod bez ključa i ključ bez koda su tihi kvarovi.
+**Cena.** Oblik tabele u §5 je noseći; test tvrdi da ključ postoji, ne da je prevod tačan.
+
+## ADR-042 — BSD-3-Clause za naš kod; `LICENSE` nosi uslove, `THIRD-PARTY.txt` obim
+
+**Odluka.** `LICENSE` u korenu je kanonski SPDX tekst, neizmenjen osim reda o autorskim
+pravima. `THIRD-PARTY.txt` nabraja direktorijume sa svojom licencom, u bloku koji čita
+`tests/test_assets.py`; ne zove se `NOTICE` ni `COPYRIGHT`.
+**Zašto.** Javan repo bez licence je „sva prava zadržana"; figure su pod istim uslovima,
+pa copyleft ne bi imao smisla. Naša rečenica u standardnom tekstu putovala bi dalje kao
+deo uslova.
+**Cena.** Treći direktorijum sa tuđim materijalom obara test — namerno.
+
+## ADR-043 — Licenca i u metapodacima paketa
+
+**Odluka.** `license = "BSD-3-Clause"`, `license-files = ["LICENSE"]` u `pyproject.toml`;
+`setuptools>=77` u `build-system.requires`, jer 76 odbija SPDX string.
+**Zašto.** Wheel je nosio nula redova o licenci; klasifikator ne razlikuje 2- od 3-clause.
+**Cena.** `pip show` ispisuje prazno `License:` (čita staro polje) — to je ispravno. Ako
+resursi uđu u paket, `license-files` mora da poraste.
+
+## ADR-047 — Dve mašinske kapije za ono što se u diffu ne vidi
+
+**Odluka.** `tests/test_encoding_bytes.py` drži BOM van `assets/**/*.json`, `src/**/*.py`
+i `docs/**/*.md`, nad bajtovima. `tools/check_commit_trailers.py` traži `Co-Authored-By:` i
+`Claude-Session:` u lokalnoj istoriji poruka (izlaz 0/1/2).
+**Zašto.** Oba kvara su jednom prošla nezapaženo; provera nad bajtovima ne deli sudbinu sa
+kvarom od kog štiti.
+**Cena.** Trajleri se proveravaju samo lokalno, ne u opisu PR-a.
+
+## ADR-048 — REZ 2: proces se seče, proizvod ostaje
+
+**Odluka.** Od 22. 9. 2026 obim je faze 0–3. Ukinuti su: dnevnik po tasku, pitanja po
+tasku (ADR-021), propagacija u istom commitu kao pravilo, ⚠️ oznake i „telo se ne menja",
+pravila o tekstu van gita, `POJMOVNIK.md`. Procesni ADR-ovi su spojeni ili uklonjeni.
+Kapije ostaju cele i dobijaju jednu komandu, `tools/check.py`. Claude Code sam odobrava
+čitanje, izmene i testove; pita za commit, push i grane.
+**Zašto.** Faza 0 je potrošila više vremena na pravila o pravilima nego na proizvod, a
+svaki task je vukao pun krug kroz pet dokumenata. Rok za zahtev mentora to ne dozvoljava.
+**Cena.** Manje zapisa o tome kako se do odluka došlo; istorija do `4770159` to čuva.
+Razumevanje se proverava obrnutim pregledom na kraju faze, ne po tasku.

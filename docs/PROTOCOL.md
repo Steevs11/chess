@@ -5,9 +5,6 @@ Verzija: **1**
 Ovaj dokument je ugovor između servera i bilo kog klijenta. Piše se kao da ga
 čita neko treći ko piše svog klijenta — jer će to za koju fazu biti veb klijent.
 
-> Verzija 2 dokumenta (protokol i dalje `v: 1`). Usklađeno sa ADR-016, 017, 018
-> i novim ADR-ovima 022–034.
-
 ---
 
 ## 1. Transport
@@ -17,10 +14,10 @@ Ovaj dokument je ugovor između servera i bilo kog klijenta. Piše se kao da ga
 - Od faze 4 i WebSocket — **isti JSON**, isti tipovi poruka, samo drugi transport
 - **Nikad `pickle`.** Protokol mora biti čitljiv iz bilo kog jezika.
 
-Server sluša oba transporta istovremeno:
+Server sluša TCP; WebSocket bi došao u fazi 4, na istoj komandi:
 
 ```bash
-python -m chess.server --tcp 5000 --ws 8000
+python -m chess.server --tcp 5000
 ```
 
 Server je **jednonitni `selectors` event loop** (ADR-016). Nema niti po klijentu.
@@ -356,7 +353,3 @@ dobija `VERSION_MISMATCH` sa jasnom porukom, umesto da pukne na neočekivanom me
 
 Dodavanje **novog opcionog polja** ili **novog tipa poruke** nije nekompatibilna
 promena — `v` ostaje isti.
-
-> **Pravilo održavanja:** kad ADR obori nešto napisano u ovom dokumentu, ispravka
-> ide u **istom commitu** kao ADR. Dokument koji zaostaje za odlukama je gori od
-> dokumenta koji ne postoji, jer mu se veruje.
