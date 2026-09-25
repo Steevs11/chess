@@ -42,6 +42,7 @@ ALLOWED = (
     ("core/board.py", "from .types import Piece"),
     ("core/board.py", "from . import types"),
     ("core/board.py", "from chess.core.types import Piece"),
+    ("core/fen.py", "from chess.core.types import Piece"),
     ("protocol/codec.py", "from chess.core.types import Move"),
     ("protocol/codec.py", "from .messages import Move"),
     ("server/session.py", "from chess.protocol.codec import decode"),
@@ -66,6 +67,8 @@ FORBIDDEN = (
     ("core/movegen.py", "import pygame"),
     ("core/movegen.py", "import numpy"),  # any PyPI package, not just pygame
     ("core/movegen.py", "from chess.server.lobby import Lobby"),
+    # fen.py knows types, not the board (ADR-024): the client reaches it.
+    ("core/fen.py", "from chess.core.board import Board"),
     # The arrow never turns around.
     ("protocol/codec.py", "from chess.server import lobby"),
     ("protocol/codec.py", "from chess.client import net"),

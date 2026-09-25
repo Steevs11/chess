@@ -15,6 +15,7 @@ Transcribed table, row for row:
     |-------------------|-------------------------------------------|
     | */__init__.py     | stdlib only                               |
     | core/*            | stdlib only                               |
+    | core/fen.py       | stdlib, core.types                        |
     | protocol/*        | stdlib, core                              |
     | server/*          | stdlib, core, protocol                    |
     | client/net.py     | stdlib, protocol                          |
@@ -70,6 +71,8 @@ _CLIENT_CORE = ("protocol", "core.types", "core.fen")
 RULES: dict[str, Rule] = {
     "*/__init__.py": Rule(),  # a package marker imports nothing from the project (ADR-037.3)
     "core/*": Rule(project=("core",)),
+    # The client imports fen.py (ADR-024), so fen.py must not pull the board in behind it.
+    "core/fen.py": Rule(project=("core.types",)),
     "protocol/*": Rule(project=("core", "protocol")),
     "server/*": Rule(project=("core", "protocol", "server")),
     "client/net.py": Rule(project=("protocol",)),

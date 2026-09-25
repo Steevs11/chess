@@ -51,6 +51,7 @@ Strelica se **nikad ne obrće.** `core` ne zna da protokol postoji (ADR-002).
 |---|---|---|
 | `*/__init__.py` | **samo stdlib** | bilo šta iz projekta (ADR-033) |
 | `core/*` | **samo stdlib** | bilo šta iz projekta van `core` |
+| `core/fen.py` | stdlib, `core.types` | ostatak `core` |
 | `protocol/*` | stdlib, `core` | `server`, `client` |
 | `server/*` | stdlib, `core`, `protocol` | `client`, `pygame` |
 | `client/net.py` | stdlib, `protocol` | `pygame`, `core.movegen` i sl. |

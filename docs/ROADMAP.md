@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.2 — core/board.py
-Sledeće:   1.3 — core/movegen.py
+Radimo:    1.3 — core/movegen.py
+Sledeće:   1.4 — specijalni potezi
 Otvoreno:  —
 ```
 
@@ -39,7 +39,7 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
       plus `from_uci()` i `to_uci()` — `from_uci()` ne može da odredi `kind` bez table, pa se
       potez spolja uvek traži u listi legalnih poteza.
       `ChessError` hijerarhija: `IllegalMoveError`, `InvalidFenError`, `InvalidSanError`.
-- [ ] 1.2 `core/board.py` — raspored, **make/unmake**, `UndoRecord`, **Zobrist heš**; `core/fen.py`.
+- [x] 1.2 `core/board.py` — raspored, **make/unmake**, `UndoRecord`, **Zobrist heš**; `core/fen.py`.
       `Board` je mutabilan (ADR-006). `UndoRecord` nosi pojedenu figuru **i njeno polje**,
       prethodna prava na rokadu, prethodno ep polje, prethodni brojač polupoteza, prethodni
       Zobrist ključ (ADR-014). Zobrist: fiksan seed, ep polje u ključ samo kad je uzimanje

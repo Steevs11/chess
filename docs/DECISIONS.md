@@ -181,10 +181,11 @@ podrazumevani suite ostaje brz, pa se stvarno pokreće.
 ## ADR-027 — Zobrist: fiksan seed, ep polje uslovno
 
 **Odluka.** Tabela se generiše sa fiksnim seed-om. Ep polje ulazi u ključ samo kad je
-en passant uzimanje stvarno moguće.
+en passant uzimanje moguće pseudo-legalno: pešak strane na potezu stoji na susednoj
+koloni pored pešaka koji je skočio za dva; vezanost i šah se ne gledaju.
 **Zašto.** Determinizam testova; bez uslova ista pozicija dobijena drugim redosledom poteza
 ne bi bila jednaka i trostruko ponavljanje ne bi okinulo.
-**Cena.** Jedna provera pri ažuriranju ključa.
+**Cena.** Jedna provera pri ažuriranju ključa; vezan pešak retko daje istoj poziciji dva ključa.
 
 ## ADR-029 — `pip install -e ".[dev]"` je jedina komanda za pokretanje
 
