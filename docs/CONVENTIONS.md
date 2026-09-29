@@ -259,7 +259,7 @@ CATALOG = Path(__file__).resolve().parent.parent.parent.parent / "assets" / "i18
 | `tools/check.py` | sve kapije jednom komandom; pred commit i pred push |
 | `tools/layer_check.py` | smer uvoza iz §2 (ADR-033) |
 | `tools/check_commit_trailers.py` | trajleri u lokalnoj istoriji poruka (ADR-047) |
-| `tools/perft.py` | perft i `perft_divide`, od 1.3 (ADR-007) |
+| `tools/perft.py` | CLI za `perft`/`perft_divide` iz `core/movegen.py`, od 1.3 (ADR-007) |
 | `tools/cli_client.py` | CLI klijent za server, od 2.0 (ADR-017) |
 | `tools/rasterize_pieces.py` | SVG figure → PNG (ADR-038) |
 

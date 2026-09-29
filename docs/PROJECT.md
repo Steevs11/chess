@@ -152,8 +152,8 @@ chess/
 │   ├── core/
 │   │   ├── types.py             Color, PieceType, Piece, Square, Move, MoveKind, CastlingRights
 │   │   ├── board.py             raspored, make/unmake
-│   │   ├── movegen.py           generisanje poteza
-│   │   ├── attacks.py           is_square_attacked, is_in_check
+│   │   ├── movegen.py           generisanje poteza, perft
+│   │   ├── attacks.py           tabele napada, is_square_attacked, is_in_check
 │   │   ├── rules.py             mat, pat, remi, RuleSet
 │   │   ├── game.py              stanje partije, istorija
 │   │   ├── fen.py
@@ -193,7 +193,7 @@ chess/
 │   └── i18n/sr.json
 ├── tools/
 │   ├── check.py                 sve kapije jednom komandom (CONVENTIONS §9)
-│   ├── perft.py                 perft + perft_divide (ADR-007)
+│   ├── perft.py                 CLI za perft/perft_divide iz core/movegen.py (ADR-007)
 │   ├── cli_client.py            CLI klijent za testiranje servera (ADR-017)
 │   ├── layer_check.py           provera uvoza iz CONVENTIONS §2 (ADR-033)
 │   ├── check_commit_trailers.py trajleri u porukama commita (ADR-047)

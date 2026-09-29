@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.3 — core/movegen.py
-Sledeće:   1.4 — specijalni potezi
+Radimo:    1.4 — core/attacks.py: is_square_attacked, is_in_check
+Sledeće:   1.5 — specijalni potezi
 Otvoreno:  —
 ```
 
@@ -44,15 +44,20 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
       prethodna prava na rokadu, prethodno ep polje, prethodni brojač polupoteza, prethodni
       Zobrist ključ (ADR-014). Zobrist: fiksan seed, ep polje u ključ samo kad je uzimanje
       moguće (ADR-027).
-- [ ] 1.3 `core/movegen.py` — generisanje po figuri **+ `tools/perft.py` sa `perft_divide`**
-      i podrazumevani perft testovi. Od ovog taska perft se pokreće posle svake izmene
-      generatora; kad se broj ne poklopi — `perft_divide`, pa binarna pretraga do poteza.
-- [ ] 1.4 Specijalni potezi — rokada (pet uslova iz PROJECT §7), en passant, promocija sa
-      podpromocijom (generator emituje četiri poteza).
-- [ ] 1.5 `core/attacks.py` — `is_square_attacked`, `is_in_check`.
-- [ ] 1.6 Legalni potezi = pseudo-legalni + filter kroz make/unmake.
+- [x] 1.3 `core/movegen.py` — pseudo-legalno generisanje po figuri **+ promocija sa
+      podpromocijom** (generator emituje četiri poteza, i kad pešak uzima); tabele napada
+      (skakač, kralj, zraci, uzimanja pešaka) u `core/attacks.py`. `perft` i `perft_divide`
+      su u `core/movegen.py`, **`tools/perft.py` je CLI** nad njima (ADR-007). Tvrdi se
+      početna d1–d3. Od ovog taska perft se pokreće posle svake izmene generatora; kad se
+      broj ne poklopi — `perft_divide`, pa binarna pretraga do poteza.
+- [ ] 1.4 `core/attacks.py` — `is_square_attacked`, `is_in_check` (tabele iz 1.3).
+- [ ] 1.5 Specijalni potezi — rokada (pet uslova iz PROJECT §7), en passant. Od 1.5 perft
+      tvrdi i Kiwipete d1 = 48.
+- [ ] 1.6 Legalni potezi = pseudo-legalni + filter kroz make/unmake. Od 1.6 perft tvrdi
+      podrazumevani skup iz ADR-026 + Position 5 d3; ADR-026 se tad dopunjuje.
 - [ ] 1.7 Mat i pat.
-- [ ] 1.8 **PERFT** — formalni checkpoint, ceo skup iz ADR-026.
+- [ ] 1.8 **PERFT** — formalni checkpoint, ceo skup iz ADR-026; spori skup iza
+      `CHESS_SLOW_TESTS`.
 - [ ] 1.9 `core/rules.py` — remi: nedovoljan materijal, 50 poteza, ponavljanje (kroz Zobrist);
       `RuleSet` sa profilima `online` i `fide` (ADR-008).
 - [ ] 1.10 `core/san.py` — SAN sa disambiguacijom (kolona → red → oba).

@@ -56,8 +56,10 @@ neupotrebljiv.
 ## ADR-007 — Perft kao dokaz ispravnosti, alat od 1.3
 
 **Odluka.** Ispravnost generatora se dokazuje perft brojevima sa Chess Programming Wiki.
-`tools/perft.py` sa `perft_divide` postoji od taska 1.3 i pokreće se posle svake izmene
-generatora; 1.8 je formalni checkpoint. Skup i dubine: ADR-026.
+`perft` i `perft_divide` su funkcije u `core/movegen.py` od taska 1.3, da ih testovi uvoze
+kao paket; `tools/perft.py` je samo CLI nad njima. Perft se pokreće posle svake izmene
+generatora; 1.8 je formalni checkpoint. Skup i dubine: ADR-026. (Ranije: `perft_divide`
+u `tools/perft.py`; promenjeno 26. 9. 2026.)
 **Zašto.** Bag se hvata u tasku u kom nastane i lokalizuje po korenskom potezu.
 **Cena.** Perft mora biti brz (ADR-006).
 
