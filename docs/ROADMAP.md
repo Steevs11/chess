@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.4 — core/attacks.py: is_square_attacked, is_in_check
-Sledeće:   1.5 — specijalni potezi
+Radimo:    1.5 — specijalni potezi (rokada, en passant)
+Sledeće:   1.6 — legalni potezi
 Otvoreno:  —
 ```
 
@@ -50,7 +50,10 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
       su u `core/movegen.py`, **`tools/perft.py` je CLI** nad njima (ADR-007). Tvrdi se
       početna d1–d3. Od ovog taska perft se pokreće posle svake izmene generatora; kad se
       broj ne poklopi — `perft_divide`, pa binarna pretraga do poteza.
-- [ ] 1.4 `core/attacks.py` — `is_square_attacked`, `is_in_check` (tabele iz 1.3).
+- [x] 1.4 `core/attacks.py` — `is_square_attacked`, `is_in_check` nad tabelama iz 1.3,
+      obrnuto od ciljnog polja. Vezana figura i dalje napada (na tome počiva rokada u 1.5).
+      Kralj se nalazi skeniranjem table; keš njegovog polja tek ako merenje u 1.8 pokaže
+      potrebu. Integracioni test: CPW kolone Checks i Captures za početnu poziciju do d3.
 - [ ] 1.5 Specijalni potezi — rokada (pet uslova iz PROJECT §7), en passant. Od 1.5 perft
       tvrdi i Kiwipete d1 = 48.
 - [ ] 1.6 Legalni potezi = pseudo-legalni + filter kroz make/unmake. Od 1.6 perft tvrdi
