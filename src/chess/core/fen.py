@@ -6,8 +6,9 @@ anything that could decide legality (ADR-024).
 
 `parse_fen` rejects text that is malformed or describes a position no board can hold -
 not exactly one king per color, a pawn on the first or last rank, a castling right
-without its king and rook at home. Whether the position is reachable, or whether the side
-not to move is in check, is not checked here.
+without its king and rook at home, an en passant square that is occupied or has no pushed
+pawn in front of it. Whether the position is reachable, or whether the side not to move
+is in check, is not checked here.
 """
 
 from __future__ import annotations
@@ -81,7 +82,7 @@ def parse_fen(text: str) -> Position:
     ep_square = _parse_ep(ep_text, turn)
     halfmove_clock = _parse_counter("halfmove clock", halfmove_text, 0)
     fullmove_number = _parse_counter("fullmove number", fullmove_text, 1)
-    _check_structure(placement, castling)
+    _check_structure(placement, castling, ep_square, turn)
     return Position(placement, turn, castling, ep_square, halfmove_clock, fullmove_number)
 
 
@@ -210,7 +211,12 @@ def _parse_counter(name: str, text: str, minimum: int) -> int:
     return value
 
 
-def _check_structure(placement: tuple[Piece | None, ...], castling: CastlingRights) -> None:
+def _check_structure(
+    placement: tuple[Piece | None, ...],
+    castling: CastlingRights,
+    ep_square: Square | None,
+    turn: Color,
+) -> None:
     for color in Color:
         king = Piece(color, PieceType.KING)
         count = placement.count(king)
@@ -228,3 +234,19 @@ def _check_structure(placement: tuple[Piece | None, ...], castling: CastlingRigh
             raise InvalidFenError(f"FEN castling {right} needs the king on {to_algebraic(king_sq)}")
         if placement[rook_sq] != Piece(color, PieceType.ROOK):
             raise InvalidFenError(f"FEN castling {right} needs a rook on {to_algebraic(rook_sq)}")
+    if ep_square is None:
+        return
+    # An en passant square carries the same guarantee as a castling right: the generator
+    # trusts it, and make for EN_PASSANT writes the capturer onto it and lifts whatever
+    # stands behind it without looking. The square the pawn pushed from is not checked.
+    if turn is Color.WHITE:
+        pushed_sq, pusher = ep_square - 8, Color.BLACK
+    else:
+        pushed_sq, pusher = ep_square + 8, Color.WHITE
+    name = to_algebraic(ep_square)
+    if placement[ep_square] is not None:
+        raise InvalidFenError(f"FEN en passant square {name} must be empty")
+    if placement[pushed_sq] != Piece(pusher, PieceType.PAWN):
+        raise InvalidFenError(
+            f"FEN en passant {name} needs a {pusher.name.lower()} pawn on {to_algebraic(pushed_sq)}"
+        )

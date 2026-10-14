@@ -24,10 +24,16 @@ NORMAL = MoveKind.NORMAL
 CAPTURE = MoveKind.CAPTURE
 DOUBLE = MoveKind.DOUBLE_PAWN_PUSH
 PROMOTION = MoveKind.PROMOTION
+EN_PASSANT = MoveKind.EN_PASSANT
+CASTLE = MoveKind.CASTLE
 
 # PROTOCOL.md section 5, the STATE example: the position after 1.e4.
 AFTER_E4_FEN = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
 KIWIPETE_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
+# Kings and rooks at home, nothing else: both sides may castle both ways.
+CASTLING_FEN = "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"
+# After 1.e4 a6 2.e5 d5: the e5 pawn may take the d5 pawn en passant.
+AFTER_D5_EP_FEN = "rnbqkbnr/1pp1pppp/p7/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3"
 
 
 def all_moves(fen: str) -> list[tuple[str, MoveKind]]:
@@ -43,6 +49,11 @@ def moves_from(fen: str, name: str) -> list[tuple[str, MoveKind]]:
 def promotions(from_to: str) -> list[tuple[str, MoveKind]]:
     """The four promotions of `from_to`, e.g. "e7e8", in PROMOTION_PIECES order."""
     return [(from_to + kind.letter, PROMOTION) for kind in PROMOTION_PIECES]
+
+
+def castles(fen: str) -> list[tuple[str, MoveKind]]:
+    """The generated CASTLE moves of `fen`, in generator order."""
+    return [pair for pair in all_moves(fen) if pair[1] is CASTLE]
 
 
 class StartingPositionTest(unittest.TestCase):
@@ -245,8 +256,146 @@ class KingTest(unittest.TestCase):
         self.assertEqual(moves_from("4k3/8/8/8/8/8/PPP5/NKN5 w - - 0 1", "b1"), [])
 
 
+class CastlingTest(unittest.TestCase):
+    def test_white_with_all_rights_castles_kingside_then_queenside_after_king_steps(self) -> None:
+        self.assertEqual(len(all_moves(CASTLING_FEN)), 26)
+        self.assertEqual(
+            moves_from(CASTLING_FEN, "e1"),
+            [
+                ("e1e2", NORMAL),
+                ("e1f1", NORMAL),
+                ("e1d1", NORMAL),
+                ("e1f2", NORMAL),
+                ("e1d2", NORMAL),
+                ("e1g1", CASTLE),
+                ("e1c1", CASTLE),
+            ],
+        )
+
+    def test_black_with_all_rights_castles_kingside_then_queenside_after_king_steps(self) -> None:
+        fen = "r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1"
+        self.assertEqual(len(all_moves(fen)), 26)
+        self.assertEqual(
+            moves_from(fen, "e8"),
+            [
+                ("e8f8", NORMAL),
+                ("e8e7", NORMAL),
+                ("e8d8", NORMAL),
+                ("e8f7", NORMAL),
+                ("e8d7", NORMAL),
+                ("e8g8", CASTLE),
+                ("e8c8", CASTLE),
+            ],
+        )
+
+    def test_castling_without_rights_is_not_generated(self) -> None:
+        fen = "r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1"
+        self.assertEqual(len(all_moves(fen)), 24)
+        self.assertEqual(castles(fen), [])
+
+    def test_castling_generated_only_on_the_side_that_meets_the_conditions(self) -> None:
+        kingside = [("e1g1", CASTLE)]
+        queenside = [("e1c1", CASTLE)]
+        black_queenside = [("e8c8", CASTLE)]
+        cases = (
+            ("kingside right only", "r3k2r/8/8/8/8/8/8/R3K2R w Kkq - 0 1", kingside),
+            ("queenside right only", "r3k2r/8/8/8/8/8/8/R3K2R w Qkq - 0 1", queenside),
+            ("own piece on f1", "r3k2r/8/8/8/8/8/8/R3KN1R w KQkq - 0 1", queenside),
+            ("own piece on g1", "r3k2r/8/8/8/8/8/8/R3K1NR w KQkq - 0 1", queenside),
+            ("own piece on b1", "r3k2r/8/8/8/8/8/8/RN2K2R w KQkq - 0 1", kingside),
+            ("own piece on c1", "r3k2r/8/8/8/8/8/8/R1B1K2R w KQkq - 0 1", kingside),
+            ("own piece on d1", "r3k2r/8/8/8/8/8/8/R2QK2R w KQkq - 0 1", kingside),
+            # b5 bishop looks at f1.
+            ("king passes attacked f1", "r3k2r/8/8/1b6/8/8/8/R3K2R w KQkq - 0 1", queenside),
+            # h3 knight looks at g1.
+            ("king lands on attacked g1", "r3k2r/8/8/8/8/7n/8/R3K2R w KQkq - 0 1", queenside),
+            # a4 bishop looks at d1.
+            ("king passes attacked d1", "r3k2r/8/8/8/b7/8/8/R3K2R w KQkq - 0 1", kingside),
+            # h6 bishop looks at c1.
+            ("king lands on attacked c1", "r3k2r/8/7b/8/8/8/8/R3K2R w KQkq - 0 1", kingside),
+            # a3 knight looks at b1, which the king does not cross.
+            (
+                "b1 attacked but empty",
+                "r3k2r/8/8/8/8/n7/8/R3K2R w KQkq - 0 1",
+                kingside + queenside,
+            ),
+            # e4 bishop looks at h1 and b1: the rook may be attacked.
+            (
+                "rook on h1 and b1 attacked",
+                "r3k2r/8/8/8/4b3/8/8/R3K2R w KQkq - 0 1",
+                kingside + queenside,
+            ),
+            # b5 bishop is pinned to e8 by the a4 bishop and still attacks f1.
+            ("pinned attacker of f1", "r3k2r/8/8/1b6/B7/8/8/R3K2R w KQkq - 0 1", queenside),
+            # h6 knight looks at g8.
+            (
+                "black king lands on attacked g8",
+                "r3k2r/8/7N/8/8/8/8/R3K2R b KQkq - 0 1",
+                black_queenside,
+            ),
+            # a3 bishop looks at f8.
+            (
+                "black king passes attacked f8",
+                "r3k2r/8/8/8/8/B7/8/R3K2R b KQkq - 0 1",
+                black_queenside,
+            ),
+        )
+        for what, fen, expected in cases:
+            with self.subTest(what=what):
+                self.assertEqual(castles(fen), expected)
+
+    def test_castling_rejected_when_king_is_in_check(self) -> None:
+        # d3 knight gives check; the king steps stay, they are pseudo-legal.
+        fen = "r3k2r/8/8/8/8/3n4/8/R3K2R w KQkq - 0 1"
+        self.assertEqual(castles(fen), [])
+        self.assertEqual(
+            moves_from(fen, "e1"),
+            [
+                ("e1e2", NORMAL),
+                ("e1f1", NORMAL),
+                ("e1d1", NORMAL),
+                ("e1f2", NORMAL),
+                ("e1d2", NORMAL),
+            ],
+        )
+
+
+class EnPassantTest(unittest.TestCase):
+    def test_pawn_beside_the_pushed_pawn_takes_en_passant(self) -> None:
+        self.assertEqual(
+            moves_from(AFTER_D5_EP_FEN, "e5"), [("e5e6", NORMAL), ("e5d6", EN_PASSANT)]
+        )
+        self.assertEqual(len(all_moves(AFTER_D5_EP_FEN)), 31)
+
+    def test_pawns_on_both_sides_each_take_en_passant(self) -> None:
+        fen = "4k3/8/8/3PpP2/8/8/8/4K3 w - e6 0 1"
+        self.assertEqual(moves_from(fen, "d5"), [("d5d6", NORMAL), ("d5e6", EN_PASSANT)])
+        self.assertEqual(moves_from(fen, "f5"), [("f5f6", NORMAL), ("f5e6", EN_PASSANT)])
+        self.assertEqual(len(all_moves(fen)), 9)
+
+    def test_pawn_beside_a_pawn_without_ep_square_only_pushes(self) -> None:
+        fen = "4k3/8/8/3Pp3/8/8/8/4K3 w - - 0 1"
+        self.assertEqual(moves_from(fen, "d5"), [("d5d6", NORMAL)])
+
+    def test_black_pawn_takes_en_passant_towards_the_third_rank(self) -> None:
+        fen = "4k3/8/8/8/3pP3/8/8/4K3 b - e3 0 1"
+        self.assertEqual(moves_from(fen, "d4"), [("d4d3", NORMAL), ("d4e3", EN_PASSANT)])
+
+    def test_ep_square_without_a_capturer_gives_no_en_passant(self) -> None:
+        moves = all_moves("4k3/8/8/4p3/8/8/8/4K3 w - e6 0 1")
+        self.assertEqual(len(moves), 5)
+        self.assertFalse(any(kind is EN_PASSANT for _, kind in moves))
+
+
 class QueryTest(unittest.TestCase):
-    FENS = (STARTING_FEN, AFTER_E4_FEN, KIWIPETE_FEN, "k2r4/4P3/8/8/8/8/8/4K3 w - - 0 1")
+    FENS = (
+        STARTING_FEN,
+        AFTER_E4_FEN,
+        KIWIPETE_FEN,
+        "k2r4/4P3/8/8/8/8/8/4K3 w - - 0 1",
+        CASTLING_FEN,
+        AFTER_D5_EP_FEN,
+    )
 
     def test_generation_leaves_fen_key_and_squares_unchanged(self) -> None:
         for fen in self.FENS:
@@ -261,7 +410,7 @@ class QueryTest(unittest.TestCase):
 
 
 class OrderTest(unittest.TestCase):
-    FENS = (STARTING_FEN, AFTER_E4_FEN, KIWIPETE_FEN)
+    FENS = (STARTING_FEN, AFTER_E4_FEN, KIWIPETE_FEN, CASTLING_FEN, AFTER_D5_EP_FEN)
 
     def test_from_square_never_decreases_through_the_list(self) -> None:
         for fen in self.FENS:

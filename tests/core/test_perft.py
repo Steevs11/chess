@@ -1,9 +1,11 @@
 """perft and perft_divide in core/movegen.py, against the Chess Programming Wiki numbers.
 
-Only the starting position at depth 1-3 is asserted in 1.3: the first check is possible on
-the third ply and the reply is the fourth, so pseudo-legal equals legal up to depth 3. The
-other positions have a check or a pin at depth 1; their numbers are asserted from 1.5, 1.6
-and 1.8 on.
+The starting position is asserted at depth 1-3 since 1.3: the first check is possible on
+the third ply and the reply is the fourth, so pseudo-legal equals legal up to depth 3.
+From 1.5 on Kiwipete and Position 5 are asserted at depth 1, where pseudo-legal equals
+legal as well and the count needs castling. Deeper, and in Position 3 and 4 already at
+depth 1, a check or a pin makes the two differ; those numbers are asserted from 1.6 and
+1.8 on.
 """
 
 from __future__ import annotations
@@ -53,6 +55,12 @@ class PerftTest(unittest.TestCase):
         for depth in (1, 2, 3):
             with self.subTest(depth=depth):
                 self.assertEqual(perft(Board.from_fen(fen), depth), nodes[depth])
+
+    def test_kiwipete_and_position_5_match_reference_at_depth_one(self) -> None:
+        for name in ("kiwipete", "position 5"):
+            fen, nodes = REFERENCE[name]
+            with self.subTest(position=name):
+                self.assertEqual(perft(Board.from_fen(fen), 1), nodes[1])
 
     def test_depth_zero_counts_the_position_itself(self) -> None:
         self.assertEqual(perft(Board.from_fen(STARTING_FEN), 0), 1)

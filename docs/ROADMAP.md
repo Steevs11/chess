@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.5 — specijalni potezi (rokada, en passant)
-Sledeće:   1.6 — legalni potezi
+Radimo:    1.6 — legalni potezi
+Sledeće:   1.7 — mat i pat
 Otvoreno:  —
 ```
 
@@ -54,8 +54,9 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
       obrnuto od ciljnog polja. Vezana figura i dalje napada (na tome počiva rokada u 1.5).
       Kralj se nalazi skeniranjem table; keš njegovog polja tek ako merenje u 1.8 pokaže
       potrebu. Integracioni test: CPW kolone Checks i Captures za početnu poziciju do d3.
-- [ ] 1.5 Specijalni potezi — rokada (pet uslova iz PROJECT §7), en passant. Od 1.5 perft
-      tvrdi i Kiwipete d1 = 48.
+- [x] 1.5 Specijalni potezi — rokada (pet uslova iz PROJECT §7), en passant. Od 1.5 perft
+      tvrdi i Kiwipete d1 = 48 i Position 5 d1 = 44. `parse_fen` odbija ep polje bez pešaka
+      koji je skočio ili zauzeto — ista garancija kao za pravo na rokadu.
 - [ ] 1.6 Legalni potezi = pseudo-legalni + filter kroz make/unmake. Od 1.6 perft tvrdi
       podrazumevani skup iz ADR-026 + Position 5 d3; ADR-026 se tad dopunjuje.
 - [ ] 1.7 Mat i pat.

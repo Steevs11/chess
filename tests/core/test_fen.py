@@ -122,6 +122,10 @@ class RejectionTest(unittest.TestCase):
         ("K without king on e1", "4k3/8/8/8/8/8/8/3K3R w K - 0 1"),
         ("K without rook on h1", "4k3/8/8/8/8/8/8/4K3 w K - 0 1"),
         ("q without rook on a8", "4k3/8/8/8/8/8/8/4K3 w q - 0 1"),
+        ("ep without the pushed pawn, white", "4k3/8/8/8/8/8/8/4K3 w - e6 0 1"),
+        ("ep without the pushed pawn, black", "4k3/8/8/8/8/8/8/4K3 b - e3 0 1"),
+        ("ep with a pawn of the wrong color", "4k3/8/8/4P3/8/8/8/4K3 w - e6 0 1"),
+        ("ep square occupied", "4k3/8/4n3/4p3/8/8/8/4K3 w - e6 0 1"),
     )
 
     def test_malformed_or_impossible_fen_raises_invalid_fen_error(self) -> None:

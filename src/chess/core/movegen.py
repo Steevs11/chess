@@ -1,7 +1,7 @@
 """Pseudo-legal move generation, and perft over it.
 
 Pseudo-legal means by the rules of movement only: a move that leaves the own king in
-check is still generated; the legality filter is 1.6. En passant and castling are 1.5.
+check is still generated; the legality filter is 1.6.
 
 perft and perft_divide live here, not in tools/perft.py, so the tests import them as a
 package; the tool is a CLI over them (ADR-007).
@@ -16,9 +16,20 @@ from chess.core.attacks import (
     ORTHOGONAL,
     PAWN_ATTACKS,
     RAYS,
+    is_square_attacked,
 )
 from chess.core.board import Board
 from chess.core.types import (
+    B1,
+    B8,
+    C1,
+    C8,
+    D1,
+    D8,
+    F1,
+    F8,
+    G1,
+    G8,
     PROMOTION_PIECES,
     Color,
     Move,
@@ -32,6 +43,8 @@ from chess.core.types import (
 _NORMAL = MoveKind.NORMAL
 _CAPTURE = MoveKind.CAPTURE
 _DOUBLE_PAWN_PUSH = MoveKind.DOUBLE_PAWN_PUSH
+_EN_PASSANT = MoveKind.EN_PASSANT
+_CASTLE = MoveKind.CASTLE
 _PROMOTION = MoveKind.PROMOTION
 
 _SLIDER_DIRECTIONS = {
@@ -40,15 +53,31 @@ _SLIDER_DIRECTIONS = {
     PieceType.QUEEN: ORTHOGONAL + DIAGONAL,
 }
 
+# Indexed by color.value, kingside first: (right, king destination, squares that must be
+# empty, squares the king crosses or lands on). b1/b8 must be empty but may be attacked:
+# the king does not cross it.
+_CASTLINGS = (
+    (
+        ("white_kingside", G1, (F1, G1), (F1, G1)),
+        ("white_queenside", C1, (D1, C1, B1), (D1, C1)),
+    ),
+    (
+        ("black_kingside", G8, (F8, G8), (F8, G8)),
+        ("black_queenside", C8, (D8, C8, B8), (D8, C8)),
+    ),
+)
+
 
 def pseudo_legal_moves(board: Board) -> list[Move]:
     """Return every pseudo-legal move of the side to move; `board` is left as it was.
 
     The order is part of the contract, because perft_divide reports by root move:
     origin squares 0-63 in turn, and for each piece
-      - pawn: one step, two steps, then captures towards the a-file before the h-file;
-        a move to the last rank is four PROMOTION moves in PROMOTION_PIECES order
-      - knight, king: targets in KNIGHT_TARGETS / KING_TARGETS order
+      - pawn: one step, two steps, then captures towards the a-file before the h-file,
+        en passant among them in the same order; a move to the last rank is four
+        PROMOTION moves in PROMOTION_PIECES order
+      - knight, king: targets in KNIGHT_TARGETS / KING_TARGETS order; after the king's
+        steps castling, kingside before queenside
       - bishop, rook, queen: directions in RAYS index order (straight N E S W, then
         diagonal NE SE SW NW), nearest square first
     Every capture is CAPTURE or PROMOTION: make does not look at the target of a NORMAL
@@ -63,18 +92,28 @@ def pseudo_legal_moves(board: Board) -> list[Move]:
             continue
         kind = piece.kind
         if kind is PieceType.PAWN:
-            _pawn_moves(squares, us, from_sq, moves)
+            _pawn_moves(squares, us, from_sq, board.ep_square, moves)
         elif kind is PieceType.KNIGHT:
             _step_moves(squares, us, from_sq, KNIGHT_TARGETS[from_sq], moves)
         elif kind is PieceType.KING:
             _step_moves(squares, us, from_sq, KING_TARGETS[from_sq], moves)
+            _castling_moves(board, us, from_sq, moves)
         else:
             _slider_moves(squares, us, from_sq, _SLIDER_DIRECTIONS[kind], moves)
     return moves
 
 
-def _pawn_moves(squares: list[Piece | None], us: Color, from_sq: Square, moves: list[Move]) -> None:
-    """Append the pushes and captures of the pawn of `us` on Square `from_sq`."""
+def _pawn_moves(
+    squares: list[Piece | None],
+    us: Color,
+    from_sq: Square,
+    ep_square: Square | None,
+    moves: list[Move],
+) -> None:
+    """Append the pushes and captures of the pawn of `us` on Square `from_sq`.
+
+    `ep_square` is the en passant Square of the position, or None.
+    """
     if us is Color.WHITE:
         step, start_rank, last_rank = 8, 1, 7
     else:
@@ -92,6 +131,12 @@ def _pawn_moves(squares: list[Piece | None], us: Color, from_sq: Square, moves: 
                 moves.append(Move(from_sq, two, _DOUBLE_PAWN_PUSH))
 
     for to_sq in PAWN_ATTACKS[us.value][from_sq]:
+        if to_sq == ep_square:
+            # Nothing else is checked. The ep square stands only on rank 3 or 6, so the
+            # capturer is on its fifth rank; parse_fen and make guarantee that the square
+            # is empty and the pushed pawn stands behind it.
+            moves.append(Move(from_sq, to_sq, _EN_PASSANT))
+            continue
         target = squares[to_sq]
         if target is None or target.color is us:
             continue
@@ -124,6 +169,34 @@ def _step_moves(
             moves.append(Move(from_sq, to_sq, _NORMAL))
         elif target.color is not us:
             moves.append(Move(from_sq, to_sq, _CAPTURE))
+
+
+def _castling_moves(board: Board, us: Color, from_sq: Square, moves: list[Move]) -> None:
+    """Append the castling moves of the king of `us` on Square `from_sq`, kingside first.
+
+    The move is the king's, to g1/c1 or g8/c8; make moves the rook.
+    """
+    # The right alone says that the king and that rook have not moved: parse_fen rejects a
+    # right without both at home, and make drops it when the king moves, the rook moves or
+    # the rook is captured at home. Their presence is not checked again.
+    squares = board.squares
+    rights = board.castling
+    sides = [
+        (king_to, path)
+        for right, king_to, empty, path in _CASTLINGS[us.value]
+        if getattr(rights, right) and all(squares[sq] is None for sq in empty)
+    ]
+    if not sides:
+        return
+    # The attacks are checked here, not left to the legality filter (1.6): that one sees
+    # only the final position, so it cannot tell that the king was in check or crossed an
+    # attacked square. The rook may be attacked, and may cross an attacked square.
+    them = us.opposite
+    if is_square_attacked(board, from_sq, them):
+        return
+    for king_to, path in sides:
+        if not any(is_square_attacked(board, sq, them) for sq in path):
+            moves.append(Move(from_sq, king_to, _CASTLE))
 
 
 def _slider_moves(
