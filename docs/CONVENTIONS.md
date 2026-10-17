@@ -143,7 +143,7 @@ CHESS_SLOW_TESTS=1 python -m unittest discover -s tests   # plus spori perft
 - **Ime:** `test_<šta>_<uslov>_<očekivano>` — čitljivo kao rečenica u izveštaju o padu:
   `test_castling_rejected_when_king_passes_attacked_square`.
 - **Tabele** kroz `subTest()`, da jedan pad ne sakrije ostale.
-- **Perft:** skup i dubine su u ADR-026; podrazumevani ostaje ispod ~300.000 čvorova,
+- **Perft:** skup i dubine su u ADR-026; podrazumevani ostaje na ~410.000 čvorova,
   dublje iza `@unittest.skipUnless(os.environ.get("CHESS_SLOW_TESTS"), "slow")`. FEN-ovi i
   referentni brojevi se prepisuju sa Chess Programming Wiki, nikad iz sećanja; svaka
   konstanta nosi komentar sa izvorom.

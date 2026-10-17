@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.6 — legalni potezi
-Sledeće:   1.7 — mat i pat
+Radimo:    1.7 — mat i pat
+Sledeće:   1.8 — PERFT
 Otvoreno:  —
 ```
 
@@ -57,7 +57,7 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
 - [x] 1.5 Specijalni potezi — rokada (pet uslova iz PROJECT §7), en passant. Od 1.5 perft
       tvrdi i Kiwipete d1 = 48 i Position 5 d1 = 44. `parse_fen` odbija ep polje bez pešaka
       koji je skočio ili zauzeto — ista garancija kao za pravo na rokadu.
-- [ ] 1.6 Legalni potezi = pseudo-legalni + filter kroz make/unmake. Od 1.6 perft tvrdi
+- [x] 1.6 Legalni potezi = pseudo-legalni + filter kroz make/unmake. Od 1.6 perft tvrdi
       podrazumevani skup iz ADR-026 + Position 5 d3; ADR-026 se tad dopunjuje.
 - [ ] 1.7 Mat i pat.
 - [ ] 1.8 **PERFT** — formalni checkpoint, ceo skup iz ADR-026; spori skup iza
@@ -68,7 +68,7 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
 - [ ] 1.11 `core/pgn.py` — PGN izvoz.
 - [ ] 1.12 `core/game.py` — stanje partije, istorija, rezultat, poeni figura.
 
-**Podrazumevani perft skup** (~300.000 čvorova, mora ostati brz da bi se stvarno pokretao):
+**Podrazumevani perft skup** (~410.000 čvorova, mora ostati brz da bi se stvarno pokretao):
 
 | Pozicija | Dubina | Šta lovi |
 |---|---|---|
@@ -76,6 +76,7 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
 | Kiwipete | 3 | rokadu i en passant istovremeno |
 | Position 3 | 4 | en passant u zamršenim slučajevima |
 | Position 4 | 3 | promociju i vezane figure |
+| Position 5 | 3 | rokadu sa napadnutim topom (PROJECT §7), promociju uzimanjem |
 
 **Iza `CHESS_SLOW_TESTS=1`** (~9.000.000 čvorova): početna d5 · Kiwipete d4 · ostale dublje.
 

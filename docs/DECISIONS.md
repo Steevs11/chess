@@ -173,12 +173,14 @@ rekonekciju bez izmene protokola.
 
 ## ADR-026 — Perft: skup pozicija i dubine
 
-**Odluka.** Podrazumevano (~300.000 čvorova): početna d4 · Kiwipete d3 · Position 3 d4 ·
-Position 4 d3. Iza `CHESS_SLOW_TESTS=1` (~9 miliona): početna d5 · Kiwipete d4 · ostale
-dublje. FEN-ovi i brojevi sa Chess Programming Wiki, nikad iz sećanja.
+**Odluka.** Podrazumevano (~410.000 čvorova): početna d4 · Kiwipete d3 · Position 3 d4 ·
+Position 4 d3 · Position 5 d3. Iza `CHESS_SLOW_TESTS=1` (~9 miliona): početna d5 · Kiwipete d4 ·
+ostale dublje. FEN-ovi i brojevi sa Chess Programming Wiki, nikad iz sećanja. (Position 5 d3
+dodat u 1.6, 15. 10. 2026 — CPW: na d3 hvatao bagove u višegodišnjim programima; ranije četiri
+pozicije, ~300.000.)
 **Zašto.** Četiri pozicije na maloj dubini nađu više bagova po sekundi nego dve na velikoj;
 podrazumevani suite ostaje brz, pa se stvarno pokreće.
-**Cena.** Nijedna.
+**Cena.** Podrazumevani skup sa legalnim potezima traje nekoliko sekundi (7–12 s u 1.6, zavisno od mašine); 1.8 meri.
 
 ## ADR-027 — Zobrist: fiksan seed, ep polje uslovno
 

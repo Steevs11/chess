@@ -1,7 +1,8 @@
-"""Pseudo-legal move generation, and perft over it.
+"""Move generation: pseudo-legal moves, the legality filter over them, and perft.
 
 Pseudo-legal means by the rules of movement only: a move that leaves the own king in
-check is still generated; the legality filter is 1.6.
+check is still generated. Legal moves are the pseudo-legal ones that survive make, a
+check test and unmake (ADR-006); perft counts legal moves.
 
 perft and perft_divide live here, not in tools/perft.py, so the tests import them as a
 package; the tool is a CLI over them (ADR-007).
@@ -16,6 +17,7 @@ from chess.core.attacks import (
     ORTHOGONAL,
     PAWN_ATTACKS,
     RAYS,
+    is_in_check,
     is_square_attacked,
 )
 from chess.core.board import Board
@@ -100,6 +102,25 @@ def pseudo_legal_moves(board: Board) -> list[Move]:
             _castling_moves(board, us, from_sq, moves)
         else:
             _slider_moves(squares, us, from_sq, _SLIDER_DIRECTIONS[kind], moves)
+    return moves
+
+
+def legal_moves(board: Board) -> list[Move]:
+    """Return every legal move of the side to move; `board` is left as it was.
+
+    Each pseudo-legal move is played with make, kept when the own king is not in check,
+    and taken back with unmake (ADR-006). The order is that of pseudo_legal_moves with
+    the illegal moves dropped; it is part of the contract, for perft_divide and for
+    finding a move from the wire by legal_moves(board).index(move) (ADR-022).
+    """
+    # Remembered before make: afterwards the opponent is to move.
+    us = board.turn
+    moves: list[Move] = []
+    for move in pseudo_legal_moves(board):
+        undo = board.make(move)
+        if not is_in_check(board, us):
+            moves.append(move)
+        board.unmake(move, undo)
     return moves
 
 
@@ -225,12 +246,12 @@ def _slider_moves(
 def perft(board: Board, depth: int) -> int:
     """Return the number of leaf positions `depth` plies below `board`; 1 for depth <= 0.
 
-    Moves are played with make/unmake, never on a copy (ADR-006); `board` is left as it
-    was. At depth 1 the moves are counted, not played.
+    Legal moves are counted. They are played with make/unmake, never on a copy (ADR-006);
+    `board` is left as it was. At depth 1 the moves are counted, not played.
     """
     if depth <= 0:
         return 1
-    moves = _perft_moves(board)
+    moves = legal_moves(board)
     if depth == 1:
         return len(moves)
     nodes = 0
@@ -242,7 +263,7 @@ def perft(board: Board, depth: int) -> int:
 
 
 def perft_divide(board: Board, depth: int) -> dict[Move, int]:
-    """Return perft of `depth` split by root move, keys in generator order.
+    """Return perft of `depth` split by legal root move, keys in legal_moves order.
 
     A mismatch against the reference is traced by comparing root moves, then descending
     into the one that differs (ADR-007). A depth below 1 has no root moves: ValueError.
@@ -250,13 +271,8 @@ def perft_divide(board: Board, depth: int) -> dict[Move, int]:
     if depth < 1:
         raise ValueError(f"perft_divide depth must be at least 1, got {depth}")
     divide: dict[Move, int] = {}
-    for move in _perft_moves(board):
+    for move in legal_moves(board):
         undo = board.make(move)
         divide[move] = perft(board, depth - 1)
         board.unmake(move, undo)
     return divide
-
-
-def _perft_moves(board: Board) -> list[Move]:
-    """The moves perft and perft_divide count; the one line that turns legal in 1.6."""
-    return pseudo_legal_moves(board)

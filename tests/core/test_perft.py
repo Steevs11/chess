@@ -1,11 +1,9 @@
 """perft and perft_divide in core/movegen.py, against the Chess Programming Wiki numbers.
 
-The starting position is asserted at depth 1-3 since 1.3: the first check is possible on
-the third ply and the reply is the fourth, so pseudo-legal equals legal up to depth 3.
-From 1.5 on Kiwipete and Position 5 are asserted at depth 1, where pseudo-legal equals
-legal as well and the count needs castling. Deeper, and in Position 3 and 4 already at
-depth 1, a check or a pin makes the two differ; those numbers are asserted from 1.6 and
-1.8 on.
+The starting position is asserted at depth 1-3 since 1.3, Kiwipete and Position 5 at
+depth 1 since 1.5: there pseudo-legal equals legal. From 1.6 on perft counts legal moves
+and the default set of ADR-026 is asserted at every depth up to the listed one. The slow
+set behind CHESS_SLOW_TESTS is 1.8.
 """
 
 from __future__ import annotations
@@ -61,6 +59,21 @@ class PerftTest(unittest.TestCase):
             fen, nodes = REFERENCE[name]
             with self.subTest(position=name):
                 self.assertEqual(perft(Board.from_fen(fen), 1), nodes[1])
+
+    def test_default_set_matches_reference_at_every_depth_up_to_the_listed_one(self) -> None:
+        # ADR-026.
+        default_set = (
+            ("start", 4),
+            ("kiwipete", 3),
+            ("position 3", 4),
+            ("position 4", 3),
+            ("position 5", 3),
+        )
+        for name, max_depth in default_set:
+            fen, nodes = REFERENCE[name]
+            for depth in range(1, max_depth + 1):
+                with self.subTest(position=name, depth=depth):
+                    self.assertEqual(perft(Board.from_fen(fen), depth), nodes[depth])
 
     def test_depth_zero_counts_the_position_itself(self) -> None:
         self.assertEqual(perft(Board.from_fen(STARTING_FEN), 0), 1)

@@ -11,7 +11,7 @@ import unittest
 
 from chess.core.board import Board
 from chess.core.fen import STARTING_FEN
-from chess.core.movegen import pseudo_legal_moves
+from chess.core.movegen import legal_moves, pseudo_legal_moves
 from chess.core.types import (
     PROMOTION_PIECES,
     MoveKind,
@@ -34,6 +34,15 @@ KIWIPETE_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -
 CASTLING_FEN = "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"
 # After 1.e4 a6 2.e5 d5: the e5 pawn may take the d5 pawn en passant.
 AFTER_D5_EP_FEN = "rnbqkbnr/1pp1pppp/p7/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3"
+# Source: https://www.chessprogramming.org/Perft_Results (as in tests/core/test_perft.py).
+POSITION_3_FEN = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
+POSITION_4_FEN = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
+# The h1 rook checks the e1 king along the first rank.
+ROOK_CHECK_FEN = "4k3/8/8/8/8/8/8/4K2r w - - 0 1"
+# b5xc6 en passant would empty the fifth rank between the a5 king and the h5 rook.
+EP_EXPOSES_KING_FEN = "7k/8/8/KPp4r/8/8/8/8 w - c6 0 1"
+# After 1.f3 e5 2.g4 Qh4: white has pseudo-legal moves but no legal one.
+NO_LEGAL_MOVE_FEN = "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"
 
 
 def all_moves(fen: str) -> list[tuple[str, MoveKind]]:
@@ -44,6 +53,16 @@ def all_moves(fen: str) -> list[tuple[str, MoveKind]]:
 def moves_from(fen: str, name: str) -> list[tuple[str, MoveKind]]:
     """The generated moves of `fen` that start on the square called `name`, in order."""
     return [pair for pair in all_moves(fen) if pair[0][:2] == name]
+
+
+def all_legal(fen: str) -> list[tuple[str, MoveKind]]:
+    """Every legal move of `fen` as (uci, kind), in generator order."""
+    return [(move.to_uci(), move.kind) for move in legal_moves(Board.from_fen(fen))]
+
+
+def legal_from(fen: str, name: str) -> list[tuple[str, MoveKind]]:
+    """The legal moves of `fen` that start on the square called `name`, in order."""
+    return [pair for pair in all_legal(fen) if pair[0][:2] == name]
 
 
 def promotions(from_to: str) -> list[tuple[str, MoveKind]]:
@@ -387,6 +406,80 @@ class EnPassantTest(unittest.TestCase):
         self.assertFalse(any(kind is EN_PASSANT for _, kind in moves))
 
 
+class LegalMovesTest(unittest.TestCase):
+    def test_bishop_pinned_to_the_king_on_a_file_has_no_legal_move(self) -> None:
+        fen = "4k3/4r3/8/8/8/8/4B3/4K3 w - - 0 1"
+        self.assertEqual(len(moves_from(fen, "e2")), 9)
+        self.assertEqual(legal_from(fen, "e2"), [])
+
+    def test_rook_pinned_on_a_file_slides_along_the_pin_only(self) -> None:
+        self.assertEqual(
+            legal_from("4k3/4r3/8/8/8/8/4R3/4K3 w - - 0 1", "e2"),
+            [
+                ("e2e3", NORMAL),
+                ("e2e4", NORMAL),
+                ("e2e5", NORMAL),
+                ("e2e6", NORMAL),
+                ("e2e7", CAPTURE),
+            ],
+        )
+
+    def test_black_knight_pinned_to_the_king_has_no_legal_move(self) -> None:
+        fen = "4k3/8/4n3/8/8/8/8/4R1K1 b - - 0 1"
+        self.assertEqual(len(moves_from(fen, "e6")), 8)
+        self.assertEqual(legal_from(fen, "e6"), [])
+
+    def test_king_in_check_from_a_rook_steps_off_the_rank(self) -> None:
+        # e1d1 stays out: after make the rook's ray runs through the emptied e1.
+        self.assertEqual(
+            all_legal(ROOK_CHECK_FEN), [("e1e2", NORMAL), ("e1f2", NORMAL), ("e1d2", NORMAL)]
+        )
+
+    def test_check_on_the_file_is_met_by_king_steps_or_a_knight_block(self) -> None:
+        fen = "4r2k/8/8/8/8/2N5/8/4K3 w - - 0 1"
+        self.assertEqual(len(all_moves(fen)), 13)
+        self.assertEqual(
+            all_legal(fen),
+            [
+                ("e1f1", NORMAL),
+                ("e1d1", NORMAL),
+                ("e1f2", NORMAL),
+                ("e1d2", NORMAL),
+                ("c3e4", NORMAL),
+                ("c3e2", NORMAL),
+            ],
+        )
+
+    def test_en_passant_that_exposes_the_king_on_the_rank_is_not_legal(self) -> None:
+        self.assertIn(("b5c6", EN_PASSANT), all_moves(EP_EXPOSES_KING_FEN))
+        self.assertEqual(
+            all_legal(EP_EXPOSES_KING_FEN),
+            [("a5a6", NORMAL), ("a5a4", NORMAL), ("a5b6", NORMAL), ("b5b6", NORMAL)],
+        )
+
+    def test_en_passant_that_removes_the_checking_pawn_is_legal(self) -> None:
+        fen = "7k/8/8/3pP3/4K3/8/8/8 w - d6 0 1"
+        self.assertEqual(len(all_moves(fen)), 9)
+        moves = all_legal(fen)
+        self.assertEqual(len(moves), 8)
+        self.assertIn(("e5d6", EN_PASSANT), moves)
+        self.assertNotIn(("e5e6", NORMAL), moves)
+
+    def test_castling_base_position_keeps_every_move_including_both_castlings(self) -> None:
+        moves = all_legal(CASTLING_FEN)
+        self.assertEqual(moves, all_moves(CASTLING_FEN))
+        self.assertEqual(len(moves), 26)
+        self.assertIn(("e1g1", CASTLE), moves)
+        self.assertIn(("e1c1", CASTLE), moves)
+
+    def test_positions_with_pseudo_legal_moves_only_give_an_empty_list(self) -> None:
+        cases = ((NO_LEGAL_MOVE_FEN, 19), ("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1", 3))
+        for fen, pseudo in cases:
+            with self.subTest(fen=fen):
+                self.assertEqual(len(all_moves(fen)), pseudo)
+                self.assertEqual(all_legal(fen), [])
+
+
 class QueryTest(unittest.TestCase):
     FENS = (
         STARTING_FEN,
@@ -408,6 +501,17 @@ class QueryTest(unittest.TestCase):
                 self.assertEqual(board.key, key)
                 self.assertEqual(board.squares, squares)
 
+    def test_legal_moves_leaves_fen_key_and_squares_unchanged(self) -> None:
+        for fen in (*self.FENS, ROOK_CHECK_FEN, EP_EXPOSES_KING_FEN, NO_LEGAL_MOVE_FEN):
+            with self.subTest(fen=fen):
+                board = Board.from_fen(fen)
+                squares = list(board.squares)
+                key = board.key
+                legal_moves(board)
+                self.assertEqual(board.to_fen(), fen)
+                self.assertEqual(board.key, key)
+                self.assertEqual(board.squares, squares)
+
 
 class OrderTest(unittest.TestCase):
     FENS = (STARTING_FEN, AFTER_E4_FEN, KIWIPETE_FEN, CASTLING_FEN, AFTER_D5_EP_FEN)
@@ -422,6 +526,17 @@ class OrderTest(unittest.TestCase):
         for fen in self.FENS:
             with self.subTest(fen=fen):
                 self.assertEqual(all_moves(fen), all_moves(fen))
+
+    def test_legal_moves_are_the_pseudo_legal_ones_with_some_dropped_in_the_same_order(
+        self,
+    ) -> None:
+        for fen in (POSITION_4_FEN, POSITION_3_FEN):
+            with self.subTest(fen=fen):
+                legal = all_legal(fen)
+                kept = set(legal)
+                pseudo = all_moves(fen)
+                self.assertEqual(legal, [pair for pair in pseudo if pair in kept])
+                self.assertLess(len(legal), len(pseudo))
 
 
 if __name__ == "__main__":
