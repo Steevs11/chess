@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.7 — mat i pat
-Sledeće:   1.8 — PERFT
+Radimo:    1.8 — PERFT
+Sledeće:   1.9 — remi i RuleSet
 Otvoreno:  —
 ```
 
@@ -59,7 +59,9 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
       koji je skočio ili zauzeto — ista garancija kao za pravo na rokadu.
 - [x] 1.6 Legalni potezi = pseudo-legalni + filter kroz make/unmake. Od 1.6 perft tvrdi
       podrazumevani skup iz ADR-026 + Position 5 d3; ADR-026 se tad dopunjuje.
-- [ ] 1.7 Mat i pat.
+- [x] 1.7 Mat i pat — `core/rules.py`: `is_checkmate`, `is_stalemate` nad `legal_moves` i
+      `is_in_check`. Tvrdi se CPW kolona Checkmates: Kiwipete d3 = 1, Position 3 d4 = 17,
+      Position 4 d3 = 22.
 - [ ] 1.8 **PERFT** — formalni checkpoint, ceo skup iz ADR-026; spori skup iza
       `CHESS_SLOW_TESTS`.
 - [ ] 1.9 `core/rules.py` — remi: nedovoljan materijal, 50 poteza, ponavljanje (kroz Zobrist);
