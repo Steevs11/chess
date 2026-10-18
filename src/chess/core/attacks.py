@@ -109,8 +109,8 @@ def is_in_check(board: Board, color: Color) -> bool:
     that has just moved, mate and stalemate (1.7) about the side to move. `board` is left
     as it was.
     """
-    # Scanned, not cached: parse_fen guarantees exactly one king, and a king square in
-    # Board waits until the measurement in 1.8 shows the need (as in ADR-013).
+    # Scanned, not cached: parse_fen guarantees exactly one king. In 1.8 the scan measured
+    # ~7% of perft time, too little for a cache (ADR-013).
     king_sq = board.squares.index(_KINGS[color.value])
     return is_square_attacked(board, king_sq, color.opposite)
 

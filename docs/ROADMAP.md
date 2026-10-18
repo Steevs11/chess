@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.8 — PERFT
-Sledeće:   1.9 — remi i RuleSet
+Radimo:    1.9 — remi i RuleSet
+Sledeće:   1.10 — SAN
 Otvoreno:  —
 ```
 
@@ -62,8 +62,9 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
 - [x] 1.7 Mat i pat — `core/rules.py`: `is_checkmate`, `is_stalemate` nad `legal_moves` i
       `is_in_check`. Tvrdi se CPW kolona Checkmates: Kiwipete d3 = 1, Position 3 d4 = 17,
       Position 4 d3 = 22.
-- [ ] 1.8 **PERFT** — formalni checkpoint, ceo skup iz ADR-026; spori skup iza
-      `CHESS_SLOW_TESTS`.
+- [x] 1.8 **PERFT** — formalni checkpoint prošao 18. 10. 2026: podrazumevani skup i spori
+      skup iza `CHESS_SLOW_TESTS` (~12 M čvorova, 4,4 min, ~44.000 čvorova/s na razvojnoj
+      mašini). Keš polja kralja odbijen merenjem (ADR-013).
 - [ ] 1.9 `core/rules.py` — remi: nedovoljan materijal, 50 poteza, ponavljanje (kroz Zobrist);
       `RuleSet` sa profilima `online` i `fide` (ADR-008).
 - [ ] 1.10 `core/san.py` — SAN sa disambiguacijom (kolona → red → oba).
@@ -80,7 +81,8 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
 | Position 4 | 3 | promociju i vezane figure |
 | Position 5 | 3 | rokadu sa napadnutim topom (PROJECT §7), promociju uzimanjem |
 
-**Iza `CHESS_SLOW_TESTS=1`** (~9.000.000 čvorova): početna d5 · Kiwipete d4 · ostale dublje.
+**Iza `CHESS_SLOW_TESTS=1`** (~12.000.000 čvorova): početna d5 · Kiwipete d4 · Position 3 d5 ·
+Position 4 d4 · Position 5 d4.
 
 > FEN-ove i referentne brojeve prepisati sa Chess Programming Wiki. Nikad iz sećanja.
 > Svaka konstanta nosi komentar sa izvorom.

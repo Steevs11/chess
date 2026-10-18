@@ -3,11 +3,12 @@
 The starting position is asserted at depth 1-3 since 1.3, Kiwipete and Position 5 at
 depth 1 since 1.5: there pseudo-legal equals legal. From 1.6 on perft counts legal moves
 and the default set of ADR-026 is asserted at every depth up to the listed one. The slow
-set behind CHESS_SLOW_TESTS is 1.8.
+set of ADR-026 runs only with CHESS_SLOW_TESTS: about 12 million nodes, minutes.
 """
 
 from __future__ import annotations
 
+import os
 import unittest
 
 from chess.core.board import Board
@@ -84,6 +85,23 @@ class PerftTest(unittest.TestCase):
         perft(board, 3)
         self.assertEqual(board.to_fen(), STARTING_FEN)
         self.assertEqual(board.key, key)
+
+
+@unittest.skipUnless(os.environ.get("CHESS_SLOW_TESTS"), "slow")
+class SlowPerftTest(unittest.TestCase):
+    def test_slow_set_matches_reference_at_the_listed_depth(self) -> None:
+        # ADR-026; the shallower depths are asserted by the default set.
+        slow_set = (
+            ("start", 5),
+            ("kiwipete", 4),
+            ("position 3", 5),
+            ("position 4", 4),
+            ("position 5", 4),
+        )
+        for name, depth in slow_set:
+            fen, nodes = REFERENCE[name]
+            with self.subTest(position=name):
+                self.assertEqual(perft(Board.from_fen(fen), depth), nodes[depth])
 
 
 class PerftDivideTest(unittest.TestCase):

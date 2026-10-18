@@ -102,7 +102,9 @@ su dokumentacija.
 **Zašto.** Perft dubine 5 obilazi 4,8 miliona čvorova — desetine miliona `Square` objekata
 su preskupe; bez type checkera `NewType` ne daje ništa osim imena.
 **Cena.** Funkcija koja prima `Square` to kaže u potpisu i docstringu. Pakovanje poteza u
-`int` tek ako merenje pokaže potrebu.
+`int` tek ako merenje pokaže potrebu. Izmereno u 1.8 (18. 10. 2026): ~44.000 legalnih
+čvorova/s; skeniranje polja kralja ~7% vremena, filter legalnosti ~85% — keš polja kralja i
+pakovanje poteza se ne uvode.
 
 ## ADR-014 — `UndoRecord` (task 1.2)
 
@@ -174,13 +176,14 @@ rekonekciju bez izmene protokola.
 ## ADR-026 — Perft: skup pozicija i dubine
 
 **Odluka.** Podrazumevano (~410.000 čvorova): početna d4 · Kiwipete d3 · Position 3 d4 ·
-Position 4 d3 · Position 5 d3. Iza `CHESS_SLOW_TESTS=1` (~9 miliona): početna d5 · Kiwipete d4 ·
-ostale dublje. FEN-ovi i brojevi sa Chess Programming Wiki, nikad iz sećanja. (Position 5 d3
-dodat u 1.6, 15. 10. 2026 — CPW: na d3 hvatao bagove u višegodišnjim programima; ranije četiri
-pozicije, ~300.000.)
+Position 4 d3 · Position 5 d3. Iza `CHESS_SLOW_TESTS=1` (~12 miliona): početna d5 · Kiwipete d4 ·
+Position 3 d5 · Position 4 d4 · Position 5 d4. FEN-ovi i brojevi sa Chess Programming Wiki,
+nikad iz sećanja. (Position 5 d3 dodat u 1.6, 15. 10. 2026 — CPW: na d3 hvatao bagove u
+višegodišnjim programima; ranije četiri pozicije, ~300.000. Spori skup zakucan u 1.8,
+18. 10. 2026; ranije „ostale dublje", ~9 miliona.)
 **Zašto.** Četiri pozicije na maloj dubini nađu više bagova po sekundi nego dve na velikoj;
 podrazumevani suite ostaje brz, pa se stvarno pokreće.
-**Cena.** Podrazumevani skup sa legalnim potezima traje nekoliko sekundi (7–12 s u 1.6, zavisno od mašine); 1.8 meri.
+**Cena.** Podrazumevani skup sa legalnim potezima traje nekoliko sekundi (7–12 s, zavisno od mašine); spori skup ~4,4 min (1.8).
 
 ## ADR-027 — Zobrist: fiksan seed, ep polje uslovno
 
