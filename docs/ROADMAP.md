@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.9 — remi i RuleSet
-Sledeće:   1.10 — SAN
+Radimo:    1.10 — SAN
+Sledeće:   1.11 — PGN
 Otvoreno:  —
 ```
 
@@ -65,7 +65,7 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
 - [x] 1.8 **PERFT** — formalni checkpoint prošao 18. 10. 2026: podrazumevani skup i spori
       skup iza `CHESS_SLOW_TESTS` (~12 M čvorova, 4,4 min, ~44.000 čvorova/s na razvojnoj
       mašini). Keš polja kralja odbijen merenjem (ADR-013).
-- [ ] 1.9 `core/rules.py` — remi: nedovoljan materijal, 50 poteza, ponavljanje (kroz Zobrist);
+- [x] 1.9 `core/rules.py` — remi: nedovoljan materijal, 50 poteza, ponavljanje (kroz Zobrist);
       `RuleSet` sa profilima `online` i `fide` (ADR-008).
 - [ ] 1.10 `core/san.py` — SAN sa disambiguacijom (kolona → red → oba).
 - [ ] 1.11 `core/pgn.py` — PGN izvoz.

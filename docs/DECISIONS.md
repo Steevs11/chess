@@ -66,7 +66,9 @@ u `tools/perft.py`; promenjeno 26. 9. 2026.)
 ## ADR-008 — `RuleSet` sa profilima `online` i `fide`
 
 **Odluka.** Pravila remija su konfiguracija. `online` (podrazumevan): trostruko ponavljanje
-i 50 poteza automatski; 75/petostruko se ne implementiraju. `fide`: striktno po FIDE.
+i 50 poteza automatski; 75/petostruko ne važe. `fide`: petostruko ponavljanje i 75 poteza
+automatski — zahtev za remi (FIDE 9.2, 9.3) traži poruku koje protokol nema. (Ranije
+„striktno po FIDE"; promenjeno 20. 10. 2026.)
 **Zašto.** Online platforme se namerno razlikuju od FIDE; ponašanje je eksplicitno.
 **Cena.** Jedan sloj konfiguracije.
 

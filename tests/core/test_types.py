@@ -36,6 +36,7 @@ from chess.core.types import (
     MoveKind,
     Piece,
     PieceType,
+    Termination,
     file_of,
     from_algebraic,
     rank_of,
@@ -236,6 +237,29 @@ class ErrorHierarchyTest(unittest.TestCase):
                     raise error("boom")
                 except ChessError as caught:
                     self.assertIsInstance(caught, error)
+
+
+class TerminationTest(unittest.TestCase):
+    def test_termination_values_match_protocol_list(self) -> None:
+        # PROTOCOL 5, GAME_OVER `termination`, without the reserved "abandoned".
+        expected = {
+            "checkmate",
+            "stalemate",
+            "resignation",
+            "timeout",
+            "draw_agreement",
+            "insufficient_material",
+            "fifty_move",
+            "threefold_repetition",
+            "fivefold_repetition",
+            "seventy_five_move",
+        }
+        self.assertEqual({member.value for member in Termination}, expected)
+
+    def test_termination_value_is_lowercase_name(self) -> None:
+        for member in Termination:
+            with self.subTest(member=member.name):
+                self.assertEqual(member.value, member.name.lower())
 
 
 if __name__ == "__main__":

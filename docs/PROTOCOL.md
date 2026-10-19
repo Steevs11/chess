@@ -222,7 +222,9 @@ da li je potez uzimanje, i kad da otvori dijalog za promociju.
 
 `termination`: `"checkmate"` · `"stalemate"` · `"resignation"` · `"timeout"` ·
 `"draw_agreement"` · `"insufficient_material"` · `"fifty_move"` ·
-`"threefold_repetition"`
+`"threefold_repetition"` · `"fivefold_repetition"` · `"seventy_five_move"`
+
+`"fivefold_repetition"` i `"seventy_five_move"` daje samo profil `fide` (ADR-008).
 
 > `"abandoned"` je **rezervisan za fazu 5** i trenutno ga ništa ne proizvodi.
 > Diskonekcija se u fazi 2 završava padom zastavice, dakle `"timeout"` (ADR-025).

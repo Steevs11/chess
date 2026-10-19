@@ -195,6 +195,26 @@ CASTLING_ALL = CastlingRights(True, True, True, True)
 CASTLING_NONE = CastlingRights(False, False, False, False)
 
 
+class Termination(Enum):
+    """Why a game ended; the values are the `termination` strings of PROTOCOL 5, GAME_OVER.
+
+    The protocol (2.1) does not duplicate this enum in protocol/messages.py; it maps a
+    member to its string through `.value`. The reserved "abandoned" is not a member until
+    something produces it.
+    """
+
+    CHECKMATE = "checkmate"
+    STALEMATE = "stalemate"
+    RESIGNATION = "resignation"
+    TIMEOUT = "timeout"
+    DRAW_AGREEMENT = "draw_agreement"
+    INSUFFICIENT_MATERIAL = "insufficient_material"
+    FIFTY_MOVE = "fifty_move"
+    THREEFOLD_REPETITION = "threefold_repetition"
+    FIVEFOLD_REPETITION = "fivefold_repetition"
+    SEVENTY_FIVE_MOVE = "seventy_five_move"
+
+
 class ChessError(Exception):
     """Base of every error core raises about chess itself (CONVENTIONS 6)."""
 

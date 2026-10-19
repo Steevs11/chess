@@ -284,8 +284,8 @@ potez sa izborom.
 **Implementiramo `RuleSet` sa dva profila:**
 
 - `online` (podrazumevan) — trostruko ponavljanje i 50 poteza primenjuju se
-  automatski; 75/petostruko se ne implementiraju
-- `fide` — striktno po FIDE
+  automatski; 75/petostruko ne važe
+- `fide` — petostruko ponavljanje i 75 poteza automatski
 
 Pravila su podatak, ne `if` zakucan u kodu.
 
