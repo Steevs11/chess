@@ -7,8 +7,8 @@ Sledeći task je prvi neodštikliran red posle bloka.
 
 ```
 Grana:     faza-1
-Radimo:    1.11 — PGN
-Sledeće:   1.12 — game
+Radimo:    1.12 — game
+Sledeće:   kraj faze 1 (WORKFLOW §6)
 Otvoreno:  —
 ```
 
@@ -68,7 +68,7 @@ sa `CHESS_SLOW_TESTS=1`. Najveći i najvažniji deo projekta.
 - [x] 1.9 `core/rules.py` — remi: nedovoljan materijal, 50 poteza, ponavljanje (kroz Zobrist);
       `RuleSet` sa profilima `online` i `fide` (ADR-008).
 - [x] 1.10 `core/san.py` — SAN sa disambiguacijom (kolona → red → oba).
-- [ ] 1.11 `core/pgn.py` — PGN izvoz.
+- [x] 1.11 `core/pgn.py` — PGN izvoz.
 - [ ] 1.12 `core/game.py` — stanje partije, istorija, rezultat, poeni figura.
 
 **Podrazumevani perft skup** (~410.000 čvorova, mora ostati brz da bi se stvarno pokretao):
